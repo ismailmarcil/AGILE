@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">📦 Delivery Manager</h1>
+            <div class="user-info">
+                <span class="user-role">Planner</span>
+                <button class="btn-logout">Déconnexion</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <nav class="nav-menu">
+                    <h3>Menu Principal</h3>
+                    <ul>
+                        <li class="active">
+                            <a href="#map">
+                                <span class="icon">🗺️</span>
+                                Carte de la ville
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#tours">
+                                <span class="icon">🚚</span>
+                                Tournées
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#deliveries">
+                                <span class="icon">📦</span>
+                                Demandes de livraison
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#couriers">
+                                <span class="icon">👤</span>
+                                Gestion des livreurs
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+
+                <div class="sidebar-actions">
+                    <h3>Actions rapides</h3>
+                    <button class="btn btn-primary">
+                        <span class="icon">📁</span>
+                        Charger une carte
+                    </button>
+                    <button class="btn btn-primary">
+                        <span class="icon">📋</span>
+                        Charger des demandes
+                    </button>
+                    <button class="btn btn-success">
+                        <span class="icon">✨</span>
+                        Créer une tournée optimale
+                    </button>
+                    <button class="btn btn-secondary">
+                        <span class="icon">💾</span>
+                        Sauvegarder les tournées
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Panel -->
+            <div class="main-panel">
+                <!-- Map Section -->
+                <section class="map-section">
+                    <div class="section-header">
+                        <h2>Carte de la ville</h2>
+                        <div class="section-actions">
+                            <button class="btn-icon" title="Zoom avant">🔍+</button>
+                            <button class="btn-icon" title="Zoom arrière">🔍-</button>
+                            <button class="btn-icon" title="Centrer">🎯</button>
+                        </div>
+                    </div>
+                    <div class="map-container">
+                        <div class="map-placeholder">
+                            <p>🗺️ Chargez une carte pour commencer</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tours Section -->
+                <section class="tours-section">
+                    <div class="section-header">
+                        <h2>Tournées actives</h2>
+                        <button class="btn btn-small">+ Nouvelle tournée</button>
+                    </div>
+                    <div class="tours-grid">
+                        <div class="tour-card tour-1">
+                            <div class="tour-header">
+                                <h3>Tournée #1</h3>
+                                <span class="tour-status status-active">En cours</span>
+                            </div>
+                            <div class="tour-details">
+                                <p><strong>Livreur:</strong> Jean Dupont</p>
+                                <p><strong>Points de livraison:</strong> 8</p>
+                                <p><strong>Distance:</strong> 12.5 km</p>
+                                <p><strong>Temps estimé:</strong> 2h 30min</p>
+                            </div>
+                            <div class="tour-actions">
+                                <button class="btn btn-small btn-info">Voir détails</button>
+                                <button class="btn btn-small btn-warning">Modifier</button>
+                                <button class="btn btn-small btn-danger">Supprimer</button>
+                            </div>
+                        </div>
+
+                        <div class="tour-card tour-2">
+                            <div class="tour-header">
+                                <h3>Tournée #2</h3>
+                                <span class="tour-status status-planned">Planifiée</span>
+                            </div>
+                            <div class="tour-details">
+                                <p><strong>Livreur:</strong> Marie Martin</p>
+                                <p><strong>Points de livraison:</strong> 6</p>
+                                <p><strong>Distance:</strong> 9.2 km</p>
+                                <p><strong>Temps estimé:</strong> 1h 45min</p>
+                            </div>
+                            <div class="tour-actions">
+                                <button class="btn btn-small btn-info">Voir détails</button>
+                                <button class="btn btn-small btn-warning">Modifier</button>
+                                <button class="btn btn-small btn-danger">Supprimer</button>
+                            </div>
+                        </div>
+
+                        <div class="tour-card tour-3">
+                            <div class="tour-header">
+                                <h3>Tournée #3</h3>
+                                <span class="tour-status status-completed">Terminée</span>
+                            </div>
+                            <div class="tour-details">
+                                <p><strong>Livreur:</strong> Pierre Durand</p>
+                                <p><strong>Points de livraison:</strong> 10</p>
+                                <p><strong>Distance:</strong> 15.8 km</p>
+                                <p><strong>Temps estimé:</strong> 3h 15min</p>
+                            </div>
+                            <div class="tour-actions">
+                                <button class="btn btn-small btn-info">Voir détails</button>
+                                <button class="btn btn-small btn-warning">Modifier</button>
+                                <button class="btn btn-small btn-danger">Supprimer</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Delivery Requests Section -->
+                <section class="deliveries-section">
+                    <div class="section-header">
+                        <h2>Demandes de livraison</h2>
+                        <button class="btn btn-small btn-success">+ Ajouter une demande</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="deliveries-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Point de collecte</th>
+                                    <th>Point de livraison</th>
+                                    <th>Livreur assigné</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>#001</td>
+                                    <td>123 Rue de Paris</td>
+                                    <td>456 Avenue Victor Hugo</td>
+                                    <td>Jean Dupont</td>
+                                    <td><span class="badge badge-success">Assignée</span></td>
+                                    <td>
+                                        <button class="btn-icon" title="Modifier">✏️</button>
+                                        <button class="btn-icon" title="Supprimer">🗑️</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>#002</td>
+                                    <td>789 Boulevard Saint-Michel</td>
+                                    <td>321 Rue de la Liberté</td>
+                                    <td>Marie Martin</td>
+                                    <td><span class="badge badge-success">Assignée</span></td>
+                                    <td>
+                                        <button class="btn-icon" title="Modifier">✏️</button>
+                                        <button class="btn-icon" title="Supprimer">🗑️</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>#003</td>
+                                    <td>654 Place de la République</td>
+                                    <td>987 Rue Nationale</td>
+                                    <td>-</td>
+                                    <td><span class="badge badge-warning">En attente</span></td>
+                                    <td>
+                                        <button class="btn-icon" title="Modifier">✏️</button>
+                                        <button class="btn-icon" title="Supprimer">🗑️</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>#004</td>
+                                    <td>147 Avenue Jean Jaurès</td>
+                                    <td>258 Rue du Commerce</td>
+                                    <td>Pierre Durand</td>
+                                    <td><span class="badge badge-info">Livrée</span></td>
+                                    <td>
+                                        <button class="btn-icon" title="Modifier">✏️</button>
+                                        <button class="btn-icon" title="Supprimer">🗑️</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for authentication (hidden by default) -->
+    <div class="modal" id="authModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔐 Authentification</h2>
+            </div>
+            <form class="auth-form">
+                <div class="form-group">
+                    <label for="username">Identifiant</label>
+                    <input type="text" id="username" placeholder="Entrez votre identifiant" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" placeholder="Entrez votre mot de passe" required>
+                </div>
+                <div class="form-group">
+                    <label for="role">Rôle</label>
+                    <select id="role">
+                        <option value="planner">Planner</option>
+                        <option value="courier">Courier</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Delivery Management System - Sprint 1</p>
+        </div>
+    </footer>
+</body>
+</html>
+
