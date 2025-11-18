@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Delivery Management System</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles/styles.css">
 </head>
 <body>
     <!-- Header -->
@@ -77,7 +77,7 @@
             <!-- Main Panel -->
             <div class="main-panel">
                 <!-- Map Section -->
-                <section class="map-section">
+                <section class="map-section" id="map">
                     <div class="section-header">
                         <h2>Carte de la ville</h2>
                         <div class="section-actions">
@@ -94,7 +94,7 @@
                 </section>
 
                 <!-- Tours Section -->
-                <section class="tours-section">
+                <section class="tours-section" id="tours">
                     <div class="section-header">
                         <h2>Tournées actives</h2>
                         <button class="btn btn-small">+ Nouvelle tournée</button>
@@ -157,7 +157,7 @@
                 </section>
 
                 <!-- Delivery Requests Section -->
-                <section class="deliveries-section">
+                <section class="deliveries-section" id="deliveries">
                     <div class="section-header">
                         <h2>Demandes de livraison</h2>
                         <button class="btn btn-small btn-success">+ Ajouter une demande</button>
@@ -223,6 +223,66 @@
                         </table>
                     </div>
                 </section>
+
+                <!-- Couriers Section -->
+                <section class="couriers-section" id="couriers">
+                    <div class="section-header">
+                        <h2>Gestion des livreurs</h2>
+                        <button class="btn btn-small btn-success">+ Ajouter un livreur</button>
+                    </div>
+                    <div class="couriers-grid">
+                        <div class="courier-card">
+                            <div class="courier-header">
+                                <h3>👤 Jean Dupont</h3>
+                                <span class="courier-status status-active">Actif</span>
+                            </div>
+                            <div class="courier-details">
+                                <p><strong>ID:</strong> #L001</p>
+                                <p><strong>Téléphone:</strong> 06 12 34 56 78</p>
+                                <p><strong>Email:</strong> jean.dupont@delivery.fr</p>
+                                <p><strong>Tournée actuelle:</strong> Tournée #1</p>
+                            </div>
+                            <div class="courier-actions">
+                                <button class="btn btn-small btn-info">Voir détails</button>
+                                <button class="btn btn-small btn-warning">Modifier</button>
+                            </div>
+                        </div>
+
+                        <div class="courier-card">
+                            <div class="courier-header">
+                                <h3>👤 Marie Martin</h3>
+                                <span class="courier-status status-active">Actif</span>
+                            </div>
+                            <div class="courier-details">
+                                <p><strong>ID:</strong> #L002</p>
+                                <p><strong>Téléphone:</strong> 06 23 45 67 89</p>
+                                <p><strong>Email:</strong> marie.martin@delivery.fr</p>
+                                <p><strong>Tournée actuelle:</strong> Tournée #2</p>
+                            </div>
+                            <div class="courier-actions">
+                                <button class="btn btn-small btn-info">Voir détails</button>
+                                <button class="btn btn-small btn-warning">Modifier</button>
+                            </div>
+                        </div>
+
+                        <div class="courier-card">
+                            <div class="courier-header">
+                                <h3>👤 Pierre Durand</h3>
+                                <span class="courier-status status-inactive">Inactif</span>
+                            </div>
+                            <div class="courier-details">
+                                <p><strong>ID:</strong> #L003</p>
+                                <p><strong>Téléphone:</strong> 06 34 56 78 90</p>
+                                <p><strong>Email:</strong> pierre.durand@delivery.fr</p>
+                                <p><strong>Tournée actuelle:</strong> Aucune</p>
+                            </div>
+                            <div class="courier-actions">
+                                <button class="btn btn-small btn-info">Voir détails</button>
+                                <button class="btn btn-small btn-warning">Modifier</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </div>
     </main>
@@ -262,4 +322,3 @@
     </footer>
 </body>
 </html>
-

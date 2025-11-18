@@ -399,6 +399,71 @@ section {
     color: #0c5460;
 }
 
+/* Couriers Section */
+.couriers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.courier-card {
+    background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+    border-radius: 10px;
+    padding: 1.5rem;
+    border-left: 5px solid #ff6b6b;
+    transition: all 0.3s ease;
+}
+
+.courier-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.courier-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.courier-header h3 {
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.courier-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.courier-status.status-active {
+    background: #28a745;
+    color: white;
+}
+
+.courier-status.status-inactive {
+    background: #6c757d;
+    color: white;
+}
+
+.courier-details {
+    margin-bottom: 1rem;
+    line-height: 1.8;
+}
+
+.courier-details p {
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.courier-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
 /* Modal */
 .modal {
     position: fixed;
@@ -482,7 +547,8 @@ section {
         position: static;
     }
 
-    .tours-grid {
+    .tours-grid,
+    .couriers-grid {
         grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     }
 }
@@ -494,7 +560,8 @@ section {
         text-align: center;
     }
 
-    .tours-grid {
+    .tours-grid,
+    .couriers-grid {
         grid-template-columns: 1fr;
     }
 
