@@ -2,29 +2,6 @@
  * Class representing a Pickup & Delivery request
  */
 class Demand {
-    /**
-     * Pickup address (node ID)
-     * @type {string|number}
-     */
-    pickupAddress;
-
-    /**
-     * Delivery address (node ID)
-     * @type {string|number}
-     */
-    deliveryAddress;
-
-    /**
-     * Pickup duration in seconds
-     * @type {number}
-     */
-    pickupDuration;
-
-    /**
-     * Delivery duration in seconds
-     * @type {number}
-     */
-    deliveryDuration;
 
     /**
      * Constructor for the Demand class
