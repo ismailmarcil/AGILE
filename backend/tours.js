@@ -19,10 +19,6 @@ class Tour {
         // List<Node> : Itinerary - Global itinerary of the tour (list of nodes)
         this.itinerary = [];
 
-        // List<TourPoint, LocalTime, LocalTime, List<Node>>
-        // Each element: { tourPoint: TourPoint, arrivalTime: string, departureTime: string, itinerary: [Node] }
-        this.pointsWithItinerary = [];
-
         // Total duration of the tour in minutes
         this.totalDuration = 0;
 
@@ -109,7 +105,6 @@ class Tour {
             courier: this.courier,
             pickupDeliveryPointsList: this.pickupDeliveryPointsList,
             itinerary: this.itinerary,
-            pointsWithItinerary: this.pointsWithItinerary,
             totalDuration: this.totalDuration,
             totalDistance: this.totalDistance
         };
