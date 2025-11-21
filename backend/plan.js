@@ -1,6 +1,13 @@
 /**
  * Class representing a city plan (Plan)
  */
+
+const fs = require("fs");
+const xml2js = require("xml2js");
+
+const Node = require("./Node");
+const Segment = require("./Segment");
+
 class Plan {
 
     /**
@@ -32,8 +39,58 @@ class Plan {
      * @returns {Promise<Plan>} The loaded Plan
      */
     static async loadFromXML(filePath) {
-        // TODO: Implement XML parsing (using xml2js or similar)
-        return new Plan();
+        // 1) Read the XML file
+        const xmlContent = await fs.promises.readFile(filePath, "utf-8");
+    
+        // 2) Convert to JSON with xml2js
+        const json = await xml2js.parseStringPromise(xmlContent);
+    
+        const root = json.reseau;
+    
+        // Empty plan
+        const plan = new Plan(new Map(), [], null);
+    
+        // ----------------------------
+        // 3) Load the nodes
+        // ----------------------------
+        if (root.noeud) {
+            for (const n of root.noeud) {
+                const id = n.$.id;
+                const latitude = parseFloat(n.$.latitude);
+                const longitude = parseFloat(n.$.longitude);
+    
+                // Each node contains a list of segments
+                const node = new Node(id, latitude, longitude);
+                node.segments = [];   // to store the segments for each node
+    
+                plan.nodes.set(id, node);
+            }
+        }
+    
+        // ----------------------------
+        // 4) Load the segments
+        // ----------------------------
+        if (root.troncon) {
+            for (const t of root.troncon) {
+                const origin = t.$.origine;
+                const destination = t.$.destination;
+                const streetName = t.$.nomRue;
+                const length = parseFloat(t.$.longueur);
+    
+                const segment = new Segment(origin, destination, streetName, length);
+    
+                // Add the segment to the list of segments of the plan
+                plan.segments.push(segment);
+    
+                // Add the segment the list of segments of the node
+                const originNode = plan.nodes.get(origin);
+                if (originNode) {
+                    originNode.segments.push(segment);
+                }
+            }
+        }
+    
+        return plan;
     }
 
     /**
