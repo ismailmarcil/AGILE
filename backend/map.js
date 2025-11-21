@@ -9,7 +9,7 @@ class Map {
      * @param {Array<Troncon>} segments - List of all segments (road segments)
      * @param {Node|null} warehouse - The warehouse node (starting point)
      */
-    constructor(nodes = [], segments = [], warehouse = null) {
+    constructor(nodes = new Map() , segments = [], warehouse = null) {
         /**
          * @type {Array<Node>}
          */
@@ -42,7 +42,7 @@ class Map {
      * @returns {Node|null}
      */
     getNodeById(id) {
-        return this.nodes.find(n => n.id == id) || null;
+        return this.nodes.get(id) || null;
     }
 
     /**
@@ -60,7 +60,7 @@ class Map {
      */
     toJSON() {
         return {
-            nodes: this.nodes,
+            nodes: Array.from(this.nodes.values()),
             segments: this.segments,
             warehouse: this.warehouse
         };
@@ -71,7 +71,7 @@ class Map {
      * @returns {string}
      */
     toString() {
-        return `Map - ${this.nodes.length} nodes, ${this.segments.length} segments, warehouse: ${
+        return `Map - ${this.nodes.size} nodes, ${this.segments.length} segments, warehouse: ${
             this.warehouse ? this.warehouse.id : 'None'
         }`;
     }
