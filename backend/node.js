@@ -2,23 +2,6 @@
  * Class representing a map node (intersection)
  */
 class Node {
-    /**
-     * Unique identifier of the node
-     * @type {string|number}
-     */
-    id;
-
-    /**
-     * Latitude coordinate of the node
-     * @type {number}
-     */
-    latitude;
-
-    /**
-     * Longitude coordinate of the node
-     * @type {number}
-     */
-    longitude;
 
     /**
      * Constructor for the Node class
