@@ -2,17 +2,6 @@
  * Class representing a courier (delivery person)
  */
 class Courier {
-    /**
-     * Unique identifier of the courier
-     * @type {string|number}
-     */
-    id;
-
-    /**
-     * Name of the courier
-     * @type {string}
-     */
-    name;
 
     /**
      * Constructor for the Courier class
