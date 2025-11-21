@@ -117,6 +117,63 @@ class Tour {
     toString() {
         return `Tour - Departure: ${this.departureTime}, Courier: ${this.courier ? this.courier.name : 'Unassigned'}, Points: ${this.pickupDeliveryPointsList.length}, Duration: ${this.totalDuration}min, Distance: ${this.totalDistance}m`;
     }
+
+    /**
+     * Generates an XML representation of the tour's itinerary
+     * The itinerary should contain nodes with their associated segments
+     * Each node in the itinerary should have a property 'segment' that represents the segment to reach the next node
+     * @returns {string} XML string representing the tour's itinerary in the same format as the map plan
+     */
+    toXML() {
+        let xml = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n';
+        xml += '<reseau>\n';
+
+        // Add all nodes from the itinerary with their coordinates
+        for (const node of this.itinerary) {
+            xml += `<noeud id="${node.id}" latitude="${node.latitude}" longitude="${node.longitude}"/>\n`;
+        }
+
+        // Add all segments from the itinerary
+        // Each node (except the last) should have a segment property that represents the edge to the next node
+        for (let i = 0; i < this.itinerary.length - 1; i++) {
+            const node = this.itinerary[i];
+
+            // Check if the node has an associated segment to the next node
+            if (node.segment) {
+                const segment = node.segment;
+                xml += `<troncon destination="${segment.destination}" longueur="${segment.length}" nomRue="${segment.streetName}" origine="${segment.origin}"/>\n`;
+            }
+        }
+
+        xml += '</reseau>';
+        return xml;
+    }
+
+    /**
+     * Saves the tour's itinerary to an XML file
+     * @param {string} filename - Name of the file to save (without extension)
+     * @returns {string} The XML content that was saved
+     */
+    saveItineraryToXML(filename = 'tour_itinerary') {
+        const xml = this.toXML();
+
+        // In a Node.js environment, write to file
+        if (typeof require !== 'undefined') {
+            try {
+                const fs = require('fs');
+                const path = require('path');
+
+                // Save in the same directory as the map XML files
+                const filePath = path.join(__dirname, '..', 'fichiersXMLPickupDelivery', `${filename}.xml`);
+                fs.writeFileSync(filePath, xml, 'utf8');
+                console.log(`Tour itinerary saved to: ${filePath}`);
+            } catch (error) {
+                console.error('Error saving XML file:', error);
+            }
+        }
+
+        return xml;
+    }
 }
 
 // Export for Node.js
