@@ -1,10 +1,10 @@
 /**
- * Class representing a city map (Map)
+ * Class representing a city plan (Plan)
  */
-class Map {
+class Plan {
 
     /**
-     * Constructor for the Map class
+     * Constructor for the Plan class
      * @param {Array<Node>} nodes - List of all nodes (intersections)
      * @param {Array<Troncon>} segments - List of all segments (road segments)
      * @param {Node|null} warehouse - The warehouse node (starting point)
@@ -27,13 +27,13 @@ class Map {
     }
 
     /**
-     * Loads a Map from an XML file (placeholder for now)
+     * Loads a Plan from an XML file (placeholder for now)
      * @param {string} filePath - Path to the XML file
-     * @returns {Promise<Map>} The loaded Map
+     * @returns {Promise<Plan>} The loaded Plan
      */
     static async loadFromXML(filePath) {
         // TODO: Implement XML parsing (using xml2js or similar)
-        return new Map();
+        return new Plan();
     }
 
     /**
@@ -55,7 +55,7 @@ class Map {
     }
 
     /**
-     * Returns a JSON representation of the map
+     * Returns a JSON representation of the plan
      * @returns {Object}
      */
     toJSON() {
@@ -67,11 +67,11 @@ class Map {
     }
 
     /**
-     * Returns a textual summary of the map
+     * Returns a textual summary of the plan
      * @returns {string}
      */
     toString() {
-        return `Map - ${this.nodes.size} nodes, ${this.segments.length} segments, warehouse: ${
+        return `Plan - ${this.nodes.size} nodes, ${this.segments.length} segments, warehouse: ${
             this.warehouse ? this.warehouse.id : 'None'
         }`;
     }
@@ -79,5 +79,5 @@ class Map {
 
 // Export for Node.js
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Map;
+    module.exports = Plan;
 }
