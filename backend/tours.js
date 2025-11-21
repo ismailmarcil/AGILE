@@ -74,8 +74,11 @@ class Tour {
      * @returns {number} Distance in meters
      */
     calculateTotalDistance() {
-        // TODO: Sum the distances of all itinerary segments
-        this.totalDistance = 0;
+        for (const node of this.itinerary) {
+            if (node.segment) {
+                this.totalDistance += node.segment.length;
+            }
+        }
         return this.totalDistance;
     }
 
