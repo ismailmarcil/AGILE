@@ -2,29 +2,6 @@
  * Class representing a road segment (Tronçon)
  */
 class Segment {
-    /**
-     * Origin node ID of the segment
-     * @type {string|number}
-     */
-    origin;
-
-    /**
-     * Destination node ID of the segment
-     * @type {string|number}
-     */
-    destination;
-
-    /**
-     * Name of the street
-     * @type {string}
-     */
-    streetName;
-
-    /**
-     * Length of the segment in meters
-     * @type {number}
-     */
-    length;
 
     /**
      * Constructor for the Segment class
