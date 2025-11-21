@@ -8,11 +8,13 @@ class Node {
      * @param {string|number} id - Unique identifier of the node
      * @param {number} latitude - Latitude value
      * @param {number} longitude - Longitude value
+     * @param {Array} segments - List of connected segments
      */
-    constructor(id, latitude, longitude) {
+    constructor(id, latitude, longitude, segments) {
         this.id = id;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.segments = segments;
     }
 
     /**
