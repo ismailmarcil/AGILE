@@ -29,7 +29,7 @@ const server = http.createServer((req, res) => {
 
     // Default to index.html
     if (filePath === '/') {
-        filePath = '/index.html';
+        filePath = '/test_display_plan.html';
     }
 
     // Construct file path
@@ -37,6 +37,12 @@ const server = http.createServer((req, res) => {
     if (filePath.startsWith('/fichiersXMLPickupDelivery/')) {
         // Handle XML files from parent directory (2 levels up from test folder)
         fullPath = path.join(__dirname, '..', '..', 'fichiersXMLPickupDelivery', path.basename(filePath));
+    } else if (filePath.startsWith('/styles/') || filePath.startsWith('/scripts/')) {
+        // Handle styles and scripts from parent front folder
+        fullPath = path.join(__dirname, '..', filePath);
+    } else if (filePath.startsWith('/backend/')) {
+        // Handle backend files from backend folder (2 levels up)
+        fullPath = path.join(__dirname, '..', '..', filePath);
     } else {
         // Handle front-end files from test folder
         fullPath = path.join(__dirname, filePath);
