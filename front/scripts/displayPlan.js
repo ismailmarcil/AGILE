@@ -1,30 +1,23 @@
 /**
- * DisplayPlan - Class to display a full city plan (nodes + segments) on a Leaflet map.
- * 
- */
+ * DisplayPlan - Display a full city plan (nodes + segments) on Leaflet.
+*/
 
 class DisplayPlan {
 
-    /**
-     * Constructor
-     * @param {string} mapElementId - ID of the HTML element containing the map
-     */
     constructor(mapElementId) {
         this.mapElementId = mapElementId;
         this.map = null;
         this.nodeMap = new Map();
-
         this.initMap();
     }
 
     /**
-     * Initialize Leaflet map.
-     * The map will be centered automatically using fitMapToPlan().
+     * Initialize the Leaflet map.
+     * fitMapToPlan() will set the zoom once the plan is drawn.
      */
     initMap() {
         this.map = L.map(this.mapElementId);
 
-        // Base tile layer
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             maxZoom: 19,
             attribution: "&copy; OpenStreetMap contributors"
@@ -34,58 +27,47 @@ class DisplayPlan {
     }
 
     /**
-     * Main method to display the plan.
-     * @param {Object} planJSON - JSON returned by Plan.toJSON()
+     * Display the full plan from { nodes: [...], segments: [...] }
      */
     displayPlan(planJSON) {
         if (!planJSON) {
-            console.error("DisplayPlan: No plan JSON provided.");
+            console.error("DisplayPlan: planJSON is null");
             return;
         }
 
         this.clearMap();
 
-        // Convert node array into a Map<id, node>
         this.nodeMap = new Map(planJSON.nodes.map(n => [n.id, n]));
 
-        // Draw segments first (lines)
         this.displaySegments(planJSON.segments);
-
-        // Draw nodes second (so they appear above the lines)
         this.displayNodes(planJSON.nodes);
-
-        // Adjust zoom automatically
         this.fitMapToPlan(planJSON.nodes);
 
-        console.log("DisplayPlan: Plan displayed.");
+        console.log("DisplayPlan: Plan displayed");
     }
 
     /**
-     * Draw all nodes as blue circle markers.
+     * Draw nodes as blue dots
      */
     displayNodes(nodes) {
         nodes.forEach(node => {
             L.circleMarker([node.latitude, node.longitude], {
                 radius: 3,
                 fillColor: "blue",
-                color: "black",
+                color: "#000",
                 weight: 1,
-                fillOpacity: 0.8
+                fillOpacity: 0.9
             }).addTo(this.map);
         });
-
-        console.log(`DisplayPlan: ${nodes.length} nodes drawn.`);
     }
 
     /**
-     * Draw all segments as gray polylines.
+     * Draw segments as gray lines
      */
     displaySegments(segments) {
         segments.forEach(seg => {
-
             const origin = this.nodeMap.get(seg.origin);
             const dest = this.nodeMap.get(seg.destination);
-
             if (!origin || !dest) return;
 
             L.polyline(
@@ -100,33 +82,29 @@ class DisplayPlan {
                 }
             ).addTo(this.map);
         });
-
-        console.log(`DisplayPlan: ${segments.length} segments drawn.`);
     }
 
     /**
-     * Automatically adjust the map view to include all nodes.
+     * Automatic map zoom based on all node positions
      */
     fitMapToPlan(nodes) {
+        if (nodes.length === 0) return;
         const bounds = nodes.map(n => [n.latitude, n.longitude]);
-
-        if (bounds.length > 0) {
-            this.map.fitBounds(bounds, { padding: [30, 30] });
-        }
+        this.map.fitBounds(bounds, { padding: [20, 20] });
     }
 
     /**
-     * Remove all layers except the base tile layer.
+     * Clear all drawn layers except tile layer
      */
     clearMap() {
         this.map.eachLayer(layer => {
-            if (layer instanceof L.TileLayer) return; // keep OSM tiles
+            if (layer instanceof L.TileLayer) return;
             this.map.removeLayer(layer);
         });
     }
 }
 
-// Export for Node.js (optional)
-if (typeof module !== 'undefined' && module.exports) {
+// Export for Node
+if (typeof module !== "undefined" && module.exports) {
     module.exports = DisplayPlan;
 }
