@@ -55,7 +55,7 @@ class DisplayPlan {
                 radius: 3,
                 fillColor: "blue",
                 color: "#000",
-                weight: 1,
+                weight: 2,
                 fillOpacity: 0.9
             }).addTo(this.map);
         });
@@ -76,9 +76,9 @@ class DisplayPlan {
                     [dest.latitude, dest.longitude]
                 ],
                 {
-                    color: "gray",
-                    weight: 2,
-                    opacity: 0.5
+                    color: "red",
+                    weight: 4,
+                    opacity: 0.9
                 }
             ).addTo(this.map);
         });
