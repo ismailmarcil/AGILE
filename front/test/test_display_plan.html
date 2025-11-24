@@ -1,85 +1,119 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Test DisplayPlan</title>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
     <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
         #map {
             width: 100%;
             height: 600px;
-            border: 2px solid black;
+            border: 2px solid #333;
         }
-        body {
-            font-family: Arial;
-            padding: 20px;
+
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 0 10px;
+            cursor: pointer;
         }
     </style>
 </head>
 
 <body>
 
-<h1>Test DisplayPlan</h1>
-<button onclick="loadPlan()">Afficher le plan</button>
+    <h1>🗺️ Test : Affichage du Plan (DisplayPlan)</h1>
 
-<div id="map"></div>
+    <div class="controls">
+        <button onclick="loadPlan()">Afficher le plan</button>
+        <button onclick="displayPlan.clearMap()">Effacer la carte</button>
+    </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <div id="map"></div>
 
-<!-- Backend JS classes -->
-<script src="../../backend/Node.js"></script>
-<script src="../../backend/Segment.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-<!-- DisplayPlan -->
-<script src="../scripts/displayPlan.js"></script>
+    <!-- Backend classes -->
+    <script src="../../backend/Node.js"></script>
+    <script src="../../backend/Segment.js"></script>
 
-<script>
-async function loadPlan() {
-    console.log("Chargement du plan...");
+    <!-- DisplayPlan class -->
+    <script src="../scripts/displayPlan.js"></script>
 
-    const response = await fetch("/fichiersXMLPickupDelivery/petitPlan.xml");
-    const xmlText = await response.text();
+    <script>
+        // Instance DisplayPlan
+        let displayPlan = new DisplayPlan("map");
 
-    const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
+        async function loadPlan() {
+            console.log("Chargement du plan...");
 
-    const xmlNodes = Array.from(xmlDoc.getElementsByTagName("noeud"));
-    const xmlSegments = Array.from(xmlDoc.getElementsByTagName("troncon"));
+            // Charger le XML via le mini-serveur
+            const response = await fetch("/fichiersXMLPickupDelivery/petitPlan.xml");
+            const xmlText = await response.text();
 
-    const nodes = xmlNodes.map(n => new Node(
-        n.getAttribute("id"),
-        parseFloat(n.getAttribute("latitude")),
-        parseFloat(n.getAttribute("longitude")),
-        []
-    ));
+            // Parser XML
+            const xmlDoc = new DOMParser().parseFromString(xmlText, "application/xml");
 
-    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+            // Charger les noeuds
+            const xmlNodes = Array.from(xmlDoc.getElementsByTagName("noeud"));
+            const nodes = xmlNodes.map(n => new Node(
+                n.getAttribute("id"),
+                parseFloat(n.getAttribute("latitude")),
+                parseFloat(n.getAttribute("longitude")),
+                [] // segments sortants à remplir ensuite
+            ));
 
-    const segments = xmlSegments.map(s => {
-        const seg = new Segment(
-            s.getAttribute("origine"),
-            s.getAttribute("destination"),
-            s.getAttribute("nomRue"),
-            parseFloat(s.getAttribute("longueur"))
-        );
-        if (nodeMap.has(seg.origin)) {
-            nodeMap.get(seg.origin).segments.push(seg);
+            const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+            // Charger les segments
+            const xmlSegments = Array.from(xmlDoc.getElementsByTagName("troncon"));
+            const segments = xmlSegments.map(s => {
+                const seg = new Segment(
+                    s.getAttribute("origine"),
+                    s.getAttribute("destination"),
+                    s.getAttribute("nomRue"),
+                    parseFloat(s.getAttribute("longueur"))
+                );
+                // Ajouter le segment au noeud d'origine
+                if (nodeMap.has(seg.origin)) {
+                    nodeMap.get(seg.origin).segments.push(seg);
+                }
+                return seg;
+            });
+
+            // Construire JSON compatible avec DisplayPlan
+            const planJSON = {
+                nodes: nodes.map(n => n.toJSON()),
+                segments: segments.map(s => s.toJSON())
+            };
+
+            // Affichage du plan
+            displayPlan.displayPlan(planJSON);
+
+            console.log("Plan affiché !");
         }
-        return seg;
-    });
 
-    const planJSON = {
-        nodes: nodes.map(n => n.toJSON()),
-        segments: segments.map(s => s.toJSON())
-    };
-
-    const display = new DisplayPlan("map");
-    display.displayPlan(planJSON);
-
-    console.log("Plan affiché !");
-}
-</script>
+    </script>
 
 </body>
 </html>
