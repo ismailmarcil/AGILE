@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Test DisplayPlan</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+    <style>
+        #map {
+            width: 100%;
+            height: 600px;
+            border: 2px solid black;
+        }
+        body {
+            font-family: Arial;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Test DisplayPlan</h1>
+<button onclick="loadPlan()">Afficher le plan</button>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<!-- Backend JS classes -->
+<script src="../../backend/Node.js"></script>
+<script src="../../backend/Segment.js"></script>
+
+<!-- DisplayPlan -->
+<script src="../scripts/displayPlan.js"></script>
+
+<script>
+async function loadPlan() {
+    console.log("Chargement du plan...");
+
+    const response = await fetch("/fichiersXMLPickupDelivery/petitPlan.xml");
+    const xmlText = await response.text();
+
+    const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
+
+    const xmlNodes = Array.from(xmlDoc.getElementsByTagName("noeud"));
+    const xmlSegments = Array.from(xmlDoc.getElementsByTagName("troncon"));
+
+    const nodes = xmlNodes.map(n => new Node(
+        n.getAttribute("id"),
+        parseFloat(n.getAttribute("latitude")),
+        parseFloat(n.getAttribute("longitude")),
+        []
+    ));
+
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+    const segments = xmlSegments.map(s => {
+        const seg = new Segment(
+            s.getAttribute("origine"),
+            s.getAttribute("destination"),
+            s.getAttribute("nomRue"),
+            parseFloat(s.getAttribute("longueur"))
+        );
+        if (nodeMap.has(seg.origin)) {
+            nodeMap.get(seg.origin).segments.push(seg);
+        }
+        return seg;
+    });
+
+    const planJSON = {
+        nodes: nodes.map(n => n.toJSON()),
+        segments: segments.map(s => s.toJSON())
+    };
+
+    const display = new DisplayPlan("map");
+    display.displayPlan(planJSON);
+
+    console.log("Plan affiché !");
+}
+</script>
+
+</body>
+</html>

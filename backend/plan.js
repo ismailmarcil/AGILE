@@ -117,9 +117,9 @@ class Plan {
      */
     toJSON() {
         return {
-            nodes: Array.from(this.nodes.values()),
-            segments: this.segments,
-            warehouse: this.warehouse
+            nodes: Array.from(this.nodes.values()).map(node => node.toJSON()),
+            segments: this.segments.map(segment => segment.toJSON()),
+            warehouse: this.warehouse ? this.warehouse.toJSON() : null
         };
     }
 
