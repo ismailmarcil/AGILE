@@ -4,5 +4,5 @@ const System = require("../backend/system.js");
 
 (async () => {
     const system = new System([]);
-    await system.loadDemandsFromXML("../demandeGrand9.xml");
+    await system.loadDemandsFromXML("../demandeMoyen3.xml");
 })();
