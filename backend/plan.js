@@ -2,12 +2,6 @@
  * Class representing a city plan (Plan)
  */
 
-const fs = require("fs");
-const xml2js = require("xml2js");
-
-const Node = require("./Node");
-const Segment = require("./Segment");
-
 class Plan {
 
     /**
@@ -34,11 +28,19 @@ class Plan {
     }
 
     /**
-     * Loads a Plan from an XML file (placeholder for now)
+     * Loads a Plan from an XML file (only works in Node.js environment)
      * @param {string} filePath - Path to the XML file
      * @returns {Promise<Plan>} The loaded Plan
      */
     static async loadFromXML(filePath) {
+        // Check if we're in Node.js environment
+        if (typeof require === 'undefined') {
+            throw new Error('loadFromXML can only be used in Node.js environment');
+        }
+
+        const fs = require("fs");
+        const xml2js = require("xml2js");
+        
         // 1) Read the XML file
         const xmlContent = await fs.promises.readFile(filePath, "utf-8");
     
@@ -134,7 +136,11 @@ class Plan {
     }
 }
 
-// Export for Node.js
+// Export for Node.js and Browser
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Plan;
+}
+
+if (typeof window !== 'undefined') {
+    window.Plan = Plan;
 }
