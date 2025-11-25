@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Test DisplayTour</title>
 
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 
     <style>
         body {
@@ -14,18 +15,22 @@
             padding: 20px;
             font-family: Arial, sans-serif;
         }
+
         h1 {
             text-align: center;
         }
+
         #map {
             height: 600px;
             width: 100%;
             border: 2px solid #333;
         }
+
         .controls {
             text-align: center;
             margin: 20px 0;
         }
+
         button {
             padding: 10px 20px;
             margin: 0 10px;
@@ -34,12 +39,13 @@
         }
     </style>
 </head>
+
 <body>
-    <h1>Test de la classe DisplayTour</h1>
+    <h1>Test de la classe View (Tour)</h1>
 
     <div class="controls">
         <button onclick="showExampleTour()">Afficher une tournée d'exemple</button>
-        <button onclick="displayTour.clearMap()">Effacer la carte</button>
+        <button onclick="view.clearMap()">Effacer la carte</button>
     </div>
 
     <div id="map"></div>
@@ -48,18 +54,18 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
     <!-- Backend Classes -->
-    <script src="../../backend/node.js"></script>
-    <script src="../../backend/segment.js"></script>
-    <script src="../../backend/courier.js"></script>
-    <script src="../../backend/tourpoint.js"></script>
-    <script src="../../backend/tours.js"></script>
+    <script src="/backend/node.js"></script>
+    <script src="/backend/segment.js"></script>
+    <script src="/backend/courier.js"></script>
+    <script src="/backend/tourpoint.js"></script>
+    <script src="/backend/tours.js"></script>
 
-    <!-- DisplayTour Class -->
-    <script src="../scripts/displayTour.js"></script>
+    <!-- View Class -->
+    <script src="/view.js"></script>
 
     <script>
-        // Initialize DisplayTour
-        const displayTour = new DisplayTour('map');
+        // Initialize View
+        const view = new View("08:00", 'map');
 
         // Function to create and show an example tour
         function showExampleTour() {
@@ -93,7 +99,7 @@
             // For now, we'll just display the itinerary
 
             // Display the tour
-            displayTour.displayTour(tour);
+            view.displayTour(tour);
 
             console.log('Tour displayed!');
         }
@@ -104,5 +110,5 @@
         });
     </script>
 </body>
-</html>
 
+</html>
