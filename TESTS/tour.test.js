@@ -67,9 +67,8 @@ describe('Tour Class - addPoint Method', () => {
         const courier = new Courier('C001', 'John Doe');
         const tour = new Tour('08:00', courier);
 
-        const node = new Node('1', 45.75, 4.85, []);
         const demand = new Demand('1', '2', 300, 240);
-        const tourPoint = new TourPoint(node, TypePoint.PICKUP, 300, demand);
+        const tourPoint = new TourPoint('1', 45.75, 4.85, [], TypePoint.PICKUP, 300, demand);
 
         tour.addPoint(tourPoint, '08:10', '08:15');
 
@@ -80,12 +79,10 @@ describe('Tour Class - addPoint Method', () => {
         const courier = new Courier('C001', 'John Doe');
         const tour = new Tour('08:00', courier);
 
-        const node1 = new Node('1', 45.75, 4.85, []);
-        const node2 = new Node('2', 45.76, 4.86, []);
         const demand = new Demand('1', '2', 300, 240);
 
-        const pickup = new TourPoint(node1, TypePoint.PICKUP, 300, demand);
-        const delivery = new TourPoint(node2, TypePoint.DELIVERY, 240, demand);
+        const pickup = new TourPoint('1', 45.75, 4.85, [], TypePoint.PICKUP, 300, demand);
+        const delivery = new TourPoint('2', 45.76, 4.86, [], TypePoint.DELIVERY, 240, demand);
 
         tour.addPoint(pickup, '08:10', '08:15');
         tour.addPoint(delivery, '08:30', '08:34');
@@ -97,8 +94,8 @@ describe('Tour Class - addPoint Method', () => {
         const courier = new Courier('C001', 'John Doe');
         const tour = new Tour('08:00', courier);
 
-        const node = new Node('1', 45.75, 4.85, []);
-        const tourPoint = new TourPoint(node, TypePoint.PICKUP, 300, null);
+        const demand = new Demand('1', '2', 300, 240);
+        const tourPoint = new TourPoint('1', 45.75, 4.85, [], TypePoint.PICKUP, 300, demand);
 
         tour.addPoint(tourPoint, '08:10', '08:15');
 
@@ -175,12 +172,10 @@ describe('Tour Class - calculateTotalDuration Method', () => {
         const courier = new Courier('C001', 'John Doe');
         const tour = new Tour('08:00', courier);
 
-        const node1 = new Node('1', 45.75, 4.85, []);
-        const node2 = new Node('2', 45.76, 4.86, []);
         const demand = new Demand('1', '2', 300, 240);
 
-        const pickup = new TourPoint(node1, TypePoint.PICKUP, 300, demand);
-        const delivery = new TourPoint(node2, TypePoint.DELIVERY, 240, demand);
+        const pickup = new TourPoint('1', 45.75, 4.85, [], TypePoint.PICKUP, 300, demand);
+        const delivery = new TourPoint('2', 45.76, 4.86, [], TypePoint.DELIVERY, 240, demand);
 
         tour.addPoint(pickup, '08:10', '08:15');
         tour.addPoint(delivery, '08:30', '08:34');
@@ -193,8 +188,7 @@ describe('Tour Class - calculateTotalDuration Method', () => {
         const courier = new Courier('C001', 'John Doe');
         const tour = new Tour('08:00', courier);
 
-        const node = new Node('1', 45.75, 4.85, []);
-        const tourPoint = new TourPoint(node, TypePoint.PICKUP, 300, null);
+        const tourPoint = new TourPoint('1', 45.75, 4.85, [], TypePoint.PICKUP, 300, null);
 
         tour.addPoint(tourPoint, '08:10', '08:15');
         tour.calculateTotalDuration();
@@ -310,8 +304,7 @@ describe('Tour Class - toString Method', () => {
         const courier = new Courier('C001', 'John Doe');
         const tour = new Tour('08:00', courier);
 
-        const node = new Node('1', 45.75, 4.85, []);
-        const tourPoint = new TourPoint(node, TypePoint.PICKUP, 300, null);
+        const tourPoint = new TourPoint('1', 45.75, 4.85, [], TypePoint.PICKUP, 300, null);
         tour.addPoint(tourPoint, '08:10', '08:15');
 
         const str = tour.toString();
@@ -394,8 +387,7 @@ describe('Tour Class - Edge Cases', () => {
         const courier = new Courier('C001', 'John Doe');
         const tour = new Tour('08:00', courier);
 
-        const warehouse = new Node('W', 45.75, 4.85, []);
-        const warehousePoint = new TourPoint(warehouse, TypePoint.ENTREPOT, 0, null);
+        const warehousePoint = new TourPoint('W', 45.75, 4.85, [], TypePoint.ENTREPOT, 0, null);
 
         tour.addPoint(warehousePoint, '08:00', '08:00');
 
@@ -421,8 +413,7 @@ describe('Tour Class - Edge Cases', () => {
         const tour = new Tour('08:00', courier);
 
         for (let i = 0; i < 100; i++) {
-            const node = new Node(String(i), 45.75, 4.85, []);
-            const tourPoint = new TourPoint(node, TypePoint.PICKUP, 300, null);
+            const tourPoint = new TourPoint(String(i), 45.75, 4.85, [], TypePoint.PICKUP, 300, null);
             tour.addPoint(tourPoint, '08:00', '08:05');
         }
 
