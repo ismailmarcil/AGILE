@@ -5,12 +5,15 @@ class Demand {
 
     /**
      * Constructor for the Demand class
+     * @param {string|number} id - Demande ID
      * @param {string|number} pickupAddress - Node ID for pickup
      * @param {string|number} deliveryAddress - Node ID for delivery
      * @param {number} pickupDuration - Duration at pickup (seconds)
      * @param {number} deliveryDuration - Duration at delivery (seconds)
      */
-    constructor(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
+
+    constructor(id, pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
+        this.id = id;
         this.pickupAddress = pickupAddress;
         this.deliveryAddress = deliveryAddress;
         this.pickupDuration = pickupDuration;
@@ -23,6 +26,7 @@ class Demand {
      */
     toJSON() {
         return {
+            id: this.id,
             pickupAddress: this.pickupAddress,
             deliveryAddress: this.deliveryAddress,
             pickupDuration: this.pickupDuration,
@@ -35,7 +39,7 @@ class Demand {
      * @returns {string}
      */
     toString() {
-        return `Demand - Pickup at ${this.pickupAddress} (${this.pickupDuration}s), Delivery at ${this.deliveryAddress} (${this.deliveryDuration}s)`;
+        return `Demand - Pickup number ${this.id} at ${this.pickupAddress} (${this.pickupDuration}s), Delivery at ${this.deliveryAddress} (${this.deliveryDuration}s)`;
     }
 }
 
