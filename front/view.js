@@ -296,4 +296,7 @@ class View {
     }
 }
 
-module.exports = View;
+// Export for Node.js
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = View;
+}

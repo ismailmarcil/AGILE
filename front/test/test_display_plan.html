@@ -55,15 +55,13 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
     <!-- Backend classes -->
-    <script src="../../backend/node.js"></script>
-    <script src="../../backend/segment.js"></script>
-
-    <!-- DisplayPlan class -->
-    <script src="../scripts/displayPlan.js"></script>
+    <script src="/backend/node.js"></script>
+    <script src="/backend/segment.js"></script>
+    <script src="/view.js"></script>
 
     <script>
-        // Instance DisplayPlan
-        let displayPlan = new DisplayPlan("map");
+        // Instance View
+        let view = new View(8, "map");
 
         async function loadPlan() {
             console.log("Chargement du plan...");
@@ -109,7 +107,7 @@
             };
 
             // Affichage du plan
-            displayPlan.displayPlan(planJSON);
+            view.displayPlan(planJSON);
 
             console.log("Plan affiché !");
         }

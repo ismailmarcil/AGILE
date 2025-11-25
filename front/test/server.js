@@ -40,6 +40,9 @@ const server = http.createServer((req, res) => {
     } else if (filePath.startsWith('/styles/') || filePath.startsWith('/scripts/')) {
         // Handle styles and scripts from parent front folder
         fullPath = path.join(__dirname, '..', filePath);
+    } else if (filePath === '/view.js') {
+        // Handle view.js from parent front folder
+        fullPath = path.join(__dirname, '..', 'view.js');
     } else if (filePath.startsWith('/backend/')) {
         // Handle backend files from backend folder (2 levels up)
         fullPath = path.join(__dirname, '..', '..', filePath);
