@@ -1,6 +1,3 @@
-const fs = require("fs");
-const xml2js = require("xml2js");
-
 class System {
     plan;
 
@@ -129,7 +126,16 @@ class System {
     //Ajouter les objets Demande à this.demandsList
 
     async loadDemandsFromXML(filePath) {
+        // This method requires Node.js environment (fs and xml2js)
+        if (typeof require === 'undefined') {
+            console.error("loadDemandsFromXML can only be used in Node.js environment");
+            return;
+        }
+
         try {
+            const fs = require("fs");
+            const xml2js = require("xml2js");
+            
             //contenu du fichier en string
             const xmlContent = await fs.promises.readFile(filePath, "utf-8");
 
@@ -142,8 +148,6 @@ class System {
         } catch (error) {
             console.error("Error while reading demand XML:", error);
         }
-
-
     }
 
 }
