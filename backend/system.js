@@ -1,3 +1,6 @@
+const fs = require("fs");
+const xml2js = require("xml2js");
+
 class System {
     plan;
 
@@ -121,6 +124,27 @@ class System {
         return { success: true, plan: planJSON }
     }
 
+    //lire un fichier XML de demandes de livraison.
+    //parser parser <livraison .../>, pour chaque livraison créer un objet Demannd
+    //Ajouter les objets Demande à this.demandsList
+
+    async loadDemandsFromXML(filePath) {
+        try {
+            //contenu du fichier en string
+            const xmlContent = await fs.promises.readFile(filePath, "utf-8");
+
+            //Parser en objet JSon
+            const json = await xml2js.parseStringPromise(xmlContent);
+
+            //afficher la structure pour vérifier
+            console.log("Raw JSON from XML:", JSON.stringify(json, null, 2));
+
+        } catch (error) {
+            console.error("Error while reading demand XML:", error);
+        }
+
+
+    }
 
 }
 
@@ -132,3 +156,4 @@ if (typeof module !== "undefined" && module.exports) {
 if (typeof window !== "undefined") {
     window.System = System;
 }
+
