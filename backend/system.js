@@ -1,8 +1,9 @@
 class System {
     plan;
 
-    constructor(couriers) {
-        this.couriers = couriers;
+    constructor(nbCouriers) {
+        this.nbCouriers = nbCouriers;
+        this.listCouriers = [];
         this.demandsList = [];
         this.toursList = [];
     }
