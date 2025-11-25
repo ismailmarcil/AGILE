@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8" />
     <title>Test DisplayPlan</title>
@@ -41,11 +42,11 @@
 
 <body>
 
-    <h1>🗺️ Test : Affichage du Plan (DisplayPlan)</h1>
+    <h1>🗺️ Test : Affichage du Plan (View)</h1>
 
     <div class="controls">
-        <input type="file" id="xmlFileInput"  accept=".xml" onchange="handleLoad()" />
-        <button onclick="displayPlan.clearMap()">Effacer la carte</button>
+        <input type="file" id="xmlFileInput" accept=".xml" onchange="handleLoad()" />
+        <button onclick="view.clearMap()">Effacer la carte</button>
     </div>
 
     <div id="map"></div>
@@ -54,17 +55,17 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
     <!-- Backend classes -->
-    <script src="../../backend/node.js"></script>
-    <script src="../../backend/segment.js"></script>
-    <script src="../../backend/plan.js"></script>
-    <script src="../../backend/system.js"></script>
+    <script src="/backend/node.js"></script>
+    <script src="/backend/segment.js"></script>
+    <script src="/backend/plan.js"></script>
+    <script src="/backend/system.js"></script>
 
-    <!-- DisplayPlan class -->
-    <script src="../scripts/displayPlan.js"></script>
+    <!-- View class -->
+    <script src="/view.js"></script>
 
     <script>
         const system = new System();
-        const displayPlan = new DisplayPlan("map");
+        const view = new View("08:00", "map");
 
         async function handleLoad() {
             const input = document.getElementById("xmlFileInput");
@@ -75,9 +76,10 @@
                 return;
             }
 
-            displayPlan.displayPlan(result.plan);
+            view.displayPlan(result.plan);
         }
     </script>
 
 </body>
+
 </html>
