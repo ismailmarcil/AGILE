@@ -5,8 +5,8 @@ class Segment {
 
     /**
      * Constructor for the Segment class
-     * @param {string|number} origin - Origin node ID
-     * @param {string|number} destination - Destination node ID
+     * @param {Node} origin - Origin node reference
+     * @param {Node} destination - Destination node reference
      * @param {string} streetName - Name of the street
      * @param {number} length - Length in meters
      */
@@ -23,8 +23,8 @@ class Segment {
      */
     toJSON() {
         return {
-            origin: this.origin,
-            destination: this.destination,
+            origin: this.origin.id,
+            destination: this.destination.id,
             streetName: this.streetName,
             length: this.length
         };
@@ -35,7 +35,7 @@ class Segment {
      * @returns {string}
      */
     toString() {
-        return `Segment ${this.origin} → ${this.destination} (${this.streetName}, ${this.length}m)`;
+        return `Segment ${this.origin.id} → ${this.destination.id} (${this.streetName}, ${this.length}m)`;
     }
 }
 

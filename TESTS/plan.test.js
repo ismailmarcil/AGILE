@@ -31,8 +31,11 @@ describe('Plan Class - Constructor and Basic Properties', () => {
     });
 
     it('should create a plan with segments array', () => {
-        const segment1 = new Segment('1', '2', 'Street A', 100);
-        const segment2 = new Segment('2', '3', 'Street B', 200);
+        const node1 = new Node('1', 45.75, 4.85, []);
+        const node2 = new Node('2', 45.76, 4.86, []);
+        const node3 = new Node('3', 45.77, 4.87, []);
+        const segment1 = new Segment(node1, node2, 'Street A', 100);
+        const segment2 = new Segment(node2, node3, 'Street B', 200);
 
         const plan = new Plan(new Map(), [segment1, segment2], null);
         assert.strictEqual(plan.segments.length, 2);
@@ -50,13 +53,15 @@ describe('Plan Class - Constructor and Basic Properties', () => {
     it('should create a plan with all parameters', () => {
         const nodes = new Map();
         const node1 = new Node('1', 45.75, 4.85, []);
+        const node2 = new Node('2', 45.76, 4.86, []);
         nodes.set('1', node1);
+        nodes.set('2', node2);
 
-        const segment1 = new Segment('1', '2', 'Street', 100);
+        const segment1 = new Segment(node1, node2, 'Street', 100);
         const warehouse = node1;
 
         const plan = new Plan(nodes, [segment1], warehouse);
-        assert.strictEqual(plan.nodes.size, 1);
+        assert.strictEqual(plan.nodes.size, 2);
         assert.strictEqual(plan.segments.length, 1);
         assert.strictEqual(plan.warehouse, warehouse);
     });
@@ -118,9 +123,12 @@ describe('Plan Class - getEdgesFrom Method', () => {
     });
 
     it('should return outgoing edges from a node', () => {
-        const segment1 = new Segment('1', '2', 'Street A', 100);
-        const segment2 = new Segment('1', '3', 'Street B', 200);
-        const segment3 = new Segment('2', '3', 'Street C', 150);
+        const node1 = new Node('1', 45.75, 4.85, []);
+        const node2 = new Node('2', 45.76, 4.86, []);
+        const node3 = new Node('3', 45.77, 4.87, []);
+        const segment1 = new Segment(node1, node2, 'Street A', 100);
+        const segment2 = new Segment(node1, node3, 'Street B', 200);
+        const segment3 = new Segment(node2, node3, 'Street C', 150);
 
         const plan = new Plan(new Map(), [segment1, segment2, segment3], null);
         const edges = plan.getEdgesFrom('1');
@@ -131,7 +139,9 @@ describe('Plan Class - getEdgesFrom Method', () => {
     });
 
     it('should return empty array for node with no outgoing edges', () => {
-        const segment1 = new Segment('1', '2', 'Street A', 100);
+        const node1 = new Node('1', 45.75, 4.85, []);
+        const node2 = new Node('2', 45.76, 4.86, []);
+        const segment1 = new Segment(node1, node2, 'Street A', 100);
         const plan = new Plan(new Map(), [segment1], null);
 
         const edges = plan.getEdgesFrom('3');
@@ -139,8 +149,11 @@ describe('Plan Class - getEdgesFrom Method', () => {
     });
 
     it('should work with numeric node ids', () => {
-        const segment1 = new Segment(1, 2, 'Street A', 100);
-        const segment2 = new Segment(1, 3, 'Street B', 200);
+        const node1 = new Node(1, 45.75, 4.85, []);
+        const node2 = new Node(2, 45.76, 4.86, []);
+        const node3 = new Node(3, 45.77, 4.87, []);
+        const segment1 = new Segment(node1, node2, 'Street A', 100);
+        const segment2 = new Segment(node1, node3, 'Street B', 200);
 
         const plan = new Plan(new Map(), [segment1, segment2], null);
         const edges = plan.getEdgesFrom(1);
@@ -149,7 +162,9 @@ describe('Plan Class - getEdgesFrom Method', () => {
     });
 
     it('should handle mixed string/number comparison', () => {
-        const segment1 = new Segment('1', '2', 'Street A', 100);
+        const node1 = new Node('1', 45.75, 4.85, []);
+        const node2 = new Node('2', 45.76, 4.86, []);
+        const segment1 = new Segment(node1, node2, 'Street A', 100);
         const plan = new Plan(new Map(), [segment1], null);
 
         // Using == comparison, should find the edge
@@ -163,9 +178,11 @@ describe('Plan Class - toJSON Method', () => {
     it('should return correct JSON representation', () => {
         const nodes = new Map();
         const node1 = new Node('1', 45.75, 4.85, []);
+        const node2 = new Node('2', 45.76, 4.86, []);
         nodes.set('1', node1);
+        nodes.set('2', node2);
 
-        const segment1 = new Segment('1', '2', 'Street', 100);
+        const segment1 = new Segment(node1, node2, 'Street', 100);
         const warehouse = node1;
 
         const plan = new Plan(nodes, [segment1], warehouse);
@@ -213,14 +230,16 @@ describe('Plan Class - toString Method', () => {
     it('should return correct string representation', () => {
         const nodes = new Map();
         const node1 = new Node('1', 45.75, 4.85, []);
+        const node2 = new Node('2', 45.76, 4.86, []);
         nodes.set('1', node1);
+        nodes.set('2', node2);
 
-        const segment1 = new Segment('1', '2', 'Street', 100);
+        const segment1 = new Segment(node1, node2, 'Street', 100);
         const plan = new Plan(nodes, [segment1], null);
 
         const str = plan.toString();
         assert.isTrue(str.includes('Plan'));
-        assert.isTrue(str.includes('1'));
+        assert.isTrue(str.includes('2'));
         assert.isTrue(str.includes('nodes'));
         assert.isTrue(str.includes('segments'));
     });
@@ -237,8 +256,11 @@ describe('Plan Class - toString Method', () => {
     });
 
     it('should include segment count in string', () => {
-        const segment1 = new Segment('1', '2', 'Street A', 100);
-        const segment2 = new Segment('2', '3', 'Street B', 200);
+        const node1 = new Node('1', 45.75, 4.85, []);
+        const node2 = new Node('2', 45.76, 4.86, []);
+        const node3 = new Node('3', 45.77, 4.87, []);
+        const segment1 = new Segment(node1, node2, 'Street A', 100);
+        const segment2 = new Segment(node2, node3, 'Street B', 200);
 
         const plan = new Plan(new Map(), [segment1, segment2], null);
         const str = plan.toString();
@@ -340,9 +362,16 @@ describe('Plan Class - Edge Cases', () => {
     });
 
     it('should handle large number of segments', () => {
+        const nodes = new Map();
+        for (let i = 0; i < 1001; i++) {
+            nodes.set(String(i), new Node(String(i), 45.75, 4.85, []));
+        }
+        
         const segments = [];
         for (let i = 0; i < 1000; i++) {
-            segments.push(new Segment(String(i), String(i+1), 'Street', 100));
+            const node1 = nodes.get(String(i));
+            const node2 = nodes.get(String(i + 1));
+            segments.push(new Segment(node1, node2, 'Street', 100));
         }
 
         const plan = new Plan(new Map(), segments, null);

@@ -74,21 +74,26 @@ class Plan {
         // ----------------------------
         if (root.troncon) {
             for (const t of root.troncon) {
-                const origin = t.$.origine;
-                const destination = t.$.destination;
+                const originId = t.$.origine;
+                const destinationId = t.$.destination;
                 const streetName = t.$.nomRue;
                 const length = parseFloat(t.$.longueur);
     
-                const segment = new Segment(origin, destination, streetName, length);
+                const originNode = plan.nodes.get(originId);
+                const destinationNode = plan.nodes.get(destinationId);
+    
+                if (!originNode || !destinationNode) {
+                    console.warn(`Skipping segment: node ${originId} or ${destinationId} not found`);
+                    continue;
+                }
+    
+                const segment = new Segment(originNode, destinationNode, streetName, length);
     
                 // Add the segment to the list of segments of the plan
                 plan.segments.push(segment);
     
                 // Add the segment the list of segments of the node
-                const originNode = plan.nodes.get(origin);
-                if (originNode) {
-                    originNode.segments.push(segment);
-                }
+                originNode.segments.push(segment);
             }
         }
     
@@ -110,7 +115,7 @@ class Plan {
      * @returns {Array<Troncon>}
      */
     getEdgesFrom(nodeId) {
-        return this.segments.filter(e => e.origin == nodeId);
+        return this.segments.filter(e => e.origin.id == nodeId);
     }
 
     /**
