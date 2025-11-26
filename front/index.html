@@ -4,9 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Delivery Management System</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="styles/styles.css">
 </head>
+
 <body>
+    <!-- Leaflet library -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    
+    <!-- Backend classes -->
+    <script src="/backend/node.js"></script>
+    <script src="/backend/segment.js"></script>
+    <script src="/backend/plan.js"></script>
+    <script src="/backend/system.js"></script>
+    <script src="/view.js"></script>
+
     <!-- Header -->
     <header class="header">
         <div class="container">
@@ -55,10 +67,11 @@
 
                 <div class="sidebar-actions">
                     <h3>Actions rapides</h3>
-                    <button class="btn btn-primary">
+                    <label for="xmlFileInput" class="btn btn-primary" role="button" tabindex="0">
                         <span class="icon">📁</span>
                         Charger une carte
-                    </button>
+                    </label>
+                    <input id="xmlFileInput" type="file" accept=".xml" style="display: none;" onchange="handleLoad()">
                     <button class="btn btn-primary">
                         <span class="icon">📋</span>
                         Charger des demandes
@@ -87,7 +100,7 @@
                         </div>
                     </div>
                     <div class="map-container">
-                        <div class="map-placeholder">
+                        <div id="map-placeholder" class="map-placeholder">
                             <p>🗺️ Chargez une carte pour commencer</p>
                         </div>
                     </div>
@@ -321,4 +334,21 @@
         </div>
     </footer>
 </body>
+
+<script>
+        const system = new System();
+        const view = new View("08:00", "map-placeholder");
+
+        async function handleLoad() {
+            const input = document.getElementById("xmlFileInput");
+            const result = await system.loadPlan(input);
+
+            if (!result.success) {
+                alert(result.error);
+                return;
+            }
+
+            view.displayPlan(result.plan);
+        }
+</script>
 </html>

@@ -29,7 +29,7 @@ const server = http.createServer((req, res) => {
 
     // Default to index.html
     if (filePath === '/') {
-        filePath = '/test_display_plan.html';
+        filePath = '/index.html';
     }
 
     // Construct file path
@@ -40,9 +40,9 @@ const server = http.createServer((req, res) => {
     } else if (filePath.startsWith('/styles/') || filePath.startsWith('/scripts/')) {
         // Handle styles and scripts from parent front folder
         fullPath = path.join(__dirname, '..', filePath);
-    } else if (filePath === '/view.js') {
-        // Handle view.js from parent front folder
-        fullPath = path.join(__dirname, '..', 'view.js');
+    } else if (filePath === '/view.js' || filePath === '/index.html') {
+        // Handle view.js and index.html from parent front folder
+        fullPath = path.join(__dirname, '..', filePath);
     } else if (filePath.startsWith('/backend/')) {
         // Handle backend files from backend folder (2 levels up)
         fullPath = path.join(__dirname, '..', '..', filePath);
