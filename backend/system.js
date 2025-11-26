@@ -82,30 +82,39 @@ class System {
             return { success: false, error: "Le XML n'a pas la structure d'un plan de carte (noeud/ troncon incorrects)."};
        }
 
-
-       const nodes = Array.from(noeuds).map(n => new Node(
+    const nodes = Array.from(noeuds).map(n => new Node(
         n.getAttribute("id"),
         parseFloat(n.getAttribute("latitude")),
         parseFloat(n.getAttribute("longitude")),
         []
-        ));
+    ));
 
-        const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
-        const segments = Array.from(troncons).map(s => {
-            const seg = new Segment(
-                s.getAttribute("origine"),
-                s.getAttribute("destination"),
-                s.getAttribute("nomRue"),
-                parseFloat(s.getAttribute("longueur"))
-            );
+    const segments = Array.from(troncons).map(t => {
+        const originId = t.getAttribute("origine");
+        const destId = t.getAttribute("destination");
+        const name = t.getAttribute("nomRue") || "";
+        const length = parseFloat(t.getAttribute("longueur"));
 
-            if (nodeMap.has(seg.origin)) {
-                nodeMap.get(seg.origin).segments.push(seg);
-            }
+        const originNode = nodeMap.get(originId) || null;
+        const destinationNode = nodeMap.get(destId) || null;
 
-            return seg;
-        });
+        const seg = new Segment(
+            originNode,
+            destinationNode,
+            name,
+            length
+        );
+
+        if (originNode) {
+            originNode.segments.push(seg);
+        }
+
+        return seg;
+    });
+
+        console.log("Segments loaded:", segments);
 
         const planJSON = {
             nodes: nodes.map(n => n.toJSON()),
