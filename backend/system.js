@@ -1,3 +1,5 @@
+const Demand = require("./demand");
+
 class System {
     plan;
 
@@ -144,15 +146,45 @@ class System {
         try {
             const fs = require("fs");
             const xml2js = require("xml2js");
-            
+
+
             //contenu du fichier en string
             const xmlContent = await fs.promises.readFile(filePath, "utf-8");
 
             //Parser en objet JSon
             const json = await xml2js.parseStringPromise(xmlContent);
 
-            //afficher la structure pour vérifier
-            console.log("Raw JSON from XML:", JSON.stringify(json, null, 2));
+            //Récupérer la racine demandeDeLivraisons du json (ce code ne marche que pour les VF des XML)
+            const root = json.demandeDeLivraisons;
+            if (!root || !root.livraison) {
+                console.log("Aucune balise <livraison> trouvée dans le XML.");
+                return;
+            }
+            //liste des livraisons du Json
+            // livraisons c'est une liste dont chaque élément est une <livraison> du XML
+            //chaque élément est un objet ayant un champ $(contient les attributs de la balise).
+
+            const livraisons = root.livraison;
+            console.log("Nombre de livraisons :", livraisons.length);
+
+            //On parcours chaque livraison
+            livraisons.forEach((livraisonNode, index) => {
+                const attrs = livraisonNode.$ || {};  //pour chaque livraisonNode on recup soit le champ $ (avec les attributs) soit un objet vide
+                //récupérer les attributs
+                const pickupAddress = attrs.adresseEnlevement;
+                const deliveryAddress = attrs.adresseLivraison;
+                const pickupDurationStr = attrs.dureeEnlevement;
+                const deliveryDurationStr = attrs.dureeLivraison;
+                //convertir les durées en nombres
+                const pickupDuration = Number(pickupDurationStr);
+                const deliveryDuration = Number(deliveryDurationStr);
+
+                //Créer un objet Demande et l'ajouter à la liste des demandes.
+                const demande = new Demand(index + 1,pickupAddress,deliveryAddress,pickupDuration,deliveryDuration);
+                this.demandsList.push(demande);
+
+
+            });
 
         } catch (error) {
             console.error("Error while reading demand XML:", error);
