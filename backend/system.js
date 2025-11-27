@@ -198,6 +198,16 @@ class System {
         return demande;
     }
 
+    removeDemandById(id) {
+        const index = this.demandsList.findIndex(d => d.id === id);
+        if (index !== -1) {
+            this.demandsList.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+
+
 }
 
 // Export for Node and Browser
