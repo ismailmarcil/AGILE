@@ -117,7 +117,9 @@ describe('TourPoint Class - toJSON Method', () => {
     });
 
     it('should serialize demand correctly in JSON', () => {
-        const demand = new Demand('D1', '123', '456', 300, 240);
+        const pickup = new Node('123', 45.75, 4.85, []);
+        const delivery = new Node('456', 45.76, 4.86, []);
+        const demand = new Demand(pickup, delivery, 300, 240, 'D1');
         const tourPoint = new TourPoint('123', 45.75, 4.85, [], TypePoint.PICKUP, 300, demand);
 
         const json = tourPoint.toJSON();

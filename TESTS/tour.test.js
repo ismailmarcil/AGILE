@@ -58,6 +58,8 @@ describe('Tour Class - Constructor and Basic Properties', () => {
     it('should handle null courier', () => {
         const tour = new Tour('08:00', null);
         assert.strictEqual(tour.courier, null);
+        assert.strictEqual(tour.departureTime, '08:00');
+        assert.isTrue(tour.id.includes('UNKNOWN')); // ID should contain UNKNOWN when courier is null
     });
 });
 
@@ -424,7 +426,9 @@ describe('Tour Class - Edge Cases', () => {
         const courier = new Courier('C001', 'John Doe');
         const tour = new Tour(null, courier);
 
+        // With backward compatibility, null is treated as departure time
         assert.strictEqual(tour.departureTime, null);
+        assert.strictEqual(tour.courier, courier);
     });
 
     it('should handle undefined courier', () => {

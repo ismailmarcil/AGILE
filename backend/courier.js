@@ -2,14 +2,15 @@
  * Class representing a courier (delivery person)
  */
 class Courier {
+    static nextId = 1;
 
     /**
      * Constructor for the Courier class
-     * @param {string|number} id - Unique identifier
+     * @param {string|number|null} id - Unique identifier (auto-generated if null)
      * @param {string} name - Courier name
      */
-    constructor(id, name) {
-        this.id = id;
+    constructor(id = null, name) {
+        this.id = id !== null ? id : `C${Courier.nextId++}`;
         this.name = name;
     }
 

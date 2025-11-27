@@ -133,14 +133,16 @@ describe('Courier Class - toString Method', () => {
 
 describe('Courier Class - Edge Cases', () => {
 
-    it('should handle null id', () => {
+    it('should auto-generate id when null', () => {
         const courier = new Courier(null, 'John Doe');
-        assert.strictEqual(courier.id, null);
+        assert.isTrue(courier.id.startsWith('C'));
+        assert.strictEqual(typeof courier.id, 'string');
     });
 
-    it('should handle undefined id', () => {
+    it('should auto-generate id when undefined', () => {
         const courier = new Courier(undefined, 'John Doe');
-        assert.strictEqual(courier.id, undefined);
+        assert.isTrue(courier.id.startsWith('C'));
+        assert.strictEqual(typeof courier.id, 'string');
     });
 
     it('should handle null name', () => {

@@ -214,7 +214,9 @@ describe('Plan Class - toJSON Method', () => {
         const plan = new Plan(nodes, [], warehouse);
         const json = plan.toJSON();
 
-        assert.strictEqual(json.warehouse, warehouse);
+        assert.strictEqual(json.warehouse.id, 'W');
+        assert.strictEqual(json.warehouse.latitude, 45.75);
+        assert.strictEqual(json.warehouse.longitude, 4.85);
     });
 
     it('should handle null warehouse in JSON', () => {

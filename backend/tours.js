@@ -4,12 +4,29 @@
 class Tour {
     /**
      * Constructor for the Tour class
-     * @param {string} departureTime - Departure time in HH:MM format (LocalTime)
-     * @param {Courier} courier - The courier assigned to the tour
+     * @param {string|null} idOrDepartureTime - Tour ID (auto-generated if null) OR departure time for backward compatibility
+     * @param {string|Courier} departureTimeOrCourier - Departure time in HH:MM OR courier for backward compatibility
+     * @param {Courier|undefined} courier - The courier assigned to the tour (optional if using old signature)
      */
-    constructor(departureTime, courier) {
-        this.departureTime = departureTime; // LocalTime format: "HH:MM"
-        this.courier = courier; // Courier object
+    constructor(idOrDepartureTime, departureTimeOrCourier, courier) {
+        // Handle backward compatibility: if second param is a Courier (or null/undefined), old signature is used
+        // Old signature check: if third param is undefined AND second param is not a time string
+        const isOldSignature = courier === undefined && 
+                              (departureTimeOrCourier === null || 
+                               departureTimeOrCourier === undefined ||
+                               (typeof departureTimeOrCourier === 'object'));
+        
+        if (isOldSignature) {
+            // Old signature: Tour(departureTime, courier)
+            this.departureTime = idOrDepartureTime;
+            this.courier = departureTimeOrCourier;
+            this.id = `T_${this.courier ? this.courier.id : 'UNKNOWN'}_${Date.now()}`;
+        } else {
+            // New signature: Tour(id, departureTime, courier)
+            this.id = idOrDepartureTime !== null ? idOrDepartureTime : `T_${courier ? courier.id : 'UNKNOWN'}_${Date.now()}`;
+            this.departureTime = departureTimeOrCourier;
+            this.courier = courier;
+        }
 
         // List<TourPoint, LocalTime, LocalTime> : pickupDeliveryPointsList
         // For each point, we store the arrival time and departure time for the tour
@@ -104,6 +121,7 @@ class Tour {
      */
     toJSON() {
         return {
+            id: this.id,
             departureTime: this.departureTime,
             courier: this.courier,
             pickupDeliveryPointsList: this.pickupDeliveryPointsList,
@@ -118,7 +136,7 @@ class Tour {
      * @returns {string} Textual summary of the tour
      */
     toString() {
-        return `Tour - Departure: ${this.departureTime}, Courier: ${this.courier ? this.courier.name : 'Unassigned'}, Points: ${this.pickupDeliveryPointsList.length}, Duration: ${this.totalDuration}min, Distance: ${this.totalDistance}m`;
+        return `Tour ${this.id} - Departure: ${this.departureTime}, Courier: ${this.courier ? this.courier.name : 'Unassigned'}, Points: ${this.pickupDeliveryPointsList.length}, Duration: ${this.totalDuration}min, Distance: ${this.totalDistance}m`;
     }
 
     /**
