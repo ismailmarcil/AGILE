@@ -1,3 +1,5 @@
+const Demand = require("./demand");
+
 class System {
     plan;
 
@@ -6,7 +8,8 @@ class System {
         this.listCouriers = [];
         this.demandsList = [];
         this.toursList = [];
-    }
+        this.nextDemandId = 1; //paramètre pour gérer les id des demandes ajoutées.
+     }
 
     async loadPlan(fileInput) {
 
@@ -82,30 +85,39 @@ class System {
             return { success: false, error: "Le XML n'a pas la structure d'un plan de carte (noeud/ troncon incorrects)."};
        }
 
-
-       const nodes = Array.from(noeuds).map(n => new Node(
+    const nodes = Array.from(noeuds).map(n => new Node(
         n.getAttribute("id"),
         parseFloat(n.getAttribute("latitude")),
         parseFloat(n.getAttribute("longitude")),
         []
-        ));
+    ));
 
-        const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
-        const segments = Array.from(troncons).map(s => {
-            const seg = new Segment(
-                s.getAttribute("origine"),
-                s.getAttribute("destination"),
-                s.getAttribute("nomRue"),
-                parseFloat(s.getAttribute("longueur"))
-            );
+    const segments = Array.from(troncons).map(t => {
+        const originId = t.getAttribute("origine");
+        const destId = t.getAttribute("destination");
+        const name = t.getAttribute("nomRue") || "";
+        const length = parseFloat(t.getAttribute("longueur"));
 
-            if (nodeMap.has(seg.origin)) {
-                nodeMap.get(seg.origin).segments.push(seg);
-            }
+        const originNode = nodeMap.get(originId) || null;
+        const destinationNode = nodeMap.get(destId) || null;
 
-            return seg;
-        });
+        const seg = new Segment(
+            originNode,
+            destinationNode,
+            name,
+            length
+        );
+
+        if (originNode) {
+            originNode.segments.push(seg);
+        }
+
+        return seg;
+    });
+
+        console.log("Segments loaded:", segments);
 
         const planJSON = {
             nodes: nodes.map(n => n.toJSON()),
@@ -135,20 +147,66 @@ class System {
         try {
             const fs = require("fs");
             const xml2js = require("xml2js");
-            
+
+
             //contenu du fichier en string
             const xmlContent = await fs.promises.readFile(filePath, "utf-8");
 
             //Parser en objet JSon
             const json = await xml2js.parseStringPromise(xmlContent);
 
-            //afficher la structure pour vérifier
-            console.log("Raw JSON from XML:", JSON.stringify(json, null, 2));
+            //Récupérer la racine demandeDeLivraisons du json (ce code ne marche que pour les VF des XML)
+            const root = json.demandeDeLivraisons;
+            if (!root || !root.livraison) {
+                console.log("Aucune balise <livraison> trouvée dans le XML.");
+                return;
+            }
+            //liste des livraisons du Json
+            // livraisons c'est une liste dont chaque élément est une <livraison> du XML
+            //chaque élément est un objet ayant un champ $(contient les attributs de la balise).
+
+            const livraisons = root.livraison;
+            console.log("Nombre de livraisons :", livraisons.length);
+
+            //On parcours chaque livraison
+            livraisons.forEach((livraisonNode) => {
+                const attrs = livraisonNode.$ || {};  //pour chaque livraisonNode on recup soit le champ $ (avec les attributs) soit un objet vide
+                //récupérer les attributs
+                const pickupAddress = attrs.adresseEnlevement;
+                const deliveryAddress = attrs.adresseLivraison;
+                const pickupDurationStr = attrs.dureeEnlevement;
+                const deliveryDurationStr = attrs.dureeLivraison;
+                //convertir les durées en nombres
+                const pickupDuration = Number(pickupDurationStr);
+                const deliveryDuration = Number(deliveryDurationStr);
+
+                //Créer un objet Demande et l'ajouter à la liste des demandes.
+                const demande = new Demand( this.nextDemandId++,pickupAddress,deliveryAddress,pickupDuration,deliveryDuration);
+                this.demandsList.push(demande);
+
+
+            });
 
         } catch (error) {
             console.error("Error while reading demand XML:", error);
         }
     }
+
+    addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
+        const demande = new Demand(this.nextDemandId++, pickupAddress, deliveryAddress, pickupDuration, deliveryDuration);
+        this.demandsList.push(demande);
+        return demande;
+    }
+
+    removeDemandById(id) {
+        const index = this.demandsList.findIndex(d => d.id === id);
+        if (index !== -1) {
+            this.demandsList.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+
 
 }
 

@@ -1,12 +1,27 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Delivery Management System</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="styles/styles.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
+
 <body>
+    <!-- Leaflet library -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <!-- Backend classes -->
+    <script src="/backend/node.js"></script>
+    <script src="/backend/segment.js"></script>
+    <script src="/backend/plan.js"></script>
+    <script src="/backend/system.js"></script>
+    <script src="/view.js"></script>
+
     <!-- Header -->
     <header class="header">
         <div class="container">
@@ -55,22 +70,25 @@
 
                 <div class="sidebar-actions">
                     <h3>Actions rapides</h3>
-                    <button class="btn btn-primary">
+                    <input type="file" id="xmlMapInput" accept=".xml" style="display: none;" onchange="handleLoadMap()">
+                    <button class="btn btn-primary" onclick="document.getElementById('xmlMapInput').click()">
                         <span class="icon">📁</span>
                         Charger une carte
-                    </button>
-                    <button class="btn btn-primary">
-                        <span class="icon">📋</span>
-                        Charger des demandes
-                    </button>
-                    <button class="btn btn-success">
-                        <span class="icon">✨</span>
-                        Créer une tournée optimale
-                    </button>
-                    <button class="btn btn-secondary">
-                        <span class="icon">💾</span>
-                        Sauvegarder les tournées
-                    </button>
+                        </label>
+                        <input id="xmlFileInput" type="file" accept=".xml" style="display: none;"
+                            onchange="handleLoad()">
+                        <button class="btn btn-primary">
+                            <span class="icon">📋</span>
+                            Charger des demandes
+                        </button>
+                        <button class="btn btn-success">
+                            <span class="icon">✨</span>
+                            Créer une tournée optimale
+                        </button>
+                        <button class="btn btn-secondary">
+                            <span class="icon">💾</span>
+                            Sauvegarder les tournées
+                        </button>
                 </div>
             </aside>
 
@@ -87,8 +105,10 @@
                         </div>
                     </div>
                     <div class="map-container">
-                        <div class="map-placeholder">
-                            <p>🗺️ Chargez une carte pour commencer</p>
+                        <div id="map" style="width: 100%; height: 500px;">
+                            <div class="map-placeholder" id="mapPlaceholder">
+                                <p>🗺️ Chargez une carte pour commencer</p>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -320,5 +340,43 @@
             <p>&copy; 2025 Delivery Management System - Sprint 1</p>
         </div>
     </footer>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <!-- Backend classes -->
+    <script src="/backend/node.js"></script>
+    <script src="/backend/segment.js"></script>
+    <script src="/backend/plan.js"></script>
+    <script src="/backend/system.js"></script>
+
+    <!-- View class -->
+    <script src="/view.js"></script>
+
+    <script>
+        const system = new System();
+        const view = new View("08:00", "map");
+
+        async function handleLoadMap() {
+            const input = document.getElementById("xmlMapInput");
+            const result = await system.loadPlan(input);
+
+            if (!result.success) {
+                alert("Erreur lors du chargement: " + result.error);
+                return;
+            }
+
+            // Hide placeholder and initialize map if first time
+            const placeholder = document.getElementById("mapPlaceholder");
+            if (placeholder) {
+                placeholder.style.display = "none";
+            }
+
+            // Display the plan
+            view.displayPlan(result.plan);
+            console.log("Plan chargé avec succès!");
+        }
+    </script>
 </body>
+
 </html>
