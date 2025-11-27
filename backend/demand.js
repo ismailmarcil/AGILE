@@ -17,11 +17,11 @@ class Demand {
 
     /**
      * Constructor for the Demand class
-     * @param {Node} pickupAddress - Node reference for pickup
-     * @param {Node} deliveryAddress - Node reference for delivery
+     * @param {string|number} pickupAddress - Node reference for pickup
+     * @param {string|number} deliveryAddress - Node reference for delivery
      * @param {number} pickupDuration - Duration at pickup (seconds)
      * @param {number} deliveryDuration - Duration at delivery (seconds)
-     * @param {string|number|null} id - Demand ID (auto-generated if null)
+     * @param {string|number} id - Demand ID (auto-generated if null)
      */
     constructor(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration, id = null) {
         this.id = id !== null ? id : Demand.generateId();

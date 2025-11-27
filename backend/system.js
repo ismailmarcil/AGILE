@@ -181,7 +181,7 @@ class System {
                 const deliveryDuration = Number(deliveryDurationStr);
 
                 //Créer un objet Demande et l'ajouter à la liste des demandes.
-                const demande = new Demand( this.nextDemandId++,pickupAddress,deliveryAddress,pickupDuration,deliveryDuration);
+                const demande = new Demand( pickupAddress,deliveryAddress,pickupDuration,deliveryDuration,this.nextDemandId++);
                 this.demandsList.push(demande);
 
 
@@ -193,7 +193,7 @@ class System {
     }
 
     addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
-        const demande = new Demand(this.nextDemandId++, pickupAddress, deliveryAddress, pickupDuration, deliveryDuration);
+        const demande = new Demand( pickupAddress, deliveryAddress, pickupDuration, deliveryDuration,this.nextDemandId++);
         this.demandsList.push(demande);
         return demande;
     }
