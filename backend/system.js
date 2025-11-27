@@ -8,7 +8,8 @@ class System {
         this.listCouriers = [];
         this.demandsList = [];
         this.toursList = [];
-    }
+        this.nextDemandId = 1; //paramètre pour gérer les id des demandes ajoutées.
+     }
 
     async loadPlan(fileInput) {
 
@@ -168,7 +169,7 @@ class System {
             console.log("Nombre de livraisons :", livraisons.length);
 
             //On parcours chaque livraison
-            livraisons.forEach((livraisonNode, index) => {
+            livraisons.forEach((livraisonNode) => {
                 const attrs = livraisonNode.$ || {};  //pour chaque livraisonNode on recup soit le champ $ (avec les attributs) soit un objet vide
                 //récupérer les attributs
                 const pickupAddress = attrs.adresseEnlevement;
@@ -180,7 +181,7 @@ class System {
                 const deliveryDuration = Number(deliveryDurationStr);
 
                 //Créer un objet Demande et l'ajouter à la liste des demandes.
-                const demande = new Demand(index + 1,pickupAddress,deliveryAddress,pickupDuration,deliveryDuration);
+                const demande = new Demand( this.nextDemandId++,pickupAddress,deliveryAddress,pickupDuration,deliveryDuration);
                 this.demandsList.push(demande);
 
 
@@ -189,6 +190,12 @@ class System {
         } catch (error) {
             console.error("Error while reading demand XML:", error);
         }
+    }
+
+    addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
+        const demande = new Demand(this.nextDemandId++, pickupAddress, deliveryAddress, pickupDuration, deliveryDuration);
+        this.demandsList.push(demande);
+        return demande;
     }
 
 }
