@@ -45,98 +45,87 @@ class DisplayTour {
         // Clear existing layers
         this.clearMap();
 
-        // Display the itinerary (path)
-        this.displayItinerary(tour.itinerary);
+        // Display the legs (paths between stops)
+        this.displayLegs(tour.legs);
 
-        // Display pickup and delivery points
-        this.displayPickupDeliveryPoints(tour.pickupDeliveryPointsList);
+        // Display tour stops
+        this.displayStops(tour.stops);
 
         // Fit map to show all points
         this.fitMapToTour(tour);
     }
 
     /**
-     * Display the itinerary (path between nodes)
-     * @param {Array<Node>} itinerary - Array of Node objects
+     * Display the legs (paths between tour points)
+     * @param {Array<Leg>} legs - Array of Leg objects
      */
-    displayItinerary(itinerary) {
-        if (!itinerary || itinerary.length === 0) {
-            console.log('No itinerary to display');
+    displayLegs(legs) {
+        if (!legs || legs.length === 0) {
+            console.log('No legs to display');
             return;
         }
 
-        // Create array of coordinates for the path
-        const pathCoordinates = itinerary.map(node => [node.latitude, node.longitude]);
+        legs.forEach((leg, index) => {
+            if (!leg.path || leg.path.length === 0) return;
 
-        // Draw the path
-        const pathLine = L.polyline(pathCoordinates, {
-            color: '#ff0000',
-            weight: 4,
-            opacity: 0.7
-        }).addTo(this.map);
+            // Create array of coordinates for the path
+            const pathCoordinates = leg.path.map(node => [node.latitude, node.longitude]);
 
-        pathLine.bindPopup('Itinéraire de la tournée');
-
-        // Add markers for each node in itinerary
-        itinerary.forEach((node, index) => {
-            const isFirst = index === 0;
-            const isLast = index === itinerary.length - 1;
-
-            let markerColor = 'blue';
-            let markerLabel = `Noeud ${index + 1}`;
-
-            if (isFirst) {
-                markerColor = 'green';
-                markerLabel = 'Départ (Entrepôt)';
-            } else if (isLast) {
-                markerColor = 'green';
-                markerLabel = 'Retour (Entrepôt)';
-            }
-
-            const marker = L.circleMarker([node.latitude, node.longitude], {
-                radius: 5,
-                fillColor: markerColor,
-                color: '#000',
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 0.8
+            // Draw the path
+            const pathLine = L.polyline(pathCoordinates, {
+                color: '#ff0000',
+                weight: 4,
+                opacity: 0.7
             }).addTo(this.map);
 
-            marker.bindPopup(`
-                <strong>${markerLabel}</strong><br>
-                ID: ${node.id}<br>
-                Lat: ${node.latitude.toFixed(6)}<br>
-                Lon: ${node.longitude.toFixed(6)}
+            pathLine.bindPopup(`
+                <strong>Segment ${index + 1}</strong><br>
+                Distance: ${(leg.distance / 1000).toFixed(2)} km<br>
+                Durée: ${Math.round(leg.travelTime / 60)} min
             `);
         });
 
-        console.log(`Itinerary displayed with ${itinerary.length} nodes`);
+        console.log(`${legs.length} legs displayed`);
     }
 
     /**
-     * Display pickup and delivery points
-     * @param {Array} pickupDeliveryPointsList - Array of pickup/delivery points
+     * Display tour stops (pickup/delivery/warehouse points)
+     * @param {Array<TourPoint>} stops - Array of TourPoint objects
      */
-    displayPickupDeliveryPoints(pickupDeliveryPointsList) {
-        if (!pickupDeliveryPointsList || pickupDeliveryPointsList.length === 0) {
-            console.log('No pickup/delivery points to display');
+    displayStops(stops) {
+        if (!stops || stops.length === 0) {
+            console.log('No stops to display');
             return;
         }
 
-        pickupDeliveryPointsList.forEach((point, index) => {
-            const tourPoint = point.tourPoint;
-
-            if (!tourPoint || !tourPoint.address) {
+        stops.forEach((tourPoint, index) => {
+            if (!tourPoint || !tourPoint.node) {
                 return;
             }
 
-            const address = tourPoint.address;
-            const isPickup = tourPoint.type === 'pickup';
+            const node = tourPoint.node;
+            const isWarehouse = tourPoint.type === 'ENTREPOT';
+            const isPickup = tourPoint.type === 'PICKUP';
+            const isDelivery = tourPoint.type === 'DELIVERY';
+
+            let markerColor = 'blue';
+            let label = 'Point';
+
+            if (isWarehouse) {
+                markerColor = 'green';
+                label = '🏠 Entrepôt';
+            } else if (isPickup) {
+                markerColor = '#FFA500';
+                label = '📦 Pickup';
+            } else if (isDelivery) {
+                markerColor = '#4CAF50';
+                label = '🏠 Delivery';
+            }
 
             // Create marker with icon
             const icon = L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div style="background-color: ${isPickup ? '#FFA500' : '#4CAF50'}; 
+                html: `<div style="background-color: ${markerColor}; 
                               width: 30px; height: 30px; 
                               border-radius: 50%; 
                               border: 2px solid white;
@@ -151,18 +140,19 @@ class DisplayTour {
                 iconAnchor: [15, 15]
             });
 
-            const marker = L.marker([address.latitude, address.longitude], { icon: icon })
+            const marker = L.marker([node.latitude, node.longitude], { icon: icon })
                 .addTo(this.map);
 
             marker.bindPopup(`
-                <strong>${isPickup ? '📦 Pickup' : '🏠 Delivery'} #${index + 1}</strong><br>
-                Arrivée: ${point.arrivalTime}<br>
-                Départ: ${point.departureTime}<br>
-                Adresse ID: ${address.id}
+                <strong>${label} #${index + 1}</strong><br>
+                Type: ${tourPoint.type}<br>
+                Durée: ${tourPoint.serviceDuration}s<br>
+                Noeud ID: ${node.id}
+                ${tourPoint.demand ? `<br>Demande ID: ${tourPoint.demand.id || 'N/A'}` : ''}
             `);
         });
 
-        console.log(`${pickupDeliveryPointsList.length} pickup/delivery points displayed`);
+        console.log(`${stops.length} stops displayed`);
     }
 
     /**
@@ -172,19 +162,22 @@ class DisplayTour {
     fitMapToTour(tour) {
         const bounds = [];
 
-        // Add itinerary points to bounds
-        if (tour.itinerary && tour.itinerary.length > 0) {
-            tour.itinerary.forEach(node => {
-                bounds.push([node.latitude, node.longitude]);
+        // Add all nodes from legs to bounds
+        if (tour.legs && tour.legs.length > 0) {
+            tour.legs.forEach(leg => {
+                if (leg.path && leg.path.length > 0) {
+                    leg.path.forEach(node => {
+                        bounds.push([node.latitude, node.longitude]);
+                    });
+                }
             });
         }
 
-        // Add pickup/delivery points to bounds
-        if (tour.pickupDeliveryPointsList && tour.pickupDeliveryPointsList.length > 0) {
-            tour.pickupDeliveryPointsList.forEach(point => {
-                if (point.tourPoint && point.tourPoint.address) {
-                    const address = point.tourPoint.address;
-                    bounds.push([address.latitude, address.longitude]);
+        // Add stop points to bounds
+        if (tour.stops && tour.stops.length > 0) {
+            tour.stops.forEach(tourPoint => {
+                if (tourPoint.node) {
+                    bounds.push([tourPoint.node.latitude, tourPoint.node.longitude]);
                 }
             });
         }

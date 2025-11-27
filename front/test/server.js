@@ -37,6 +37,9 @@ const server = http.createServer((req, res) => {
     if (filePath.startsWith('/fichiersXMLPickupDelivery/')) {
         // Handle XML files from parent directory (2 levels up from test folder)
         fullPath = path.join(__dirname, '..', '..', 'fichiersXMLPickupDelivery', path.basename(filePath));
+    } else if (filePath.startsWith('/front/')) {
+        // Handle front folder files (view.js, etc.)
+        fullPath = path.join(__dirname, '..', '..', filePath);
     } else if (filePath.startsWith('/styles/') || filePath.startsWith('/scripts/')) {
         // Handle styles and scripts from parent front folder
         fullPath = path.join(__dirname, '..', filePath);

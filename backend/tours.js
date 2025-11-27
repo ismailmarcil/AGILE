@@ -4,98 +4,69 @@
 class Tour {
     /**
      * Constructor for the Tour class
-     * @param {string|null} idOrDepartureTime - Tour ID (auto-generated if null) OR departure time for backward compatibility
-     * @param {string|Courier} departureTimeOrCourier - Departure time in HH:MM OR courier for backward compatibility
-     * @param {Courier|undefined} courier - The courier assigned to the tour (optional if using old signature)
-     */
-    constructor(idOrDepartureTime, departureTimeOrCourier, courier) {
-        // Handle backward compatibility: if second param is a Courier (or null/undefined), old signature is used
-        // Old signature check: if third param is undefined AND second param is not a time string
-        const isOldSignature = courier === undefined && 
-                              (departureTimeOrCourier === null || 
-                               departureTimeOrCourier === undefined ||
-                               (typeof departureTimeOrCourier === 'object'));
-        
-        if (isOldSignature) {
-            // Old signature: Tour(departureTime, courier)
-            this.departureTime = idOrDepartureTime;
-            this.courier = departureTimeOrCourier;
-            this.id = `T_${this.courier ? this.courier.id : 'UNKNOWN'}_${Date.now()}`;
-        } else {
-            // New signature: Tour(id, departureTime, courier)
-            this.id = idOrDepartureTime !== null ? idOrDepartureTime : `T_${courier ? courier.id : 'UNKNOWN'}_${Date.now()}`;
-            this.departureTime = departureTimeOrCourier;
-            this.courier = courier;
-        }
-
-        // List<TourPoint, LocalTime, LocalTime> : pickupDeliveryPointsList
-        // For each point, we store the arrival time and departure time for the tour
-        // Each element: { tourPoint: TourPoint, arrivalTime: string, departureTime: string }
-        this.pickupDeliveryPointsList = [];
-
-        // List<Node> : Itinerary - Global itinerary of the tour (list of nodes)
-        this.itinerary = [];
-
-        // Total duration of the tour in minutes
-        this.totalDuration = 0;
-
-        // Total distance of the tour in meters
-        this.totalDistance = 0;
-    }
-
-    /**
-     * Adds a pickup/delivery point to the tour
-     * @param {TourPoint} tourPoint - The point to add
-     * @param {string} arrivalTime - Arrival time in HH:MM format
+     * @param {string|null} id - Tour ID (auto-generated if null)
      * @param {string} departureTime - Departure time in HH:MM format
+     * @param {Courier} courier - The courier assigned to the tour
      */
-    addPoint(tourPoint, arrivalTime, departureTime) {
-        this.pickupDeliveryPointsList.push({
-            tourPoint: tourPoint,
-            arrivalTime: arrivalTime,
-            departureTime: departureTime
-        });
+    constructor(id, departureTime, courier) {
+        this.id = id !== null ? id : `T_${courier ? courier.id : 'UNKNOWN'}_${Date.now()}`;
+        this.departureTime = departureTime;
+        this.courier = courier;
+        this.stops = []; // Array<TourPoint>
+        this.legs = []; // Array<Leg>
+        this.totalDuration = 0; // Total duration in seconds
+        this.totalDistance = 0; // Total distance in meters
     }
 
     /**
-     * Calculates and returns the complete itinerary of the tour
-     * @param {Array} pickupDeliveryPointsList - List of points with their schedules
-     * @returns {Array<Node>} The complete itinerary (list of nodes)
+     * Adds a stop to the tour
+     * @param {TourPoint} tourPoint - The tour point to add
      */
-    getItinerary(pickupDeliveryPointsList) {
-        // TODO: Implement the itinerary calculation algorithm
-        // This should calculate the shortest path through all points
-        this.itinerary = [];
-        return this.itinerary;
+    addStop(tourPoint) {
+        this.stops.push(tourPoint);
     }
 
     /**
-     * Calculates the total duration of the tour
-     * @returns {number} Duration in minutes
+     * Adds a leg to the tour
+     * @param {Leg} leg - The leg to add
+     */
+    addLeg(leg) {
+        this.legs.push(leg);
+    }
+
+    /**
+     * Calculates the total duration of the tour from all legs and service durations
+     * @returns {number} Duration in seconds
      */
     calculateTotalDuration() {
-        if (this.pickupDeliveryPointsList.length === 0) {
-            this.totalDuration = 0;
-            return this.totalDuration;
+        let duration = 0;
+        
+        // Add travel time from all legs
+        for (const leg of this.legs) {
+            duration += leg.travelTime;
         }
-
-        // Calculate between departure time and end time of the last point
-        const lastPoint = this.pickupDeliveryPointsList[this.pickupDeliveryPointsList.length - 1];
-        this.totalDuration = this.calculateTimeDifference(this.departureTime, lastPoint.departureTime);
-
+        
+        // Add service duration from all stops
+        for (const stop of this.stops) {
+            duration += stop.serviceDuration;
+        }
+        
+        this.totalDuration = duration;
         return this.totalDuration;
     }
 
     /**
-     * Calculates the total distance of the tour
+     * Calculates the total distance of the tour from all legs
      * @returns {number} Distance in meters
      */
     calculateTotalDistance() {
-        for (const node of this.itinerary) {
-            if (node.segment) {
-                this.totalDistance += node.segment.length;
-            }
+        let distance = 0;
+        
+        for (const leg of this.legs) {
+            distance += leg.distance;
         }
+        
+        this.totalDistance = distance;
         return this.totalDistance;
     }
 
@@ -123,9 +94,9 @@ class Tour {
         return {
             id: this.id,
             departureTime: this.departureTime,
-            courier: this.courier,
-            pickupDeliveryPointsList: this.pickupDeliveryPointsList,
-            itinerary: this.itinerary,
+            courier: this.courier ? this.courier.toJSON() : null,
+            stops: this.stops.map(stop => stop.toJSON()),
+            legs: this.legs.map(leg => leg.toJSON()),
             totalDuration: this.totalDuration,
             totalDistance: this.totalDistance
         };
@@ -136,33 +107,41 @@ class Tour {
      * @returns {string} Textual summary of the tour
      */
     toString() {
-        return `Tour ${this.id} - Departure: ${this.departureTime}, Courier: ${this.courier ? this.courier.name : 'Unassigned'}, Points: ${this.pickupDeliveryPointsList.length}, Duration: ${this.totalDuration}min, Distance: ${this.totalDistance}m`;
+        return `Tour ${this.id} - Departure: ${this.departureTime}, Courier: ${this.courier ? this.courier.name : 'Unassigned'}, Stops: ${this.stops.length}, Legs: ${this.legs.length}, Duration: ${this.totalDuration}s, Distance: ${this.totalDistance}m`;
     }
 
     /**
-     * Generates an XML representation of the tour's itinerary
-     * The itinerary should contain nodes with their associated segments
-     * Each node in the itinerary should have a property 'segment' that represents the segment to reach the next node
-     * @returns {string} XML string representing the tour's itinerary in the same format as the map plan
+     * Generates an XML representation of the tour
+     * @returns {string} XML string representing the tour
      */
     toXML() {
         let xml = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n';
         xml += '<reseau>\n';
 
-        // Add all nodes from the itinerary with their coordinates
-        for (const node of this.itinerary) {
+        // Collect all unique nodes from legs
+        const nodesMap = new Map();
+        for (const leg of this.legs) {
+            for (const node of leg.path) {
+                nodesMap.set(node.id, node);
+            }
+        }
+
+        // Add all nodes
+        for (const node of nodesMap.values()) {
             xml += `<noeud id="${node.id}" latitude="${node.latitude}" longitude="${node.longitude}"/>\n`;
         }
 
-        // Add all segments from the itinerary
-        // Each node (except the last) should have a segment property that represents the edge to the next node
-        for (let i = 0; i < this.itinerary.length - 1; i++) {
-            const node = this.itinerary[i];
-
-            // Check if the node has an associated segment to the next node
-            if (node.segment) {
-                const segment = node.segment;
-                xml += `<troncon destination="${segment.destination}" longueur="${segment.length}" nomRue="${segment.streetName}" origine="${segment.origin}"/>\n`;
+        // Add segments from node paths in legs
+        for (const leg of this.legs) {
+            for (let i = 0; i < leg.path.length - 1; i++) {
+                const fromNode = leg.path[i];
+                const toNode = leg.path[i + 1];
+                
+                // Find the segment between these nodes
+                const segment = fromNode.segments.find(seg => seg.destination.id === toNode.id);
+                if (segment) {
+                    xml += `<troncon origine="${segment.origin.id}" destination="${segment.destination.id}" nomRue="${segment.streetName}" longueur="${segment.length}"/>\n`;
+                }
             }
         }
 
@@ -171,7 +150,7 @@ class Tour {
     }
 
     /**
-     * Saves the tour's itinerary to an XML file
+     * Saves the tour to an XML file
      * @param {string} filename - Name of the file to save (without extension)
      * @returns {string} The XML content that was saved
      */
@@ -187,7 +166,7 @@ class Tour {
                 // Save in the same directory as the map XML files
                 const filePath = path.join(__dirname, '..', 'fichiersXMLPickupDelivery', `${filename}.xml`);
                 fs.writeFileSync(filePath, xml, 'utf8');
-                console.log(`Tour itinerary saved to: ${filePath}`);
+                console.log(`Tour saved to: ${filePath}`);
             } catch (error) {
                 console.error('Error saving XML file:', error);
             }

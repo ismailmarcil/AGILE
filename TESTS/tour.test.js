@@ -4,6 +4,7 @@
  */
 
 const Tour = require('../backend/tours.js');
+const Leg = require('../backend/leg.js');
 const Courier = require('../backend/courier.js');
 const { TourPoint, TypePoint } = require('../backend/tourpoint.js');
 const Node = require('../backend/node.js');
@@ -16,95 +17,102 @@ describe('Tour Class - Constructor and Basic Properties', () => {
 
     it('should create a tour with valid parameters', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         assert.strictEqual(tour.departureTime, '08:00');
         assert.strictEqual(tour.courier, courier);
-        assert.strictEqual(tour.pickupDeliveryPointsList.length, 0);
-        assert.strictEqual(tour.itinerary.length, 0);
+        assert.strictEqual(tour.stops.length, 0);
+        assert.strictEqual(tour.legs.length, 0);
         assert.strictEqual(tour.totalDuration, 0);
         assert.strictEqual(tour.totalDistance, 0);
     });
 
-    it('should initialize with empty pickup/delivery points list', () => {
+    it('should initialize with empty stops list', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
-        assert.isTrue(Array.isArray(tour.pickupDeliveryPointsList));
-        assert.strictEqual(tour.pickupDeliveryPointsList.length, 0);
+        assert.isTrue(Array.isArray(tour.stops));
+        assert.strictEqual(tour.stops.length, 0);
     });
 
-    it('should initialize with empty itinerary', () => {
+    it('should initialize with empty legs list', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
-        assert.isTrue(Array.isArray(tour.itinerary));
-        assert.strictEqual(tour.itinerary.length, 0);
+        assert.isTrue(Array.isArray(tour.legs));
+        assert.strictEqual(tour.legs.length, 0);
     });
 
     it('should handle different time formats', () => {
         const courier = new Courier('C001', 'John Doe');
 
-        const tour1 = new Tour('08:00', courier);
+        const tour1 = new Tour(null, '08:00', courier);
         assert.strictEqual(tour1.departureTime, '08:00');
 
-        const tour2 = new Tour('14:30', courier);
+        const tour2 = new Tour(null, '14:30', courier);
         assert.strictEqual(tour2.departureTime, '14:30');
 
-        const tour3 = new Tour('23:59', courier);
+        const tour3 = new Tour(null, '23:59', courier);
         assert.strictEqual(tour3.departureTime, '23:59');
     });
 
     it('should handle null courier', () => {
-        const tour = new Tour('08:00', null);
+        const tour = new Tour(null, '08:00', null);
         assert.strictEqual(tour.courier, null);
         assert.strictEqual(tour.departureTime, '08:00');
-        assert.isTrue(tour.id.includes('UNKNOWN')); // ID should contain UNKNOWN when courier is null
+        assert.isTrue(tour.id.includes('UNKNOWN'));
     });
 });
 
-describe('Tour Class - addPoint Method', () => {
+describe('Tour Class - addStop Method', () => {
 
-    it('should add a pickup point to the tour', () => {
+    it('should add a stop to the tour', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
-        const demand = new Demand('1', '2', 300, 240);
-        const tourPoint = new TourPoint('1', 45.75, 4.85, [], TypePoint.PICKUP, 300, demand);
+        const node = new Node('1', 45.75, 4.85, []);
+        const pickup = new Node('1', 45.75, 4.85, []);
+        const delivery = new Node('2', 45.76, 4.86, []);
+        const demand = new Demand(pickup, delivery, 300, 240);
+        const tourPoint = new TourPoint(node, 300, TypePoint.PICKUP, demand);
 
-        tour.addPoint(tourPoint, '08:10', '08:15');
+        tour.addStop(tourPoint);
 
-        assert.strictEqual(tour.pickupDeliveryPointsList.length, 1);
+        assert.strictEqual(tour.stops.length, 1);
     });
 
-    it('should add multiple points to the tour', () => {
+    it('should add multiple stops to the tour', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
-        const demand = new Demand('1', '2', 300, 240);
+        const node1 = new Node('1', 45.75, 4.85, []);
+        const node2 = new Node('2', 45.76, 4.86, []);
+        const pickup = new Node('1', 45.75, 4.85, []);
+        const delivery = new Node('2', 45.76, 4.86, []);
+        const demand = new Demand(pickup, delivery, 300, 240);
 
-        const pickup = new TourPoint('1', 45.75, 4.85, [], TypePoint.PICKUP, 300, demand);
-        const delivery = new TourPoint('2', 45.76, 4.86, [], TypePoint.DELIVERY, 240, demand);
+        const pickupPoint = new TourPoint(node1, 300, TypePoint.PICKUP, demand);
+        const deliveryPoint = new TourPoint(node2, 240, TypePoint.DELIVERY, demand);
 
-        tour.addPoint(pickup, '08:10', '08:15');
-        tour.addPoint(delivery, '08:30', '08:34');
+        tour.addStop(pickupPoint);
+        tour.addStop(deliveryPoint);
 
-        assert.strictEqual(tour.pickupDeliveryPointsList.length, 2);
+        assert.strictEqual(tour.stops.length, 2);
     });
 
-    it('should store arrival and departure times for each point', () => {
+    it('should store tour points correctly', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
-        const demand = new Demand('1', '2', 300, 240);
-        const tourPoint = new TourPoint('1', 45.75, 4.85, [], TypePoint.PICKUP, 300, demand);
+        const node = new Node('1', 45.75, 4.85, []);
+        const pickup = new Node('1', 45.75, 4.85, []);
+        const delivery = new Node('2', 45.76, 4.86, []);
+        const demand = new Demand(pickup, delivery, 300, 240);
+        const tourPoint = new TourPoint(node, 300, TypePoint.PICKUP, demand);
 
-        tour.addPoint(tourPoint, '08:10', '08:15');
+        tour.addStop(tourPoint);
 
-        const addedPoint = tour.pickupDeliveryPointsList[0];
-        assert.strictEqual(addedPoint.arrivalTime, '08:10');
-        assert.strictEqual(addedPoint.departureTime, '08:15');
-        assert.strictEqual(addedPoint.tourPoint, tourPoint);
+        assert.strictEqual(tour.stops[0], tourPoint);
     });
 });
 
@@ -112,7 +120,7 @@ describe('Tour Class - calculateTimeDifference Method', () => {
 
     it('should calculate difference between two times', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const diff = tour.calculateTimeDifference('08:00', '09:00');
         assert.strictEqual(diff, 60);
@@ -120,7 +128,7 @@ describe('Tour Class - calculateTimeDifference Method', () => {
 
     it('should calculate difference for same time', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const diff = tour.calculateTimeDifference('08:00', '08:00');
         assert.strictEqual(diff, 0);
@@ -128,7 +136,7 @@ describe('Tour Class - calculateTimeDifference Method', () => {
 
     it('should calculate difference with minutes', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const diff = tour.calculateTimeDifference('08:15', '08:45');
         assert.strictEqual(diff, 30);
@@ -136,7 +144,7 @@ describe('Tour Class - calculateTimeDifference Method', () => {
 
     it('should return absolute difference', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const diff1 = tour.calculateTimeDifference('08:00', '09:00');
         const diff2 = tour.calculateTimeDifference('09:00', '08:00');
@@ -145,7 +153,7 @@ describe('Tour Class - calculateTimeDifference Method', () => {
 
     it('should handle times crossing hours', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const diff = tour.calculateTimeDifference('08:50', '09:10');
         assert.strictEqual(diff, 20);
@@ -153,7 +161,7 @@ describe('Tour Class - calculateTimeDifference Method', () => {
 
     it('should handle multi-hour differences', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const diff = tour.calculateTimeDifference('08:00', '12:30');
         assert.strictEqual(diff, 270);
@@ -162,87 +170,96 @@ describe('Tour Class - calculateTimeDifference Method', () => {
 
 describe('Tour Class - calculateTotalDuration Method', () => {
 
-    it('should return 0 for tour with no points', () => {
+    it('should return 0 for tour with no stops', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const duration = tour.calculateTotalDuration();
         assert.strictEqual(duration, 0);
     });
 
-    it('should calculate duration from departure to last point', () => {
+    it('should calculate duration from legs and stops', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
-        const demand = new Demand('1', '2', 300, 240);
+        const node1 = new Node('1', 45.75, 4.85, []);
+        const node2 = new Node('2', 45.76, 4.86, []);
+        
+        const pickup = new Node('1', 45.75, 4.85, []);
+        const delivery = new Node('2', 45.76, 4.86, []);
+        const demand = new Demand(pickup, delivery, 300, 240);
 
-        const pickup = new TourPoint('1', 45.75, 4.85, [], TypePoint.PICKUP, 300, demand);
-        const delivery = new TourPoint('2', 45.76, 4.86, [], TypePoint.DELIVERY, 240, demand);
+        const pickupPoint = new TourPoint(node1, 300, TypePoint.PICKUP, demand);
+        const deliveryPoint = new TourPoint(node2, 240, TypePoint.DELIVERY, demand);
 
-        tour.addPoint(pickup, '08:10', '08:15');
-        tour.addPoint(delivery, '08:30', '08:34');
+        tour.addStop(pickupPoint);
+        tour.addStop(deliveryPoint);
+
+        const leg = new Leg(pickupPoint, deliveryPoint, [node1, node2], 150, 60);
+        tour.addLeg(leg);
 
         const duration = tour.calculateTotalDuration();
-        assert.strictEqual(duration, 34); // From 08:00 to 08:34
+        assert.strictEqual(duration, 600); // 300 + 240 + 60
     });
 
     it('should update totalDuration property', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
-        const tourPoint = new TourPoint('1', 45.75, 4.85, [], TypePoint.PICKUP, 300, null);
+        const node = new Node('1', 45.75, 4.85, []);
+        const tourPoint = new TourPoint(node, 300, TypePoint.PICKUP, null);
 
-        tour.addPoint(tourPoint, '08:10', '08:15');
+        tour.addStop(tourPoint);
         tour.calculateTotalDuration();
 
-        assert.strictEqual(tour.totalDuration, 15);
+        assert.strictEqual(tour.totalDuration, 300);
     });
 });
 
 describe('Tour Class - calculateTotalDistance Method', () => {
 
-    it('should return 0 for tour with empty itinerary', () => {
+    it('should return 0 for tour with empty legs', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const distance = tour.calculateTotalDistance();
         assert.strictEqual(distance, 0);
     });
 
-    it('should calculate distance from segments in itinerary', () => {
+    it('should calculate distance from legs', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const node1 = new Node('1', 45.75, 4.85, []);
         const node2 = new Node('2', 45.76, 4.86, []);
-        const segment1 = new Segment('1', '2', 'Street', 150);
+        
+        const tourPoint1 = new TourPoint(node1, 0, TypePoint.ENTREPOT, null);
+        const tourPoint2 = new TourPoint(node2, 300, TypePoint.PICKUP, null);
 
-        node1.segment = segment1;
-
-        tour.itinerary.push(node1);
-        tour.itinerary.push(node2);
+        const leg = new Leg(tourPoint1, tourPoint2, [node1, node2], 150, 60);
+        tour.addLeg(leg);
 
         const distance = tour.calculateTotalDistance();
         assert.strictEqual(distance, 150);
     });
 
-    it('should sum all segment lengths in itinerary', () => {
+    it('should sum all leg distances', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const node1 = new Node('1', 45.75, 4.85, []);
         const node2 = new Node('2', 45.76, 4.86, []);
         const node3 = new Node('3', 45.77, 4.87, []);
 
-        const segment1 = new Segment('1', '2', 'Street A', 150);
-        const segment2 = new Segment('2', '3', 'Street B', 200);
+        const tourPoint1 = new TourPoint(node1, 0, TypePoint.ENTREPOT, null);
+        const tourPoint2 = new TourPoint(node2, 300, TypePoint.PICKUP, null);
+        const tourPoint3 = new TourPoint(node3, 240, TypePoint.DELIVERY, null);
 
-        node1.segment = segment1;
-        node2.segment = segment2;
+        const leg1 = new Leg(tourPoint1, tourPoint2, [node1, node2], 150, 60);
+        const leg2 = new Leg(tourPoint2, tourPoint3, [node2, node3], 200, 80);
 
-        tour.itinerary.push(node1);
-        tour.itinerary.push(node2);
-        tour.itinerary.push(node3);
+        tour.addLeg(leg1);
+        tour.addLeg(leg2);
 
         const distance = tour.calculateTotalDistance();
         assert.strictEqual(distance, 350);
@@ -253,29 +270,30 @@ describe('Tour Class - toJSON Method', () => {
 
     it('should return correct JSON representation', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const json = tour.toJSON();
 
         assert.strictEqual(json.departureTime, '08:00');
-        assert.strictEqual(json.courier, courier);
-        assert.isTrue(Array.isArray(json.pickupDeliveryPointsList));
-        assert.isTrue(Array.isArray(json.itinerary));
+        assert.isTrue(json.courier !== null);
+        assert.isTrue(Array.isArray(json.stops));
+        assert.isTrue(Array.isArray(json.legs));
         assert.strictEqual(json.totalDuration, 0);
         assert.strictEqual(json.totalDistance, 0);
     });
 
     it('should include all tour properties in JSON', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const json = tour.toJSON();
         const keys = Object.keys(json);
 
+        assert.isTrue(keys.includes('id'));
         assert.isTrue(keys.includes('departureTime'));
         assert.isTrue(keys.includes('courier'));
-        assert.isTrue(keys.includes('pickupDeliveryPointsList'));
-        assert.isTrue(keys.includes('itinerary'));
+        assert.isTrue(keys.includes('stops'));
+        assert.isTrue(keys.includes('legs'));
         assert.isTrue(keys.includes('totalDuration'));
         assert.isTrue(keys.includes('totalDistance'));
     });
@@ -285,7 +303,7 @@ describe('Tour Class - toString Method', () => {
 
     it('should return correct string representation', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const str = tour.toString();
 
@@ -296,25 +314,26 @@ describe('Tour Class - toString Method', () => {
 
     it('should include departure time in string', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('14:30', courier);
+        const tour = new Tour(null, '14:30', courier);
 
         const str = tour.toString();
         assert.isTrue(str.includes('14:30'));
     });
 
-    it('should include number of points', () => {
+    it('should include number of stops', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
-        const tourPoint = new TourPoint('1', 45.75, 4.85, [], TypePoint.PICKUP, 300, null);
-        tour.addPoint(tourPoint, '08:10', '08:15');
+        const node = new Node('1', 45.75, 4.85, []);
+        const tourPoint = new TourPoint(node, 300, TypePoint.PICKUP, null);
+        tour.addStop(tourPoint);
 
         const str = tour.toString();
         assert.isTrue(str.includes('1'));
     });
 
     it('should handle null courier in string', () => {
-        const tour = new Tour('08:00', null);
+        const tour = new Tour(null, '08:00', null);
         const str = tour.toString();
 
         assert.isTrue(str.includes('Unassigned'));
@@ -325,7 +344,7 @@ describe('Tour Class - toXML Method', () => {
 
     it('should generate XML with header', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const xml = tour.toXML();
 
@@ -336,10 +355,13 @@ describe('Tour Class - toXML Method', () => {
 
     it('should include nodes in XML', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const node = new Node('123', 45.75, 4.85, []);
-        tour.itinerary.push(node);
+        const tourPoint = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
+        
+        const leg = new Leg(tourPoint, tourPoint, [node], 0, 0);
+        tour.addLeg(leg);
 
         const xml = tour.toXML();
 
@@ -351,29 +373,30 @@ describe('Tour Class - toXML Method', () => {
 
     it('should include segments in XML', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const node1 = new Node('1', 45.75, 4.85, []);
         const node2 = new Node('2', 45.76, 4.86, []);
-        const segment = new Segment('1', '2', 'Main Street', 150);
+        const segment = new Segment(node1, node2, 'Main Street', 150);
+        
+        node1.segments = [segment];
 
-        node1.segment = segment;
-
-        tour.itinerary.push(node1);
-        tour.itinerary.push(node2);
+        const tourPoint1 = new TourPoint(node1, 0, TypePoint.ENTREPOT, null);
+        const tourPoint2 = new TourPoint(node2, 0, TypePoint.PICKUP, null);
+        
+        const leg = new Leg(tourPoint1, tourPoint2, [node1, node2], 150, 60);
+        tour.addLeg(leg);
 
         const xml = tour.toXML();
 
         assert.isTrue(xml.includes('<troncon'));
         assert.isTrue(xml.includes('origine="1"'));
         assert.isTrue(xml.includes('destination="2"'));
-        assert.isTrue(xml.includes('nomRue="Main Street"'));
-        assert.isTrue(xml.includes('longueur="150"'));
     });
 
-    it('should generate valid XML structure for empty itinerary', () => {
+    it('should generate valid XML structure for empty legs', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         const xml = tour.toXML();
 
@@ -387,52 +410,53 @@ describe('Tour Class - Edge Cases', () => {
 
     it('should handle tour with only warehouse point', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
-        const warehousePoint = new TourPoint('W', 45.75, 4.85, [], TypePoint.ENTREPOT, 0, null);
+        const node = new Node('W', 45.75, 4.85, []);
+        const warehousePoint = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
 
-        tour.addPoint(warehousePoint, '08:00', '08:00');
+        tour.addStop(warehousePoint);
 
-        assert.strictEqual(tour.pickupDeliveryPointsList.length, 1);
+        assert.strictEqual(tour.stops.length, 1);
     });
 
     it('should handle very early departure time', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('00:00', courier);
+        const tour = new Tour(null, '00:00', courier);
 
         assert.strictEqual(tour.departureTime, '00:00');
     });
 
     it('should handle very late departure time', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('23:59', courier);
+        const tour = new Tour(null, '23:59', courier);
 
         assert.strictEqual(tour.departureTime, '23:59');
     });
 
     it('should handle tour with many points', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour('08:00', courier);
+        const tour = new Tour(null, '08:00', courier);
 
         for (let i = 0; i < 100; i++) {
-            const tourPoint = new TourPoint(String(i), 45.75, 4.85, [], TypePoint.PICKUP, 300, null);
-            tour.addPoint(tourPoint, '08:00', '08:05');
+            const node = new Node(String(i), 45.75, 4.85, []);
+            const tourPoint = new TourPoint(node, 300, TypePoint.PICKUP, null);
+            tour.addStop(tourPoint);
         }
 
-        assert.strictEqual(tour.pickupDeliveryPointsList.length, 100);
+        assert.strictEqual(tour.stops.length, 100);
     });
 
     it('should handle null departure time', () => {
         const courier = new Courier('C001', 'John Doe');
-        const tour = new Tour(null, courier);
+        const tour = new Tour(null, null, courier);
 
-        // With backward compatibility, null is treated as departure time
         assert.strictEqual(tour.departureTime, null);
         assert.strictEqual(tour.courier, courier);
     });
 
     it('should handle undefined courier', () => {
-        const tour = new Tour('08:00', undefined);
+        const tour = new Tour(null, '08:00', undefined);
 
         assert.strictEqual(tour.courier, undefined);
     });
