@@ -29,7 +29,7 @@ const server = http.createServer((req, res) => {
 
     // Default to index.html
     if (filePath === '/') {
-        filePath = '/test_display_plan.html';
+        filePath = '../index.html';
     }
 
     // Construct file path
