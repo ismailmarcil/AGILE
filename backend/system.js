@@ -102,6 +102,9 @@ class System {
 
     const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
+    // Initialize distance matrix
+    this.distanceMatrix = new Map();
+
     const segments = Array.from(troncons).map(t => {
         const originId = t.getAttribute("origine");
         const destId = t.getAttribute("destination");
@@ -120,12 +123,22 @@ class System {
 
         if (originNode) {
             originNode.segments.push(seg);
+            
+            // Add to distance matrix
+            if (!this.distanceMatrix.has(originNode.id)) {
+                this.distanceMatrix.set(originNode.id, new Map());
+            }
+            
+            // Calculate time for this segment (distance / 15 km/h * 60 minutes)
+            const travelTimeMinutes = (length / 15) * 60;
+            this.distanceMatrix.get(originNode.id).set(destinationNode.id, travelTimeMinutes);
         }
 
         return seg;
     });
 
         console.log("Segments loaded:", segments);
+        console.log("Distance matrix populated:", this.distanceMatrix);
 
         const planJSON = {
             nodes: nodes.map(n => n.toJSON()),
