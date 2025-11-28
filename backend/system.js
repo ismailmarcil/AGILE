@@ -1,5 +1,12 @@
 // Demand is expected to be loaded before this script in browser environment
-// For Node.js: const Demand = require("./demand");
+// For Node.js environment - import Demand and Tour
+
+if (typeof require !== 'undefined') {
+    // Node.js environment
+    Demand = require("./demand");
+    Tour = require("./tours");
+}
+// In browser, Demand and Tour will be available from the global scope after their scripts load
 
 class System {
     plan;
@@ -170,7 +177,7 @@ class System {
             console.log("Nombre de livraisons :", livraisons.length);
 
             //On parcours chaque livraison
-            livraisons.forEach((livraisonNode) => {
+            for (const livraisonNode of livraisons) {
                 const attrs = livraisonNode.$ || {};  //pour chaque livraisonNode on recup soit le champ $ (avec les attributs) soit un objet vide
                 //récupérer les attributs
                 const pickupAddress = attrs.adresseEnlevement;
@@ -186,7 +193,7 @@ class System {
                 this.demandsList.push(demande);
 
 
-            });
+            }
 
         } catch (error) {
             console.error("Error while reading demand XML:", error);
@@ -207,6 +214,223 @@ class System {
         }
         return false;
     }
+
+
+    /**
+     * Compute optimal tours for couriers using a simple Nearest Neighbor TSP algorithm
+     * @param {Array<Courier>} couriers - List of available couriers
+     * @returns {Array<Tour>} List of computed tours
+     */
+    computeTours(couriers) {
+        if (!this.plan || !this.plan.nodes || this.demandsList.length === 0) {
+            console.error("Cannot compute tours: plan or demands are missing");
+            return [];
+        }
+
+        // Build a distance matrix between all relevant nodes
+        const allPoints = this.buildPointsList();
+        const distanceMatrix = this.computeDistanceMatrix(allPoints);
+
+        // Divide demands among couriers
+        const tours = [];
+        const demandsPerCourier = Math.ceil(this.demandsList.length / couriers.length);
+
+        for (let i = 0; i < couriers.length; i++) {
+            const courier = couriers[i];
+            const startIdx = i * demandsPerCourier;
+            const endIdx = Math.min((i + 1) * demandsPerCourier, this.demandsList.length);
+            
+            if (startIdx >= this.demandsList.length) break;
+
+            const assignedDemands = this.demandsList.slice(startIdx, endIdx);
+            const tour = this.buildTourForCourier(courier, assignedDemands, allPoints, distanceMatrix);
+            
+            if (tour) {
+                tours.push(tour);
+                this.toursList.push(tour);
+            }
+        }
+
+        return tours;
+    }
+
+    /**
+     * Build a list of all delivery points (pickup and delivery addresses)
+     * @returns {Array} List of unique points
+     */
+    buildPointsList() {
+        const pointsSet = new Set();
+        const pointsMap = new Map();
+
+        // Add warehouse as starting point
+        if (this.plan.warehouse) {
+            pointsMap.set(this.plan.warehouse.id, this.plan.warehouse);
+            pointsSet.add(this.plan.warehouse.id);
+        }
+
+        // Add all pickup and delivery addresses
+        this.demandsList.forEach(demand => {
+            if (demand.pickupAddress) {
+                const pickupId = demand.pickupAddress.id || demand.pickupAddress;
+                pointsMap.set(pickupId, demand.pickupAddress);
+                pointsSet.add(pickupId);
+            }
+            if (demand.deliveryAddress) {
+                const deliveryId = demand.deliveryAddress.id || demand.deliveryAddress;
+                pointsMap.set(deliveryId, demand.deliveryAddress);
+                pointsSet.add(deliveryId);
+            }
+        });
+
+        return Array.from(pointsSet).map(id => pointsMap.get(id));
+    }
+
+    /**
+     * Compute Euclidean distance matrix between all points
+     * @param {Array} points - List of points
+     * @returns {Map} Distance matrix as map of maps
+     */
+    computeDistanceMatrix(points) {
+        const distMatrix = new Map();
+
+        for (let i = 0; i < points.length; i++) {
+            const point1 = points[i];
+            if (!distMatrix.has(point1.id)) {
+                distMatrix.set(point1.id, new Map());
+            }
+
+            for (let j = 0; j < points.length; j++) {
+                if (i === j) {
+                    distMatrix.get(point1.id).set(points[j].id, 0);
+                } else {
+                    const point2 = points[j];
+                    const distance = this.calculateDistance(point1, point2);
+                    distMatrix.get(point1.id).set(point2.id, distance);
+                }
+            }
+        }
+
+        return distMatrix;
+    }
+
+    /**
+     * Calculate Euclidean distance between two points
+     * @param {Node} point1 - First point
+     * @param {Node} point2 - Second point
+     * @returns {number} Distance in degrees (approximation)
+     */
+    calculateDistance(point1, point2) {
+        const dx = point1.latitude - point2.latitude;
+        const dy = point1.longitude - point2.longitude;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    /**
+     * Build a tour for a courier using Nearest Neighbor algorithm
+     * @param {Courier} courier - The courier
+     * @param {Array<Demand>} demands - Demands to fulfill
+     * @param {Array} allPoints - All available points
+     * @param {Map} distanceMatrix - Pre-computed distance matrix
+     * @returns {Tour} Computed tour
+     */
+    buildTourForCourier(courier, demands, allPoints, distanceMatrix) {
+        if (demands.length === 0) return null;
+
+        // Create list of points to visit (pickup and delivery for each demand)
+        const pointsToVisit = [];
+        const pointsMap = new Map();
+
+        demands.forEach(demand => {
+            if (demand.pickupAddress) {
+                const pickup = demand.pickupAddress;
+                pointsToVisit.push({ point: pickup, type: 'pickup', demand: demand });
+                pointsMap.set(pickup.id || pickup, pickup);
+            }
+            if (demand.deliveryAddress) {
+                const delivery = demand.deliveryAddress;
+                pointsToVisit.push({ point: delivery, type: 'delivery', demand: demand });
+                pointsMap.set(delivery.id || delivery, delivery);
+            }
+        });
+
+        // Start from warehouse
+        const warehouse = this.plan.warehouse || allPoints[0];
+        const tour = new Tour(null, "08:00", courier);
+
+        // Apply Nearest Neighbor algorithm
+        let currentPoint = warehouse;
+        const visited = new Set([currentPoint.id]);
+        const sequence = [currentPoint];
+
+        while (pointsToVisit.length > 0) {
+            // Find nearest unvisited point
+            let nearestIdx = -1;
+            let minDistance = Infinity;
+
+            for (let i = 0; i < pointsToVisit.length; i++) {
+                const nextPoint = pointsToVisit[i].point;
+                const pointId = nextPoint.id || nextPoint;
+                
+                if (!visited.has(pointId)) {
+                    const distance = distanceMatrix.has(currentPoint.id)
+                        ? (distanceMatrix.get(currentPoint.id).get(pointId) || Infinity)
+                        : this.calculateDistance(currentPoint, nextPoint);
+
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestIdx = i;
+                    }
+                }
+            }
+
+            if (nearestIdx === -1) break; // All points visited
+
+            // Visit nearest point
+            const nextItem = pointsToVisit[nearestIdx];
+            const nextPoint = nextItem.point;
+            const pointId = nextPoint.id || nextPoint;
+
+            visited.add(pointId);
+            sequence.push(nextPoint);
+
+            currentPoint = nextPoint;
+        }
+
+        // Add warehouse as final point (return to origin)
+        sequence.push(warehouse);
+
+        // Build tour with the sequence
+        for (let i = 0; i < sequence.length; i++) {
+            const point = sequence[i];
+            // Create a simplified tour point (can be extended with TourPoint class)
+            tour.addStop({
+                id: point.id,
+                address: point,
+                arrivalTime: "08:00", // Simplified, can be calculated
+                departureTime: "08:00"
+            });
+        }
+
+        // Calculate tour metrics
+        let totalDistance = 0;
+        for (let i = 0; i < sequence.length - 1; i++) {
+            const p1 = sequence[i];
+            const p2 = sequence[i + 1];
+            const dist = distanceMatrix.has(p1.id)
+                ? (distanceMatrix.get(p1.id).get(p2.id) || 0)
+                : this.calculateDistance(p1, p2);
+            totalDistance += dist;
+        }
+
+        tour.totalDistance = totalDistance;
+
+        console.log(`Tour computed for courier ${courier.id}: ${sequence.length} stops, distance: ${totalDistance.toFixed(2)}`);
+
+        return tour;
+    }
+
+
+
 
 
 }
