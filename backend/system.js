@@ -1,11 +1,3 @@
-const Node = require("./node");
-const Segment = require("./segment");
-const Courier = require("./courier");
-const Demand = require("./demand");
-const Tour = require("./tours");
-const Plan = require("./plan");
-const Leg = require("./leg");
-const { TourPoint } = require("./tourpoint");
 
 class System {
     plan;
