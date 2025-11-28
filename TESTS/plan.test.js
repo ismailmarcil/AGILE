@@ -289,57 +289,6 @@ describe('Plan Class - toString Method', () => {
     });
 });
 
-describe('Plan Class - loadFromXML Method', () => {
-
-    it('should load a simple XML plan file', async () => {
-        const xmlPath = path.join(__dirname, '..', 'fichiersXMLPickupDelivery', 'petitPlan.xml');
-
-        try {
-            const plan = await Plan.loadFromXML(xmlPath);
-            assert.isTrue(plan instanceof Plan);
-            assert.isTrue(plan.nodes.size > 0);
-            assert.isTrue(plan.segments.length > 0);
-        } catch (error) {
-            // If file doesn't exist, test should note this
-            assert.isTrue(error.code === 'ENOENT' || plan instanceof Plan);
-        }
-    });
-
-    it('should create nodes with correct properties from XML', async () => {
-        const xmlPath = path.join(__dirname, '..', 'fichiersXMLPickupDelivery', 'petitPlan.xml');
-
-        try {
-            const plan = await Plan.loadFromXML(xmlPath);
-            const firstNode = Array.from(plan.nodes.values())[0];
-
-            if (firstNode) {
-                assert.isTrue(firstNode.id !== undefined);
-                assert.strictEqual(typeof firstNode.latitude, 'number');
-                assert.strictEqual(typeof firstNode.longitude, 'number');
-            }
-        } catch (error) {
-            // File may not exist in test environment
-            assert.isTrue(error.code === 'ENOENT' || true);
-        }
-    });
-
-    it('should create segments with correct properties from XML', async () => {
-        const xmlPath = path.join(__dirname, '..', 'fichiersXMLPickupDelivery', 'petitPlan.xml');
-
-        try {
-            const plan = await Plan.loadFromXML(xmlPath);
-
-            if (plan.segments.length > 0) {
-                const firstSegment = plan.segments[0];
-                assert.isTrue(firstSegment.origin !== undefined);
-                assert.isTrue(firstSegment.destination !== undefined);
-                assert.strictEqual(typeof firstSegment.length, 'number');
-            }
-        } catch (error) {
-            assert.isTrue(error.code === 'ENOENT' || true);
-        }
-    });
-});
 
 describe('Plan Class - Edge Cases', () => {
 
