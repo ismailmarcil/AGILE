@@ -107,11 +107,11 @@
             tour.addStop(warehouseReturn);
 
             // Create legs
-            tour.addLeg(new Leg(warehouse, pickup1, [node1, node2], 69.98, 17));
-            tour.addLeg(new Leg(pickup1, delivery1, [node2, node3], 136.01, 33));
-            tour.addLeg(new Leg(delivery1, pickup2, [node3, node4], 45.5, 11));
-            tour.addLeg(new Leg(pickup2, delivery2, [node4, node5], 180.5, 43));
-            tour.addLeg(new Leg(delivery2, warehouseReturn, [node5, node1], 200.3, 48));
+            tour.addLeg(new Leg(warehouse, pickup1, [node1, node2], [], 69.98, 17));
+            tour.addLeg(new Leg(pickup1, delivery1, [node2, node3], [], 136.01, 33));
+            tour.addLeg(new Leg(delivery1, pickup2, [node3, node4], [], 45.5, 11));
+            tour.addLeg(new Leg(pickup2, delivery2, [node4, node5], [], 180.5, 43));
+            tour.addLeg(new Leg(delivery2, warehouseReturn, [node5, node1], [], 200.3, 48));
 
             tour.calculateTotalDistance();
             tour.calculateTotalDuration();
