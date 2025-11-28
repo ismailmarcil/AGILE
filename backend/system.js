@@ -370,7 +370,7 @@ class System {
 
         // First leg: warehouse to first pickup
         let { path, distance, segments } = this.plan.findShortestPath(this.plan.warehouse.id, this.demandsList[0].pickupAddress);
-        let leg = new Leg(this.plan.warehouse, path[path.length - 1], path, distance, distance);
+        let leg = new Leg(this.plan.warehouse, path[path.length - 1], path, segments, distance, distance);
         tour.addLeg(leg);
         tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", this.demandsList[0]));
 
@@ -378,20 +378,20 @@ class System {
             let demand = this.demandsList[i];
             let nextDemand = this.demandsList[i + 1];
             let { path, distance, segments } = this.plan.findShortestPath(demand.pickupAddress, demand.deliveryAddress);
-            let leg = new Leg(path[0], path[path.length - 1], path, distance, distance);
+            let leg = new Leg(path[0], path[path.length - 1], path, segments, distance, distance);
             tour.addLeg(leg);
             tour.addStop(new TourPoint(path[0], demand.pickupDuration, "PICKUP", demand));
             tour.addStop(new TourPoint(path[path.length - 1], demand.deliveryDuration, "DELIVERY", demand));
 
             let { path: nextPath, distance: nextDistance, segments: nextSegments } = this.plan.findShortestPath(demand.deliveryAddress, nextDemand.pickupAddress);
-            let nextLeg = new Leg(nextPath[0], nextPath[nextPath.length - 1], nextPath, nextDistance, nextDistance);
+            let nextLeg = new Leg(nextPath[0], nextPath[nextPath.length - 1], nextPath, nextSegments, nextDistance, nextDistance);
             tour.addLeg(nextLeg);
         }
 
         // Retour à l'entrepôt
         let lastDemand = this.demandsList[this.demandsList.length - 1];
         let { path: returnPath, distance: returnDistance, segments: returnSegments } = this.plan.findShortestPath(lastDemand.deliveryAddress, this.plan.warehouse.id);
-        let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnDistance, returnDistance);
+        let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnSegments, returnDistance, returnDistance);
         tour.addLeg(returnLeg);
         tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", null));
 
