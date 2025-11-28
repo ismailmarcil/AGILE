@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PLD Agile - Dashboard Manager</title>
+    <title>DelivHub - Dashboard Manager</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="styles/design.css">
 </head>
 <body>
@@ -12,7 +13,7 @@
 <div class="sidebar">
     <div class="header">
         <div>
-            <h1 style="font-size: 1.1rem;"><i class="fa-solid fa-bicycle"></i> PLD Agile</h1>
+            <h1 style="font-size: 1.1rem;"><i class="fa-solid fa-bicycle"></i> DelivHub</h1>
         </div>
         <div class="user-profile">
             <i class="fa-regular fa-user"></i>&nbsp; Planner
@@ -22,11 +23,13 @@
     <div class="controls">
         <div class="control-group">
             <div class="section-title"><i class="fa-regular fa-folder-open"></i> Fichiers</div>
+            <input type="file" id="xmlMapInput" accept=".xml" style="display: none;" onchange="handleLoadMap()">
+            <input type="file" id="xmlDeliveriesInput" accept=".xml" style="display: none;" onchange="handleLoadDemands()">
             <div class="upload-row">
-                <div class="file-upload-box">
+                <div class="file-upload-box" onclick="document.getElementById('xmlMapInput').click()" style="cursor: pointer;">
                     <i class="fa-solid fa-map"></i> Plan (XML)
                 </div>
-                <div class="file-upload-box">
+                <div class="file-upload-box" onclick="document.getElementById('xmlDeliveriesInput').click()" style="cursor: pointer;">
                     <i class="fa-solid fa-box-open"></i> Livraisons (XML)
                 </div>
             </div>
@@ -47,28 +50,28 @@
 
         <div class="control-group" style="border:none;">
             <div class="section-title" style="justify-content: space-between;">
-                <span><i class="fa-solid fa-list-check"></i> Requêtes</span>
-                <button class="btn-icon" title="Add Delivery Request"><i class="fa-solid fa-plus"></i></button>
+                <span><i class="fa-solid fa-list-check"></i> Demandes</span>
+                <button class="btn-icon" title="Ajouter une demande"><i class="fa-solid fa-plus"></i></button>
             </div>
 
-            <div class="request-card">
-                <div class="req-header">
+            <div class="demand-card">
+                <div class="demand-header">
                     <span style="font-weight:600; font-size:0.9rem;">#1 Client Dupont</span>
-                    <div class="req-actions">
-                        <button class="btn-icon" title="Modify Request"><i class="fa-solid fa-pencil"></i></button>
-                        <button class="btn-icon delete" title="Delete Request"><i class="fa-solid fa-trash"></i></button>
+                    <div class="demand-actions">
+                        <button class="btn-icon" title="Modifier la demande"><i class="fa-solid fa-pencil"></i></button>
+                        <button class="btn-icon delete" title="Supprimer la demande"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </div>
                 <div class="point-row"><div class="dot dot-p"></div> 12 Rue de la République (5m)</div>
                 <div class="point-row"><div class="dot dot-d"></div> 8 Cours Gambetta (10m)</div>
             </div>
 
-            <div class="request-card">
-                <div class="req-header">
+            <div class="demand-card">
+                <div class="demand-header">
                     <span style="font-weight:600; font-size:0.9rem;">#2 Magasin Bio</span>
-                    <div class="req-actions">
-                        <button class="btn-icon"><i class="fa-solid fa-pencil"></i></button>
-                        <button class="btn-icon delete"><i class="fa-solid fa-trash"></i></button>
+                    <div class="demand-actions">
+                        <button class="btn-icon" title="Modifier la demande"><i class="fa-solid fa-pencil"></i></button>
+                        <button class="btn-icon delete" title="Supprimer la demande"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </div>
                 <div class="point-row"><div class="dot dot-p"></div> 45 Av. Jean Jaurès (5m)</div>
@@ -106,22 +109,24 @@
     </div>
 
     <div class="map-container">
-        <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
-            <i class="fa-solid fa-map-location-dot" style="font-size: 3rem; color: var(--secondary-color); margin-bottom: 15px;"></i>
-            <h3>Visualisation de la Carte</h3>
-            <p style="color: #7f8c8d; margin-top: 5px;">Le plan XML sera rendu ici via JavaFX/Swing</p>
+        <div id="map" style="width: 100%; height: 100%;">
+            <div class="map-placeholder" id="mapPlaceholder" style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                <i class="fa-solid fa-map-location-dot" style="font-size: 3rem; color: var(--secondary-color); margin-bottom: 15px;"></i>
+                <h3>Visualisation de la Carte</h3>
+                <p style="color: #7f8c8d; margin-top: 5px;">Chargez un plan XML pour commencer</p>
+            </div>
         </div>
     </div>
 
     <div class="tour-timeline">
         <div class="section-title">
             <span><i class="fa-solid fa-stopwatch"></i> Détails de la tournée (Pierre)</span>
-            <span style="margin-left:auto; font-size:0.7rem; font-weight:400; color:#7f8c8d;">Drag to reorder</span>
+            <span style="margin-left:auto; font-size:0.7rem; font-weight:400; color:#7f8c8d;">Glisser pour réorganiser</span>
         </div>
 
         <div class="timeline-scroll">
             <div class="step">
-                <div class="step-connector"></div>
+                <div class="drag-handle"></div>
                 <div class="step-icon" style="background: var(--secondary-color); color:white;"><i class="fa-solid fa-warehouse"></i></div>
                 <div class="step-time">08:00</div>
                 <div class="step-desc">Départ</div>
@@ -129,7 +134,6 @@
 
             <div class="step">
                 <div class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></div>
-                <div class="step-connector"></div>
                 <div class="step-icon" style="border-color: var(--accent-pickup); color: var(--accent-pickup);">P1</div>
                 <div class="step-time">08:15</div>
                 <div class="step-desc">R. Répu.</div>
@@ -137,7 +141,6 @@
 
             <div class="step">
                 <div class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></div>
-                <div class="step-connector"></div>
                 <div class="step-icon" style="border-color: var(--accent-pickup); color: var(--accent-pickup);">P2</div>
                 <div class="step-time">08:25</div>
                 <div class="step-desc">Av. Jaurès</div>
@@ -145,13 +148,13 @@
 
             <div class="step">
                 <div class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></div>
-                <div class="step-connector"></div>
                 <div class="step-icon" style="border-color: var(--accent-delivery); color: var(--accent-delivery);">L1</div>
                 <div class="step-time">08:45</div>
                 <div class="step-desc">C. Gambetta</div>
             </div>
 
             <div class="step">
+                <div class="drag-handle"></div>
                 <div class="step-icon" style="background: var(--secondary-color); color:white;"><i class="fa-solid fa-warehouse"></i></div>
                 <div class="step-time">09:10</div>
                 <div class="step-desc">Arrivée</div>
@@ -160,5 +163,65 @@
     </div>
 </div>
 
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<!-- Backend classes (load in order of dependencies) -->
+<script src="/backend/demand.js"></script>
+<script src="/backend/node.js"></script>
+<script src="/backend/segment.js"></script>
+<script src="/backend/plan.js"></script>
+<script src="/backend/system.js"></script>
+
+<!-- View class -->
+<script src="/front/scripts/view.js"></script>
+
+<!-- Timeline drag & drop -->
+<script src="scripts/timeline.js"></script>
+
+<script>
+    // Initialize system and view
+    const system = new System();
+    const view = new View("08:00", "map");
+
+    // Handle map loading
+    async function handleLoadMap() {
+        const input = document.getElementById("xmlMapInput");
+        const result = await system.loadPlan(input);
+
+        if (!result.success) {
+            alert("Erreur lors du chargement: " + result.error);
+            return;
+        }
+
+        // Hide placeholder and initialize map if first time
+        const placeholder = document.getElementById("mapPlaceholder");
+        if (placeholder) {
+            placeholder.style.display = "none";
+        }
+
+        // Display the plan
+        view.displayPlan(result.plan);
+        console.log("Plan chargé avec succès!");
+    }
+
+    // Handle demands loading
+    async function handleLoadDemands() {
+        const input = document.getElementById("xmlDeliveriesInput");
+        const result = await system.loadDemandsFromXML(input);
+
+        if (!result.success) {
+            alert("Erreur lors du chargement des demandes: " + result.error);
+            return;
+        }
+
+        console.log(`${result.count} demandes chargées avec succès!`);
+        console.log("Entrepôt:", result.warehouse);
+        console.log("Demandes:", result.demands);
+
+        // TODO: Update UI with loaded demands (afficher dans la sidebar)
+        alert(`${result.count} demandes chargées avec succès!\nEntrepôt: ${result.warehouse.address}\nHeure départ: ${result.warehouse.departureTime}`);
+    }
+</script>
 </body>
 </html>
