@@ -1,4 +1,5 @@
-const Demand = require("./demand");
+// Demand is expected to be loaded before this script in browser environment
+// For Node.js: const Demand = require("./demand");
 
 class System {
     plan;
