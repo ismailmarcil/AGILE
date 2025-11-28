@@ -40,17 +40,17 @@ class Tour {
      */
     calculateTotalDuration() {
         let duration = 0;
-        
+
         // Add travel time from all legs
         for (const leg of this.legs) {
             duration += leg.travelTime;
         }
-        
+
         // Add service duration from all stops
         for (const stop of this.stops) {
             duration += stop.serviceDuration;
         }
-        
+
         this.totalDuration = duration;
         return this.totalDuration;
     }
@@ -61,11 +61,11 @@ class Tour {
      */
     calculateTotalDistance() {
         let distance = 0;
-        
+
         for (const leg of this.legs) {
             distance += leg.distance;
         }
-        
+
         this.totalDistance = distance;
         return this.totalDistance;
     }
@@ -150,19 +150,19 @@ class Tour {
             const j = newStops.indexOf(p.relatedTourPoint);
 
             if (p.type === "PICKUP" && i > j) {
-                return { 
-                    valid: false, 
-                    reason: "PICKUP_AFTER_DELIVERY", 
-                    pickup: p.node.id, 
-                    delivery: p.relatedTourPoint.node.id 
+                return {
+                    valid: false,
+                    reason: "PICKUP_AFTER_DELIVERY",
+                    pickup: p.node.id,
+                    delivery: p.relatedTourPoint.node.id
                 };
             }
             if (p.type === "DELIVERY" && i < j) {
-                return { 
-                    valid: false, 
-                    reason: "DELIVERY_BEFORE_PICKUP", 
-                    pickup: p.relatedTourPoint.node.id, 
-                    delivery: p.node.id 
+                return {
+                    valid: false,
+                    reason: "DELIVERY_BEFORE_PICKUP",
+                    pickup: p.relatedTourPoint.node.id,
+                    delivery: p.node.id
                 };
             }
         }
