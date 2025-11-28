@@ -42,6 +42,7 @@ const addDemandForm = document.getElementById("addDemandForm");
 const addDemandBtn = document.getElementById("addDemandBtn");
 const addDemandCancelBtn = document.getElementById("addDemandCancelBtn");
 const addDemandCloseBtn = document.getElementById("addDemandCloseBtn");
+const clearDemandsBtn = document.getElementById("clearDemandsBtn");
 
 
 
@@ -61,6 +62,22 @@ function closeAddDemandModal() {
 // Ouverture via le bouton +
 if (addDemandBtn) {
     addDemandBtn.addEventListener("click", openAddDemandModal);
+}
+
+// Effacer toutes les demandes via le bouton Clear
+if (clearDemandsBtn) {
+    clearDemandsBtn.addEventListener("click", () => {
+        if (system.demandsList.length === 0) {
+            alert("Aucune demande à effacer.");
+            return;
+        }
+
+        if (confirm(`Êtes-vous sûr de vouloir effacer toutes les ${system.demandsList.length} demandes ?`)) {
+            system.demandsList = [];
+            updateDemandsUI();
+            console.log("Toutes les demandes ont été effacées");
+        }
+    });
 }
 
 // Fermeture via bouton "Annuler" + croix
@@ -112,7 +129,10 @@ if (addDemandForm) {
             deliveryDuration
         );
 
-
+        // Assign a default name for manually added demands
+        if (demand) {
+            demand.clientName = `Demande manuelle #${demand.id}`;
+        }
 
         // Rafraîchir l'UI avec la nouvelle demande
         updateDemandsUI();
@@ -125,34 +145,52 @@ if (addDemandForm) {
 async function handleLoadDemands() {
     const input = document.getElementById("xmlDeliveriesInput");
 
-    // Extract filename without extension
-    let fileName = "Client";
-    if (input.files.length > 0) {
-        const fullName = input.files[0].name;
-        // Remove .xml extension
-        fileName = fullName.replace(/\.xml$/i, '');
-    }
-
-    const result = await system.loadDemandsFromXML(input);
-
-    if (!result.success) {
-        alert("Erreur lors du chargement des demandes: " + result.error);
+    // Process multiple files
+    if (input.files.length === 0) {
         return;
     }
 
-    // Update client names based on filename
-    system.demandsList.forEach((demand, index) => {
-        demand.clientName = `${fileName} #${index + 1}`;
-    });
+    let totalDemandsLoaded = 0;
+    const fileNames = [];
 
-    console.log(`${result.count} demandes chargées avec succès!`);
-    console.log("Entrepôt:", result.warehouse);
-    console.log("Demandes:", result.demands);
+    // Process each selected file
+    for (let i = 0; i < input.files.length; i++) {
+        const file = input.files[i];
+        const fileName = file.name.replace(/\.xml$/i, '');
+        fileNames.push(fileName);
+
+        // Create a temporary input for this file
+        const tempInput = document.createElement('input');
+        tempInput.type = 'file';
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        tempInput.files = dataTransfer.files;
+
+        // Track the number of demands before loading
+        const demandsCountBefore = system.demandsList.length;
+
+        const result = await system.loadDemandsFromXML(tempInput);
+
+        if (!result.success) {
+            alert(`Erreur lors du chargement de ${fileName}: ${result.error}`);
+            continue;
+        }
+
+        // Update client names for the newly added demands
+        for (let j = demandsCountBefore; j < system.demandsList.length; j++) {
+            system.demandsList[j].clientName = fileName;
+        }
+
+        totalDemandsLoaded += result.count;
+        console.log(`${result.count} demandes chargées depuis ${fileName}`);
+    }
 
     // Update UI with loaded demands
     updateDemandsUI();
 
-    alert(`${result.count} demandes chargées avec succès!\nEntrepôt: ${result.warehouse.address}\nHeure départ: ${result.warehouse.departureTime}`);
+    if (totalDemandsLoaded > 0) {
+        alert(`${totalDemandsLoaded} demandes chargées avec succès depuis ${input.files.length} fichier(s)!\nFichiers: ${fileNames.join(', ')}`);
+    }
 }
 
 // Helper function to format node address for display
@@ -184,6 +222,18 @@ function updateDemandsUI() {
             child.remove();
         }
     });
+
+    // Update map display if plan is loaded
+    if (system.plan && view.map) {
+        // Redisplay plan (light segments and nodes)
+        const planJSON = system.plan.toJSON();
+        view.clearMap();
+        view.displaySegments(planJSON.segments);
+        view.displayNodes(planJSON.nodes);
+
+        // Display demands on top
+        view.displayDemands(system.demandsList, system.plan);
+    }
 
     // Add each demand from system.demandsList
     system.demandsList.forEach((demand) => {

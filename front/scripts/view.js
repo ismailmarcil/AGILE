@@ -49,22 +49,23 @@ class View {
     }
 
     /**
-     * Draw nodes as blue dots
+     * Draw nodes as blue dots (légers pour ne pas dominer la carte)
      */
     displayNodes(nodes) {
         nodes.forEach(node => {
             L.circleMarker([node.latitude, node.longitude], {
-                radius: 3,
-                fillColor: "blue",
-                color: "#000",
-                weight: 2,
-                fillOpacity: 0.9
+                radius: 2,
+                fillColor: "#95a5a6",
+                color: "#7f8c8d",
+                weight: 1,
+                fillOpacity: 0.3,
+                opacity: 0.4
             }).addTo(this.map);
         });
     }
 
     /**
-     * Draw segments as red lines
+     * Draw segments as red lines (légers pour ne pas dominer la carte)
      */
     displaySegments(segments) {
         segments.forEach(seg => {
@@ -78,9 +79,9 @@ class View {
                     [dest.latitude, dest.longitude]
                 ],
                 {
-                    color: "red",
-                    weight: 4,
-                    opacity: 0.9
+                    color: "#bdc3c7",
+                    weight: 2,
+                    opacity: 0.4
                 }
             ).addTo(this.map);
         });
@@ -103,6 +104,102 @@ class View {
             if (layer instanceof L.TileLayer) return;
             this.map.removeLayer(layer);
         });
+    }
+
+    /**
+     * Display demands on the map (pickup and delivery points)
+     * @param {Array<Demand>} demands - Array of Demand objects
+     * @param {Plan} plan - The Plan object to get node coordinates
+     */
+    displayDemands(demands, plan) {
+        if (!demands || demands.length === 0) {
+            console.log('View: No demands to display');
+            return;
+        }
+
+        if (!plan) {
+            console.error('View: Plan is required to display demands');
+            return;
+        }
+
+        demands.forEach((demand, index) => {
+            // Get pickup node
+            const pickupNode = plan.getNodeById(demand.pickupAddress);
+            if (pickupNode) {
+                const pickupIcon = L.divIcon({
+                    className: 'demand-marker',
+                    html: `<div style="
+                        background-color: #e67e22;
+                        width: 28px;
+                        height: 28px;
+                        border-radius: 50%;
+                        border: 3px solid white;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        font-size: 11px;
+                        color: white;
+                    ">P${index + 1}</div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+
+                const pickupMarker = L.marker([pickupNode.latitude, pickupNode.longitude], {
+                    icon: pickupIcon,
+                    zIndexOffset: 1000
+                }).addTo(this.map);
+
+                pickupMarker.bindPopup(`
+                    <strong>📦 Pickup ${index + 1}</strong><br>
+                    Client: ${demand.clientName || 'N/A'}<br>
+                    Durée: ${Math.round(demand.pickupDuration / 60)} min<br>
+                    Node ID: ${pickupNode.id}<br>
+                    Coords: (${pickupNode.latitude.toFixed(4)}, ${pickupNode.longitude.toFixed(4)})
+                `);
+            }
+
+            // Get delivery node
+            const deliveryNode = plan.getNodeById(demand.deliveryAddress);
+            if (deliveryNode) {
+                const deliveryIcon = L.divIcon({
+                    className: 'demand-marker',
+                    html: `<div style="
+                        background-color: #27ae60;
+                        width: 28px;
+                        height: 28px;
+                        border-radius: 50%;
+                        border: 3px solid white;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        font-size: 11px;
+                        color: white;
+                    ">D${index + 1}</div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+
+                const deliveryMarker = L.marker([deliveryNode.latitude, deliveryNode.longitude], {
+                    icon: deliveryIcon,
+                    zIndexOffset: 1000
+                }).addTo(this.map);
+
+                deliveryMarker.bindPopup(`
+                    <strong>🏠 Delivery ${index + 1}</strong><br>
+                    Client: ${demand.clientName || 'N/A'}<br>
+                    Durée: ${Math.round(demand.deliveryDuration / 60)} min<br>
+                    Node ID: ${deliveryNode.id}<br>
+                    Coords: (${deliveryNode.latitude.toFixed(4)}, ${deliveryNode.longitude.toFixed(4)})
+                `);
+            }
+
+        });
+
+        console.log(`View: ${demands.length} demands displayed on map`);
     }
 
     /**

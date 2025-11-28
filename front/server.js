@@ -27,9 +27,9 @@ const server = http.createServer((req, res) => {
     // Parser l'URL et retirer les query strings
     let filePath = req.url.split('?')[0];
 
-    // Route par défaut vers design.html
+    // Route par défaut vers index.html
     if (filePath === '/' || filePath === '') {
-        filePath = '/design.html';
+        filePath = '/index.html';
     }
 
     // Construire le chemin complet du fichier

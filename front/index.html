@@ -6,7 +6,7 @@
     <title>DelivHub - Dashboard Manager</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <link rel="stylesheet" href="styles/design.css">
+    <link rel="stylesheet" href="styles/styles.css">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
         <div class="control-group">
             <div class="section-title"><i class="fa-regular fa-folder-open"></i> Fichiers</div>
             <input type="file" id="xmlMapInput" accept=".xml" style="display: none;" onchange="handleLoadMap()">
-            <input type="file" id="xmlDeliveriesInput" accept=".xml" style="display: none;" onchange="handleLoadDemands()">
+            <input type="file" id="xmlDeliveriesInput" accept=".xml" multiple style="display: none;" onchange="handleLoadDemands()">
             <div class="upload-row">
                 <div class="file-upload-box" onclick="document.getElementById('xmlMapInput').click()" style="cursor: pointer;">
                     <i class="fa-solid fa-map"></i> Plan (XML)
@@ -51,9 +51,14 @@
         <div class="control-group" style="border:none;" id="demandsContainer">
             <div class="section-title" style="justify-content: space-between;">
                 <span><i class="fa-solid fa-list-check"></i> Demandes</span>
-                <button class="btn-icon" id="addDemandBtn" title="Ajouter une demande">
-                    <i class="fa-solid fa-plus"></i>
-                </button>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn-icon" id="clearDemandsBtn" title="Effacer toutes les demandes">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                    <button class="btn-icon" id="addDemandBtn" title="Ajouter une demande">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
             </div>
 
             <p style="text-align: center; color: #95a5a6; font-size: 0.85rem; padding: 20px;">
