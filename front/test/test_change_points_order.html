@@ -82,7 +82,6 @@
             const node3 = new Node("2117622723", 45.75425, 4.8591485, []);
             const node4 = new Node("2117622721", 45.753757, 4.8601513, []);
             const node5 = new Node("25611760", 45.754536, 4.866525, []);
-            // const node6 = new Node("25175791", 45.75406, 4.857418, []); // Retour à l'entrepôt
 
             // Create segments between nodes
             node1.segment = new Segment("25175791", "25175778", "Rue Danton", 69.98);
@@ -97,7 +96,7 @@
             // Create the tour
             tour = new Tour("08:00", courier);
 
-            // --- Création de vrais TourPoint pour le test ---
+            // Tour Points
 
             // Pickup 1
             const p1 = new TourPoint(
@@ -115,7 +114,7 @@
                 "DELIVERY"
             );
 
-            // Lien entre pickup et delivery
+            // Link between pickup and delivery
             p1.relatedId = d1.id;
             d1.relatedId = p1.id;
 
@@ -135,18 +134,18 @@
                 "DELIVERY"
             );
 
-            // Lien entre pickup et delivery
+            // Link between pickup and delivery
             p2.relatedId = d2.id;
             d2.relatedId = p2.id;
 
-            // Un point normal (entrepôt ou autre)
+            // Start warehouse
             const start = new TourPoint(
                 "START",
                 node3.latitude, node3.longitude,
                 node3.segments,
                 "ENTREPOT"
             );
-
+            // End warehouse
             const end = new TourPoint(
                 "END",
                 node3.latitude, node3.longitude,
@@ -154,10 +153,7 @@
                 "ENTREPOT"
             );
 
-
-
-            // --- Définir l’itinéraire pour tester l'ordre ---
-            //tour.itinerary = [ neutral, pickup,delivery];
+            // Build the itinerary
             tour.itinerary = [
                 start,   // index 0 — can't move
                 p1,       // index 1 — can move
@@ -167,10 +163,6 @@
                 end       // index 3 — can't move
             ];
 
-
-
-            // Create pickup and delivery points (optional - can be added if TourPoint class exists)
-            // For now, we'll just display the itinerary
 
             // Display the tour
             view.displayTour(tour);
