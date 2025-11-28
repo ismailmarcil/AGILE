@@ -51,7 +51,9 @@
         <div class="control-group" style="border:none;" id="demandsContainer">
             <div class="section-title" style="justify-content: space-between;">
                 <span><i class="fa-solid fa-list-check"></i> Demandes</span>
-                <button class="btn-icon" title="Ajouter une demande"><i class="fa-solid fa-plus"></i></button>
+                <button class="btn-icon" id="addDemandBtn" title="Ajouter une demande">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
             </div>
 
             <p style="text-align: center; color: #95a5a6; font-size: 0.85rem; padding: 20px;">
@@ -159,7 +161,48 @@
 <!-- Timeline drag & drop -->
 <script src="scripts/timeline.js"></script>
 
+<!-- Modal ajout de demande -->
+<div id="addDemandModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Ajouter une demande</h3>
+            <button type="button" id="addDemandCloseBtn" class="btn-icon">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form id="addDemandForm" class="modal-body">
+            <div class="form-row">
+                <label for="pickupAddressInput">Adresse pickup (id de noeud)</label>
+                <input type="text" id="pickupAddressInput" required placeholder="ex: 25175791">
+            </div>
+
+            <div class="form-row">
+                <label for="deliveryAddressInput">Adresse delivery (id de noeud)</label>
+                <input type="text" id="deliveryAddressInput" required placeholder="ex: 26086130">
+            </div>
+
+            <div class="form-row">
+                <label for="pickupDurationInput">Durée pickup (sec)</label>
+                <input type="number" id="pickupDurationInput" min="0" value="5" required>
+            </div>
+
+            <div class="form-row">
+                <label for="deliveryDurationInput">Durée delivery (sec)</label>
+                <input type="number" id="deliveryDurationInput" min="0" value="5" required>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn" id="addDemandCancelBtn">Annuler</button>
+                <button type="submit" class="btn btn-primary">Ajouter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Main application script -->
 <script src="scripts/app.js"></script>
+
+
 </body>
 </html>

@@ -35,6 +35,93 @@ async function handleLoadMap() {
 }
 
 // Handle demands loading
+
+// Récupération des éléments du DOM
+const addDemandModal = document.getElementById("addDemandModal");
+const addDemandForm = document.getElementById("addDemandForm");
+const addDemandBtn = document.getElementById("addDemandBtn");
+const addDemandCancelBtn = document.getElementById("addDemandCancelBtn");
+const addDemandCloseBtn = document.getElementById("addDemandCloseBtn");
+
+
+
+function openAddDemandModal() {
+    if (!addDemandModal) return;
+    addDemandModal.style.display = "flex";
+}
+
+function closeAddDemandModal() {
+    if (!addDemandModal) return;
+    addDemandModal.style.display = "none";
+    if (addDemandForm) {
+        addDemandForm.reset();
+    }
+}
+
+// Ouverture via le bouton +
+if (addDemandBtn) {
+    addDemandBtn.addEventListener("click", openAddDemandModal);
+}
+
+// Fermeture via bouton "Annuler" + croix
+if (addDemandCancelBtn) {
+    addDemandCancelBtn.addEventListener("click", closeAddDemandModal);
+}
+if (addDemandCloseBtn) {
+    addDemandCloseBtn.addEventListener("click", closeAddDemandModal);
+}
+
+// Fermeture si on clique sur le fond gris
+if (addDemandModal) {
+    addDemandModal.addEventListener("click", (e) => {
+        if (e.target === addDemandModal) {
+            closeAddDemandModal();
+        }
+    });
+}
+
+// Soumission du formulaire
+if (addDemandForm) {
+    addDemandForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        const pickupAddressInput = document.getElementById("pickupAddressInput");
+        const deliveryAddressInput = document.getElementById("deliveryAddressInput");
+        const pickupDurationInput = document.getElementById("pickupDurationInput");
+        const deliveryDurationInput = document.getElementById("deliveryDurationInput");
+
+        const pickupAddress = pickupAddressInput.value.trim();
+        const deliveryAddress = deliveryAddressInput.value.trim();
+
+        const pickupDuration = Number(pickupDurationInput.value);
+        const deliveryDuration = Number(deliveryDurationInput.value);
+
+        if (!pickupAddress || !deliveryAddress || isNaN(pickupDuration) || isNaN(deliveryDuration)) {
+            alert("Merci de remplir tous les champs correctement.");
+            return;
+        }
+
+
+
+        // Appel de la fonction back déjà existante dans System
+        // addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration)
+        const demand = system.addDemand(
+            pickupAddress,
+            deliveryAddress,
+            pickupDuration,
+            deliveryDuration
+        );
+
+
+
+        // Rafraîchir l'UI avec la nouvelle demande
+        updateDemandsUI();
+
+        // Fermer la modale
+        closeAddDemandModal();
+    });
+}
+
 async function handleLoadDemands() {
     const input = document.getElementById("xmlDeliveriesInput");
 
