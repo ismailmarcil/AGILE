@@ -87,6 +87,91 @@ class Tour {
     }
 
     /**
+     * Moves a stop from oldIndex to newIndex
+     * @param {number} oldIndex - Current index of the stop
+     * @param {number} newIndex - New index to move the stop to
+     * @returns {Object} Result object with valid flag and optional reason
+     */
+    movePoint(oldIndex, newIndex) {
+        const result = this.isMoveValid(oldIndex, newIndex);
+
+        if (!result.valid) {
+            return result;
+        }
+
+        const [point] = this.stops.splice(oldIndex, 1);
+        this.stops.splice(newIndex, 0, point);
+
+        return { valid: true };
+    }
+
+    /**
+     * Validates if moving a stop from oldIndex to newIndex is valid
+     * @param {number} oldIndex - Current index of the stop
+     * @param {number} newIndex - New index to move the stop to
+     * @returns {Object} Object with valid flag and optional reason/details
+     */
+    isMoveValid(oldIndex, newIndex) {
+        const stops = this.stops;
+        const point = stops[oldIndex];
+
+        if (newIndex < 0 || newIndex >= stops.length) {
+            return { valid: false, reason: "OUT_OF_RANGE" };
+        }
+
+        // Start warehouse immobile
+        if (oldIndex === 0 && point.type === "ENTREPOT") {
+            return { valid: false, reason: "DEPOT_START" };
+        }
+
+        // Final warehouse immobile
+        if (oldIndex === stops.length - 1 && point.type === "ENTREPOT") {
+            return { valid: false, reason: "DEPOT_END_MOVE" };
+        }
+
+        // Simulation
+        const newStops = [...stops];
+        const [moved] = newStops.splice(oldIndex, 1);
+        newStops.splice(newIndex, 0, moved);
+
+        // Warehouse always at the ends
+        if (newStops[0].type !== "ENTREPOT") {
+            return { valid: false, reason: "DEPOT_START_MUST_REMAIN" };
+        }
+        if (newStops[newStops.length - 1].type !== "ENTREPOT") {
+            return { valid: false, reason: "DEPOT_END_MUST_REMAIN" };
+        }
+
+        // Pickup & Delivery precedence rules
+        for (const p of newStops) {
+            if (!p.relatedTourPoint) continue;
+
+            const i = newStops.indexOf(p);
+            const j = newStops.indexOf(p.relatedTourPoint);
+
+            if (p.type === "PICKUP" && i > j) {
+                return { 
+                    valid: false, 
+                    reason: "PICKUP_AFTER_DELIVERY", 
+                    pickup: p.node.id, 
+                    delivery: p.relatedTourPoint.node.id 
+                };
+            }
+            if (p.type === "DELIVERY" && i < j) {
+                return { 
+                    valid: false, 
+                    reason: "DELIVERY_BEFORE_PICKUP", 
+                    pickup: p.relatedTourPoint.node.id, 
+                    delivery: p.node.id 
+                };
+            }
+        }
+
+        return { valid: true };
+    }
+
+
+    /**
      * Returns a JSON representation of the tour
      * @returns {Object} JSON object representing the tour
      */
