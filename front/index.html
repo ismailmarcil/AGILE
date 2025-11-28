@@ -1,384 +1,165 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delivery Management System</title>
+    <title>DelivHub - Dashboard Manager</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="styles/styles.css">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
-
 <body>
-    <!-- Leaflet library -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-    <!-- Backend classes (load in order of dependencies) -->
-    <script src="/backend/demand.js"></script>
-    <script src="/backend/node.js"></script>
-    <script src="/backend/segment.js"></script>
-    <script src="/backend/plan.js"></script>
-    <script src="/backend/system.js"></script>
-    <script src="/front/scripts/view.js"></script>
-
-    <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <h1 class="logo">📦 Delivery Manager</h1>
-            <div class="user-info">
-                <span class="user-role">Planner</span>
-                <button class="btn-logout">Déconnexion</button>
-            </div>
+<div class="sidebar">
+    <div class="header">
+        <div>
+            <h1 style="font-size: 1.1rem;"><i class="fa-solid fa-bicycle"></i> DelivHub</h1>
         </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-            <!-- Sidebar -->
-            <aside class="sidebar">
-                <nav class="nav-menu">
-                    <h3>Menu Principal</h3>
-                    <ul>
-                        <li class="active">
-                            <a href="#map">
-                                <span class="icon">🗺️</span>
-                                Carte de la ville
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#tours">
-                                <span class="icon">🚚</span>
-                                Tournées
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#deliveries">
-                                <span class="icon">📦</span>
-                                Demandes de livraison
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#couriers">
-                                <span class="icon">👤</span>
-                                Gestion des livreurs
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
-
-                <div class="sidebar-actions">
-                    <h3>Actions rapides</h3>
-                    <input type="file" id="xmlMapInput" accept=".xml" style="display: none;" onchange="handleLoadMap()">
-                    <button class="btn btn-primary" onclick="document.getElementById('xmlMapInput').click()">
-                        <span class="icon">📁</span>
-                        Charger une carte
-                        </label>
-                        <input id="xmlFileInput" type="file" accept=".xml" style="display: none;"
-                            onchange="handleLoad()">
-                        <button class="btn btn-primary">
-                            <span class="icon">📋</span>
-                            Charger des demandes
-                        </button>
-                        <button class="btn btn-success">
-                            <span class="icon">✨</span>
-                            Créer une tournée optimale
-                        </button>
-                        <button class="btn btn-secondary">
-                            <span class="icon">💾</span>
-                            Sauvegarder les tournées
-                        </button>
-                </div>
-            </aside>
-
-            <!-- Main Panel -->
-            <div class="main-panel">
-                <!-- Map Section -->
-                <section class="map-section" id="map">
-                    <div class="section-header">
-                        <h2>Carte de la ville</h2>
-                        <div class="section-actions">
-                            <button class="btn-icon" title="Zoom avant">🔍+</button>
-                            <button class="btn-icon" title="Zoom arrière">🔍-</button>
-                            <button class="btn-icon" title="Centrer">🎯</button>
-                        </div>
-                    </div>
-                    <div class="map-container">
-                        <div id="map" style="width: 100%; height: 500px;">
-                            <div class="map-placeholder" id="mapPlaceholder">
-                                <p>🗺️ Chargez une carte pour commencer</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Tours Section -->
-                <section class="tours-section" id="tours">
-                    <div class="section-header">
-                        <h2>Tournées actives</h2>
-                        <button class="btn btn-small">+ Nouvelle tournée</button>
-                    </div>
-                    <div class="tours-grid">
-                        <div class="tour-card tour-1">
-                            <div class="tour-header">
-                                <h3>Tournée #1</h3>
-                                <span class="tour-status status-active">En cours</span>
-                            </div>
-                            <div class="tour-details">
-                                <p><strong>Livreur:</strong> Jean Dupont</p>
-                                <p><strong>Points de livraison:</strong> 8</p>
-                                <p><strong>Distance:</strong> 12.5 km</p>
-                                <p><strong>Temps estimé:</strong> 2h 30min</p>
-                            </div>
-                            <div class="tour-actions">
-                                <button class="btn btn-small btn-info">Voir détails</button>
-                                <button class="btn btn-small btn-warning">Modifier</button>
-                                <button class="btn btn-small btn-danger">Supprimer</button>
-                            </div>
-                        </div>
-
-                        <div class="tour-card tour-2">
-                            <div class="tour-header">
-                                <h3>Tournée #2</h3>
-                                <span class="tour-status status-planned">Planifiée</span>
-                            </div>
-                            <div class="tour-details">
-                                <p><strong>Livreur:</strong> Marie Martin</p>
-                                <p><strong>Points de livraison:</strong> 6</p>
-                                <p><strong>Distance:</strong> 9.2 km</p>
-                                <p><strong>Temps estimé:</strong> 1h 45min</p>
-                            </div>
-                            <div class="tour-actions">
-                                <button class="btn btn-small btn-info">Voir détails</button>
-                                <button class="btn btn-small btn-warning">Modifier</button>
-                                <button class="btn btn-small btn-danger">Supprimer</button>
-                            </div>
-                        </div>
-
-                        <div class="tour-card tour-3">
-                            <div class="tour-header">
-                                <h3>Tournée #3</h3>
-                                <span class="tour-status status-completed">Terminée</span>
-                            </div>
-                            <div class="tour-details">
-                                <p><strong>Livreur:</strong> Pierre Durand</p>
-                                <p><strong>Points de livraison:</strong> 10</p>
-                                <p><strong>Distance:</strong> 15.8 km</p>
-                                <p><strong>Temps estimé:</strong> 3h 15min</p>
-                            </div>
-                            <div class="tour-actions">
-                                <button class="btn btn-small btn-info">Voir détails</button>
-                                <button class="btn btn-small btn-warning">Modifier</button>
-                                <button class="btn btn-small btn-danger">Supprimer</button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Delivery Requests Section -->
-                <section class="deliveries-section" id="deliveries">
-                    <div class="section-header">
-                        <h2>Demandes de livraison</h2>
-                        <button class="btn btn-small btn-success">+ Ajouter une demande</button>
-                    </div>
-                    <div class="table-container">
-                        <table class="deliveries-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Point de collecte</th>
-                                    <th>Point de livraison</th>
-                                    <th>Livreur assigné</th>
-                                    <th>Statut</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>#001</td>
-                                    <td>123 Rue de Paris</td>
-                                    <td>456 Avenue Victor Hugo</td>
-                                    <td>Jean Dupont</td>
-                                    <td><span class="badge badge-success">Assignée</span></td>
-                                    <td>
-                                        <button class="btn-icon" title="Modifier">✏️</button>
-                                        <button class="btn-icon" title="Supprimer">🗑️</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>#002</td>
-                                    <td>789 Boulevard Saint-Michel</td>
-                                    <td>321 Rue de la Liberté</td>
-                                    <td>Marie Martin</td>
-                                    <td><span class="badge badge-success">Assignée</span></td>
-                                    <td>
-                                        <button class="btn-icon" title="Modifier">✏️</button>
-                                        <button class="btn-icon" title="Supprimer">🗑️</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>#003</td>
-                                    <td>654 Place de la République</td>
-                                    <td>987 Rue Nationale</td>
-                                    <td>-</td>
-                                    <td><span class="badge badge-warning">En attente</span></td>
-                                    <td>
-                                        <button class="btn-icon" title="Modifier">✏️</button>
-                                        <button class="btn-icon" title="Supprimer">🗑️</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>#004</td>
-                                    <td>147 Avenue Jean Jaurès</td>
-                                    <td>258 Rue du Commerce</td>
-                                    <td>Pierre Durand</td>
-                                    <td><span class="badge badge-info">Livrée</span></td>
-                                    <td>
-                                        <button class="btn-icon" title="Modifier">✏️</button>
-                                        <button class="btn-icon" title="Supprimer">🗑️</button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <!-- Couriers Section -->
-                <section class="couriers-section" id="couriers">
-                    <div class="section-header">
-                        <h2>Gestion des livreurs</h2>
-                        <button class="btn btn-small btn-success">+ Ajouter un livreur</button>
-                    </div>
-                    <div class="couriers-grid">
-                        <div class="courier-card">
-                            <div class="courier-header">
-                                <h3>👤 Jean Dupont</h3>
-                                <span class="courier-status status-active">Actif</span>
-                            </div>
-                            <div class="courier-details">
-                                <p><strong>ID:</strong> #L001</p>
-                                <p><strong>Téléphone:</strong> 06 12 34 56 78</p>
-                                <p><strong>Email:</strong> jean.dupont@delivery.fr</p>
-                                <p><strong>Tournée actuelle:</strong> Tournée #1</p>
-                            </div>
-                            <div class="courier-actions">
-                                <button class="btn btn-small btn-info">Voir détails</button>
-                                <button class="btn btn-small btn-warning">Modifier</button>
-                            </div>
-                        </div>
-
-                        <div class="courier-card">
-                            <div class="courier-header">
-                                <h3>👤 Marie Martin</h3>
-                                <span class="courier-status status-active">Actif</span>
-                            </div>
-                            <div class="courier-details">
-                                <p><strong>ID:</strong> #L002</p>
-                                <p><strong>Téléphone:</strong> 06 23 45 67 89</p>
-                                <p><strong>Email:</strong> marie.martin@delivery.fr</p>
-                                <p><strong>Tournée actuelle:</strong> Tournée #2</p>
-                            </div>
-                            <div class="courier-actions">
-                                <button class="btn btn-small btn-info">Voir détails</button>
-                                <button class="btn btn-small btn-warning">Modifier</button>
-                            </div>
-                        </div>
-
-                        <div class="courier-card">
-                            <div class="courier-header">
-                                <h3>👤 Pierre Durand</h3>
-                                <span class="courier-status status-inactive">Inactif</span>
-                            </div>
-                            <div class="courier-details">
-                                <p><strong>ID:</strong> #L003</p>
-                                <p><strong>Téléphone:</strong> 06 34 56 78 90</p>
-                                <p><strong>Email:</strong> pierre.durand@delivery.fr</p>
-                                <p><strong>Tournée actuelle:</strong> Aucune</p>
-                            </div>
-                            <div class="courier-actions">
-                                <button class="btn btn-small btn-info">Voir détails</button>
-                                <button class="btn btn-small btn-warning">Modifier</button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </div>
-    </main>
-
-    <!-- Modal for authentication (hidden by default) -->
-    <div class="modal" id="authModal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🔐 Authentification</h2>
-            </div>
-            <form class="auth-form">
-                <div class="form-group">
-                    <label for="username">Identifiant</label>
-                    <input type="text" id="username" placeholder="Entrez votre identifiant" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Mot de passe</label>
-                    <input type="password" id="password" placeholder="Entrez votre mot de passe" required>
-                </div>
-                <div class="form-group">
-                    <label for="role">Rôle</label>
-                    <select id="role">
-                        <option value="planner">Planner</option>
-                        <option value="courier">Courier</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
-            </form>
+        <div class="user-profile">
+            <i class="fa-regular fa-user"></i>&nbsp; Planner
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2025 Delivery Management System - Sprint 1</p>
+    <div class="controls">
+        <div class="control-group">
+            <div class="section-title"><i class="fa-regular fa-folder-open"></i> Fichiers</div>
+            <input type="file" id="xmlMapInput" accept=".xml" style="display: none;" onchange="handleLoadMap()">
+            <input type="file" id="xmlDeliveriesInput" accept=".xml" style="display: none;" onchange="handleLoadDemands()">
+            <div class="upload-row">
+                <div class="file-upload-box" onclick="document.getElementById('xmlMapInput').click()" style="cursor: pointer;">
+                    <i class="fa-solid fa-map"></i> Plan (XML)
+                </div>
+                <div class="file-upload-box" id="deliveriesUploadBox" onclick="document.getElementById('xmlDeliveriesInput').click()" style="cursor: pointer; opacity: 0.5; pointer-events: none;">
+                    <i class="fa-solid fa-box-open"></i> Livraisons (XML)
+                </div>
+            </div>
         </div>
-    </footer>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+        <div class="control-group">
+            <div class="section-title"><i class="fa-solid fa-users"></i> Coursiers</div>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <button class="btn btn-sm" style="border:1px solid #ccc">-</button>
+                <input type="text" value="2" style="width:40px; text-align:center; border:1px solid #ccc; border-radius:4px;" readonly>
+                <button class="btn btn-sm" style="border:1px solid #ccc">+</button>
+            </div>
+            <select style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #bdc3c7;">
+                <option>Pierre (Actif)</option>
+                <option>Paul</option>
+            </select>
+        </div>
 
-    <!-- Backend classes (load in order of dependencies) -->
-    <script src="/backend/demand.js"></script>
-    <script src="/backend/node.js"></script>
-    <script src="/backend/segment.js"></script>
-    <script src="/backend/plan.js"></script>
-    <script src="/backend/system.js"></script>
+        <div class="control-group" style="border:none;" id="demandsContainer">
+            <div class="section-title" style="justify-content: space-between;">
+                <span><i class="fa-solid fa-list-check"></i> Demandes</span>
+                <button class="btn-icon" title="Ajouter une demande"><i class="fa-solid fa-plus"></i></button>
+            </div>
 
-    <!-- View class -->
-    <script src="/script/view.js"></script>
+            <p style="text-align: center; color: #95a5a6; font-size: 0.85rem; padding: 20px;">
+                Aucune demande chargée. Chargez un fichier XML de livraisons.
+            </p>
 
-    <script>
-        const system = new System();
-        const view = new View("08:00", "map");
+        </div>
+    </div>
 
-        async function handleLoadMap() {
-            const input = document.getElementById("xmlMapInput");
-            const result = await system.loadPlan(input);
+    <div style="padding: 20px; border-top: 1px solid var(--border-color);">
+        <button class="btn btn-primary">
+            <i class="fa-solid fa-calculator"></i> Calculer la tournée
+        </button>
+    </div>
+</div>
 
-            if (!result.success) {
-                alert("Erreur lors du chargement: " + result.error);
-                return;
-            }
+<div class="main-content">
+    <div class="toolbar">
+        <div class="view-toggles">
+            <button class="toggle-btn active">Vue Livreur</button>
+            <button class="toggle-btn">Vue Globale</button>
+        </div>
 
-            // Hide placeholder and initialize map if first time
-            const placeholder = document.getElementById("mapPlaceholder");
-            if (placeholder) {
-                placeholder.style.display = "none";
-            }
+        <div>
+            <button class="btn btn-sm" style="background:white; border:1px solid #bdc3c7; margin-right:5px;">
+                <i class="fa-solid fa-rotate-left"></i> Undo
+            </button>
+            <button class="btn btn-sm" style="background:white; border:1px solid #bdc3c7; margin-right:5px;">
+                <i class="fa-solid fa-folder-open"></i> Restaurer
+            </button>
+            <button class="btn btn-sm btn-primary" style="width: auto;">
+                <i class="fa-solid fa-floppy-disk"></i> Sauvegarder
+            </button>
+        </div>
+    </div>
 
-            // Display the plan
-            view.displayPlan(result.plan);
-            console.log("Plan chargé avec succès!");
-        }
-    </script>
+    <div class="map-container">
+        <div id="map" style="width: 100%; height: 100%;">
+            <div class="map-placeholder" id="mapPlaceholder" style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                <i class="fa-solid fa-map-location-dot" style="font-size: 3rem; color: var(--secondary-color); margin-bottom: 15px;"></i>
+                <h3>Visualisation de la Carte</h3>
+                <p style="color: #7f8c8d; margin-top: 5px;">Chargez un plan XML pour commencer</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="tour-timeline">
+        <div class="section-title">
+            <span><i class="fa-solid fa-stopwatch"></i> Détails de la tournée (Pierre)</span>
+            <span style="margin-left:auto; font-size:0.7rem; font-weight:400; color:#7f8c8d;">Glisser pour réorganiser</span>
+        </div>
+
+        <div class="timeline-scroll">
+            <div class="step">
+                <div class="drag-handle"></div>
+                <div class="step-icon" style="background: var(--secondary-color); color:white;"><i class="fa-solid fa-warehouse"></i></div>
+                <div class="step-time">08:00</div>
+                <div class="step-desc">Départ</div>
+            </div>
+
+            <div class="step">
+                <div class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></div>
+                <div class="step-icon" style="border-color: var(--accent-pickup); color: var(--accent-pickup);">P1</div>
+                <div class="step-time">08:15</div>
+                <div class="step-desc">R. Répu.</div>
+            </div>
+
+            <div class="step">
+                <div class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></div>
+                <div class="step-icon" style="border-color: var(--accent-pickup); color: var(--accent-pickup);">P2</div>
+                <div class="step-time">08:25</div>
+                <div class="step-desc">Av. Jaurès</div>
+            </div>
+
+            <div class="step">
+                <div class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></div>
+                <div class="step-icon" style="border-color: var(--accent-delivery); color: var(--accent-delivery);">L1</div>
+                <div class="step-time">08:45</div>
+                <div class="step-desc">C. Gambetta</div>
+            </div>
+
+            <div class="step">
+                <div class="drag-handle"></div>
+                <div class="step-icon" style="background: var(--secondary-color); color:white;"><i class="fa-solid fa-warehouse"></i></div>
+                <div class="step-time">09:10</div>
+                <div class="step-desc">Arrivée</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<!-- Backend classes (load in order of dependencies) -->
+<script src="/backend/demand.js"></script>
+<script src="/backend/node.js"></script>
+<script src="/backend/segment.js"></script>
+<script src="/backend/plan.js"></script>
+<script src="/backend/system.js"></script>
+
+<!-- View class -->
+<script src="/front/scripts/view.js"></script>
+
+<!-- Timeline drag & drop -->
+<script src="scripts/timeline.js"></script>
+
+<!-- Main application script -->
+<script src="scripts/app.js"></script>
 </body>
-
 </html>
