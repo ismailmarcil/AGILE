@@ -1,18 +1,42 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Test DisplayTour</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
-        h1 { text-align: center; }
-        #map { height: 600px; width: 100%; border: 2px solid #333; }
-        .controls { text-align: center; margin: 20px 0; }
-        button { padding: 10px 20px; margin: 0 10px; font-size: 16px; cursor: pointer; }
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        #map {
+            height: 600px;
+            width: 100%;
+            border: 2px solid #333;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
     </style>
 </head>
+
 <body>
     <h1>Test de la classe View (Tour)</h1>
     <div class="controls">
@@ -29,7 +53,7 @@
     <script src="/backend/tourpoint.js"></script>
     <script src="/backend/leg.js"></script>
     <script src="/backend/tours.js"></script>
-    <script src="/view.js"></script>
+    <script src="/script/view.js"></script>
 
     <script>
         const view = new View("08:00", 'map');
@@ -50,7 +74,7 @@
             const seg3 = new Segment(node3, node4, "Rue de l'Abondance", 45.5);
             const seg4 = new Segment(node4, node5, "Avenue Félix Faure", 180.5);
             const seg5 = new Segment(node5, node1, "Rue Danton", 200.3);
-            
+
             node1.segments = [seg1];
             node2.segments = [seg2];
             node3.segments = [seg3];
@@ -100,4 +124,5 @@
         window.addEventListener('load', () => setTimeout(showExampleTour, 500));
     </script>
 </body>
+
 </html>
