@@ -1,9 +1,3 @@
-const Courier = require("./courier");
-const Demand = require("./demand");
-const Tour = require("./tours");
-const Plan = require("./plan");
-const Leg = require("./leg");
-const { TourPoint } = require("./tourpoint");
 // Demand is expected to be loaded before this script in browser environment
 // For Node.js environment - import Demand and Tour
 
@@ -23,13 +17,13 @@ class System {
         this.demandsList = [];
         this.toursList = [];
         this.nextDemandId = 1; //paramètre pour gérer les id des demandes ajoutées.
-    }
+     }
 
     async loadPlan(fileInput) {
 
         // 1. Vérifier qu'un fichier est sélectionné
         if (fileInput.files.length === 0) {
-            return { success: false, error: " Aucun fichier sélectionné. Veuillez choisir un fichier XML." };
+                 return { success: false, error: " Aucun fichier sélectionné. Veuillez choisir un fichier XML."};
         }
 
         const file = fileInput.files[0];
@@ -40,16 +34,16 @@ class System {
         const isXmlMime = file.type === "text/xml" || file.type === "application/xml" || file.type === "";
 
         if (!isXmlExtension && !isXmlMime) {
-            return { success: false, error: "Le fichier sélectionné n'est pas un fichier XML." };
-        }
+            return { success: false, error: "Le fichier sélectionné n'est pas un fichier XML."};
+        }  
 
         // 3. Lire le contenu du fichier
         let text;
         try {
             text = await file.text();
         } catch (error) {
-            return { success: false, error: "Impossible de lire le fichier. Vérifiez qu'il n'est pas corrompu." };
-
+            return { success: false, error: "Impossible de lire le fichier. Vérifiez qu'il n'est pas corrompu."};
+            
         }
 
         // 4. Parser le XML
@@ -57,7 +51,7 @@ class System {
 
         // Vérifier les erreurs de parsing
         if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
-            return { success: false, error: "Le contenu du fichier XML est invalide ou mal formé." };
+            return { success: false, error: "Le contenu du fichier XML est invalide ou mal formé."};
         }
 
         const reseau = xmlDoc.getElementsByTagName("reseau")[0];
@@ -65,15 +59,15 @@ class System {
         const troncons = xmlDoc.getElementsByTagName("troncon");
 
         if (!reseau) {
-            return { success: false, error: "Le XML ne contient pas la balise <reseau>. Ce n'est pas un plan valide." };
+            return { success: false, error: "Le XML ne contient pas la balise <reseau>. Ce n'est pas un plan valide."};
         }
 
         if (noeuds.length === 0) {
-            return { success: false, error: "Aucun noeud trouvé dans le XML. Ce fichier ne correspond pas à un plan." };
+            return { success: false, error: "Aucun noeud trouvé dans le XML. Ce fichier ne correspond pas à un plan."};
         }
 
         if (troncons.length === 0) {
-            return { success: false, error: "Aucun troncon trouvé dans le XML. Ce fichier ne correspond pas à un plan." };
+            return { success: false, error: "Aucun troncon trouvé dans le XML. Ce fichier ne correspond pas à un plan."};
         }
 
         // Validación de atributos esenciales
@@ -96,40 +90,40 @@ class System {
         }
 
         if (!estructuraValida) {
-            return { success: false, error: "Le XML n'a pas la structure d'un plan de carte (noeud/ troncon incorrects)." };
+            return { success: false, error: "Le XML n'a pas la structure d'un plan de carte (noeud/ troncon incorrects)."};
+       }
+
+    const nodes = Array.from(noeuds).map(n => new Node(
+        n.getAttribute("id"),
+        parseFloat(n.getAttribute("latitude")),
+        parseFloat(n.getAttribute("longitude")),
+        []
+    ));
+
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+    const segments = Array.from(troncons).map(t => {
+        const originId = t.getAttribute("origine");
+        const destId = t.getAttribute("destination");
+        const name = t.getAttribute("nomRue") || "";
+        const length = parseFloat(t.getAttribute("longueur"));
+
+        const originNode = nodeMap.get(originId) || null;
+        const destinationNode = nodeMap.get(destId) || null;
+
+        const seg = new Segment(
+            originNode,
+            destinationNode,
+            name,
+            length
+        );
+
+        if (originNode) {
+            originNode.segments.push(seg);
         }
 
-        const nodes = Array.from(noeuds).map(n => new Node(
-            n.getAttribute("id"),
-            parseFloat(n.getAttribute("latitude")),
-            parseFloat(n.getAttribute("longitude")),
-            []
-        ));
-
-        const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
-        const segments = Array.from(troncons).map(t => {
-            const originId = t.getAttribute("origine");
-            const destId = t.getAttribute("destination");
-            const name = t.getAttribute("nomRue") || "";
-            const length = parseFloat(t.getAttribute("longueur"));
-
-            const originNode = nodeMap.get(originId) || null;
-            const destinationNode = nodeMap.get(destId) || null;
-
-            const seg = new Segment(
-                originNode,
-                destinationNode,
-                name,
-                length
-            );
-
-            if (originNode) {
-                originNode.segments.push(seg);
-            }
-
-            return seg;
-        });
+        return seg;
+    });
 
         console.log("Segments loaded:", segments);
 
@@ -188,7 +182,7 @@ class System {
         });
 
         (data.legs || []).forEach(l => {
-            const pathNodes = (l.pathNode || []).map(getOrCreateNode);
+            const pathNodes = (l.path || []).map(getOrCreateNode);
             const leg = new Leg(null, null, pathNodes, l.distance || 0, l.travelTime || 0);
             tour.addLeg(leg);
         });
@@ -338,7 +332,7 @@ class System {
                 const deliveryDuration = Number(deliveryDurationStr);
 
                 //Créer un objet Demande et l'ajouter à la liste des demandes.
-                const demande = new Demand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration, this.nextDemandId++);
+                const demande = new Demand( pickupAddress,deliveryAddress,pickupDuration,deliveryDuration,this.nextDemandId++);
                 this.demandsList.push(demande);
             };
 
@@ -351,7 +345,7 @@ class System {
     }
 
     addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
-        const demande = new Demand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration, this.nextDemandId++);
+        const demande = new Demand( pickupAddress, deliveryAddress, pickupDuration, deliveryDuration,this.nextDemandId++);
         this.demandsList.push(demande);
         return demande;
     }
@@ -423,12 +417,12 @@ class System {
             const courier = couriers[i];
             const startIdx = i * demandsPerCourier;
             const endIdx = Math.min((i + 1) * demandsPerCourier, this.demandsList.length);
-
+            
             if (startIdx >= this.demandsList.length) break;
 
             const assignedDemands = this.demandsList.slice(startIdx, endIdx);
             const tour = this.buildTourForCourier(courier, assignedDemands, allPoints, distanceMatrix);
-
+            
             if (tour) {
                 tours.push(tour);
                 this.toursList.push(tour);
@@ -554,7 +548,7 @@ class System {
             for (let i = 0; i < pointsToVisit.length; i++) {
                 const nextPoint = pointsToVisit[i].point;
                 const pointId = nextPoint.id || nextPoint;
-
+                
                 if (!visited.has(pointId)) {
                     const distance = distanceMatrix.has(currentPoint.id)
                         ? (distanceMatrix.get(currentPoint.id).get(pointId) || Infinity)
