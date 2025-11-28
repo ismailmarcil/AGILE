@@ -10,7 +10,7 @@ class Plan {
      * @param {Array<Troncon>} segments - List of all segments (road segments)
      * @param {Node|null} warehouse - The warehouse node (starting point)
      */
-    constructor(nodes = new Map() , segments = [], warehouse = null) {
+    constructor(nodes = new Map(), segments = [], warehouse = null) {
         /**
          * @type {Array<Node>}
          */
@@ -40,18 +40,18 @@ class Plan {
 
         const fs = require("fs");
         const xml2js = require("xml2js");
-        
+
         // 1) Read the XML file
         const xmlContent = await fs.promises.readFile(filePath, "utf-8");
-    
+
         // 2) Convert to JSON with xml2js
         const json = await xml2js.parseStringPromise(xmlContent);
-    
+
         const root = json.reseau;
-    
+
         // Empty plan
         const plan = new Plan(new Map(), [], null);
-    
+
         // ----------------------------
         // 3) Load the nodes
         // ----------------------------
@@ -60,15 +60,15 @@ class Plan {
                 const id = n.$.id;
                 const latitude = parseFloat(n.$.latitude);
                 const longitude = parseFloat(n.$.longitude);
-    
+
                 // Each node contains a list of segments
                 const node = new Node(id, latitude, longitude);
                 node.segments = [];   // to store the segments for each node
-    
+
                 plan.nodes.set(id, node);
             }
         }
-    
+
         // ----------------------------
         // 4) Load the segments
         // ----------------------------
@@ -78,25 +78,25 @@ class Plan {
                 const destinationId = t.$.destination;
                 const streetName = t.$.nomRue;
                 const length = parseFloat(t.$.longueur);
-    
+
                 const originNode = plan.nodes.get(originId);
                 const destinationNode = plan.nodes.get(destinationId);
-    
+
                 if (!originNode || !destinationNode) {
                     console.warn(`Skipping segment: node ${originId} or ${destinationId} not found`);
                     continue;
                 }
-    
+
                 const segment = new Segment(originNode, destinationNode, streetName, length);
-    
+
                 // Add the segment to the list of segments of the plan
                 plan.segments.push(segment);
-    
+
                 // Add the segment the list of segments of the node
                 originNode.segments.push(segment);
             }
         }
-    
+
         return plan;
     }
 
@@ -115,7 +115,133 @@ class Plan {
      * @returns {Array<Troncon>}
      */
     getEdgesFrom(nodeId) {
-        return this.segments.filter(e => e.origin.id == nodeId);
+        return this.segments.filter(e => (e.origin.id == nodeId || e.destination.id == nodeId));
+    }
+
+    /**
+     * Returns all neighboring node IDs connected to a given node
+     * @param {string|number} nodeId
+     * @returns {Array<string|number>}
+     */
+    getNeighbors(nodeId) {
+        const neighbors = new Set();
+
+        this.segments.forEach(segment => {
+            if (segment.origin.id == nodeId) {
+                neighbors.add(segment.destination.id);
+            } else if (segment.destination.id == nodeId) {
+                neighbors.add(segment.origin.id);
+            }
+        });
+
+        return Array.from(neighbors);
+    }
+
+    /**
+     * Finds the shortest path between two nodes using Dijkstra's algorithm
+     * @param {string|number} startId - Starting node ID
+     * @param {string|number} endId - Destination node ID
+     * @returns {Object} { path: Array<Node>, distance: number, segments: Array<Segment> } or null if no path exists
+     */
+    findShortestPath(startId, endId) {
+        // Validate nodes exist
+        if (!this.nodes.has(startId) || !this.nodes.has(endId)) {
+            return null;
+        }
+
+        // Initialize distances and previous nodes
+        const distances = new Map();
+        const previous = new Map();
+        const unvisited = new Set();
+
+        // Set all distances to infinity except start node
+        this.nodes.forEach((node, id) => {
+            distances.set(id, id == startId ? 0 : Infinity);
+            previous.set(id, null);
+            unvisited.add(id);
+        });
+
+        while (unvisited.size > 0) {
+            // Find unvisited node with minimum distance
+            let currentId = null;
+            let minDistance = Infinity;
+            unvisited.forEach(id => {
+                if (distances.get(id) < minDistance) {
+                    minDistance = distances.get(id);
+                    currentId = id;
+                }
+            });
+
+            // If no path exists
+            if (currentId === null || minDistance === Infinity) {
+                return null;
+            }
+
+            // Remove current from unvisited
+            unvisited.delete(currentId);
+
+            // If we reached the destination
+            if (currentId == endId) {
+                break;
+            }
+
+            // Check all neighbors
+            const neighbors = this.getNeighbors(currentId);
+            neighbors.forEach(neighborId => {
+                if (!unvisited.has(neighborId)) return;
+
+                // Find segment connecting current to neighbor
+                const segment = this.segments.find(s =>
+                    (s.origin.id == currentId && s.destination.id == neighborId) ||
+                    (s.destination.id == currentId && s.origin.id == neighborId)
+                );
+
+                if (!segment) return;
+
+                // Calculate new distance
+                const newDistance = distances.get(currentId) + segment.length;
+
+                // Update if shorter path found
+                if (newDistance < distances.get(neighborId)) {
+                    distances.set(neighborId, newDistance);
+                    previous.set(neighborId, currentId);
+                }
+            });
+        }
+
+        // Reconstruct path with Node objects
+        const pathIds = [];
+        let current = endId;
+        while (current !== null) {
+            pathIds.unshift(current);
+            current = previous.get(current);
+        }
+
+        // If path doesn't start at startId, no path exists
+        if (pathIds[0] != startId) {
+            return null;
+        }
+
+        // Convert IDs to Node objects
+        const path = pathIds.map(id => this.nodes.get(id));
+
+        // Get segments along the path
+        const pathSegments = [];
+        for (let i = 0; i < pathIds.length - 1; i++) {
+            const segment = this.segments.find(s =>
+                (s.origin.id == pathIds[i] && s.destination.id == pathIds[i + 1]) ||
+                (s.destination.id == pathIds[i] && s.origin.id == pathIds[i + 1])
+            );
+            if (segment) {
+                pathSegments.push(segment);
+            }
+        }
+
+        return {
+            path: path,
+            distance: distances.get(endId),
+            segments: pathSegments
+        };
     }
 
     /**
@@ -135,9 +261,8 @@ class Plan {
      * @returns {string}
      */
     toString() {
-        return `Plan - ${this.nodes.size} nodes, ${this.segments.length} segments, warehouse: ${
-            this.warehouse ? this.warehouse.id : 'None'
-        }`;
+        return `Plan - ${this.nodes.size} nodes, ${this.segments.length} segments, warehouse: ${this.warehouse ? this.warehouse.id : 'None'
+            }`;
     }
 }
 
