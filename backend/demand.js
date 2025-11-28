@@ -55,8 +55,12 @@ class Demand {
         return `Demand - Pickup number ${this.id} at ${pickupId} (${this.pickupDuration}s), Delivery at ${deliveryId} (${this.deliveryDuration}s)`;
     }
 }
-
 // Export for Node.js
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Demand;
+}
+
+// Export for Browser
+if (typeof window !== 'undefined') {
+    window.Demand = Demand;
 }

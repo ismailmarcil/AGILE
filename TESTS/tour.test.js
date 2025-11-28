@@ -384,7 +384,7 @@ describe('Tour Class - toXML Method', () => {
         const tourPoint1 = new TourPoint(node1, 0, TypePoint.ENTREPOT, null);
         const tourPoint2 = new TourPoint(node2, 0, TypePoint.PICKUP, null);
         
-        const leg = new Leg(tourPoint1, tourPoint2, [node1, node2], 150, 60);
+        const leg = new Leg(tourPoint1, tourPoint2, [node1, node2], [segment], 150, 60);
         tour.addLeg(leg);
 
         const xml = tour.toXML();
