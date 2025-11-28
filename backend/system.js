@@ -1,12 +1,3 @@
-const Courier = require("./courier");
-const Demand = require("./demand");
-const Tour = require("./tours");
-const Plan = require("./plan");
-const Leg = require("./leg");
-const { TourPoint } = require("./tourpoint");
-// Demand is expected to be loaded before this script in browser environment
-// For Node.js environment - import Demand and Tour
-
 if (typeof require !== 'undefined') {
     // Node.js environment
     Demand = require("./demand");
