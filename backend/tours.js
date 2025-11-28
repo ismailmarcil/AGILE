@@ -40,17 +40,17 @@ class Tour {
      */
     calculateTotalDuration() {
         let duration = 0;
-        
+
         // Add travel time from all legs
         for (const leg of this.legs) {
             duration += leg.travelTime;
         }
-        
+
         // Add service duration from all stops
         for (const stop of this.stops) {
             duration += stop.serviceDuration;
         }
-        
+
         this.totalDuration = duration;
         return this.totalDuration;
     }
@@ -61,11 +61,11 @@ class Tour {
      */
     calculateTotalDistance() {
         let distance = 0;
-        
+
         for (const leg of this.legs) {
             distance += leg.distance;
         }
-        
+
         this.totalDistance = distance;
         return this.totalDistance;
     }
@@ -136,7 +136,7 @@ class Tour {
             for (let i = 0; i < leg.path.length - 1; i++) {
                 const fromNode = leg.path[i];
                 const toNode = leg.path[i + 1];
-                
+
                 // Find the segment between these nodes
                 const segment = fromNode.segments.find(seg => seg.destination.id === toNode.id);
                 if (segment) {
