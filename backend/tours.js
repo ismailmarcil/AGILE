@@ -206,7 +206,7 @@ class Tour {
         // Collect all unique nodes from legs
         const nodesMap = new Map();
         for (const leg of this.legs) {
-            for (const node of leg.path) {
+            for (const node of leg.pathNode) {
                 nodesMap.set(node.id, node);
             }
         }
@@ -216,16 +216,25 @@ class Tour {
             xml += `<noeud id="${node.id}" latitude="${node.latitude}" longitude="${node.longitude}"/>\n`;
         }
 
-        // Add segments from node paths in legs
+        // Add segments from legs
         for (const leg of this.legs) {
-            for (let i = 0; i < leg.path.length - 1; i++) {
-                const fromNode = leg.path[i];
-                const toNode = leg.path[i + 1];
-                
-                // Find the segment between these nodes
-                const segment = fromNode.segments.find(seg => seg.destination.id === toNode.id);
-                if (segment) {
+            // If pathSegment is available, use it directly
+            if (leg.pathSegment && leg.pathSegment.length > 0) {
+                for (const segment of leg.pathSegment) {
                     xml += `<troncon origine="${segment.origin.id}" destination="${segment.destination.id}" nomRue="${segment.streetName}" longueur="${segment.length}"/>\n`;
+                }
+            } else {
+                // Otherwise, fall back to finding segments from nodes
+                const nodes = leg.pathNode;
+                for (let i = 0; i < nodes.length - 1; i++) {
+                    const fromNode = nodes[i];
+                    const toNode = nodes[i + 1];
+
+                    // Find the segment between these nodes
+                    const segment = fromNode.segments.find(seg => seg.destination.id === toNode.id);
+                    if (segment) {
+                        xml += `<troncon origine="${segment.origin.id}" destination="${segment.destination.id}" nomRue="${segment.streetName}" longueur="${segment.length}"/>\n`;
+                    }
                 }
             }
         }

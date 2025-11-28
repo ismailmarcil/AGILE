@@ -133,9 +133,9 @@ class System {
         };
 
 
-        // 5. Créer le plan
+        // 5. Créer le plan avec nodeMap (Map) au lieu de nodes (Array)
         this.plan = new Plan();
-        this.plan.nodes = nodes;
+        this.plan.nodes = nodeMap;
         this.plan.segments = segments;
 
         return { success: true, plan: planJSON }

@@ -7,14 +7,16 @@ class Leg {
      * Constructor for the Leg class
      * @param {TourPoint} from - Starting tour point
      * @param {TourPoint} to - Ending tour point
-     * @param {Array<Node>} path - Path of nodes between the two tour points
+     * @param {Array<Node>} pathNode - Path of nodes between the two tour points
+     * @param {Array<Segment>} pathSegment - Path of segments between the two tour points
      * @param {number} distance - Distance in meters
      * @param {number} travelTime - Travel time in seconds
      */
-    constructor(from, to, path = [], distance = 0, travelTime = 0) {
+    constructor(from, to, pathNode = [], pathSegment = [], distance = 0, travelTime = 0) {
         this.from = from;
         this.to = to;
-        this.path = path;
+        this.pathNode = pathNode;
+        this.pathSegment = pathSegment;
         this.distance = distance;
         this.travelTime = travelTime;
     }
@@ -27,7 +29,8 @@ class Leg {
         return {
             from: this.from ? this.from.toJSON() : null,
             to: this.to ? this.to.toJSON() : null,
-            path: this.path.map(node => node.toJSON()),
+            pathNode: this.pathNode.map(node => node.toJSON()),
+            pathSegment: this.pathSegment.map(segment => segment.toJSON()),
             distance: this.distance,
             travelTime: this.travelTime
         };
