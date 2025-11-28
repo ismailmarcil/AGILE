@@ -43,7 +43,7 @@ class Leg {
     toString() {
         const fromId = this.from?.node?.id ?? 'Unknown';
         const toId = this.to?.node?.id ?? 'Unknown';
-        return `Leg from ${fromId} to ${toId} - ${this.distance}m, ${this.travelTime}s, ${this.path.length} nodes`;
+        return `Leg from ${fromId} to ${toId} - ${this.distance}m, ${this.travelTime}s, ${this.pathNode.length} nodes`;
     }
 }
 

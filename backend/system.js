@@ -1,9 +1,11 @@
-if (typeof require !== 'undefined') {
-    // Node.js environment
-    Demand = require("./demand");
-    Tour = require("./tours");
-}
-// In browser, Demand and Tour will be available from the global scope after their scripts load
+const Node = require("./node");
+const Segment = require("./segment");
+const Courier = require("./courier");
+const Demand = require("./demand");
+const Tour = require("./tours");
+const Plan = require("./plan");
+const Leg = require("./leg");
+const { TourPoint } = require("./tourpoint");
 
 class System {
     plan;
@@ -192,7 +194,7 @@ class System {
         });
 
         (data.legs || []).forEach(l => {
-            const pathNodes = (l.path || []).map(getOrCreateNode);
+            const pathNodes = (l.pathNode || []).map(getOrCreateNode);
             const leg = new Leg(null, null, pathNodes, l.distance || 0, l.travelTime || 0);
             tour.addLeg(leg);
         });
@@ -370,36 +372,51 @@ class System {
     }
 
     calculateTour() {
+        if (!this.plan || !this.plan.warehouse) {
+            console.error("Plan or warehouse not set");
+            return null;
+        }
+
+        if (this.demandsList.length === 0) {
+            console.error("No demands to process");
+            return null;
+        }
+
         let tour = new Tour(null, "8:00", new Courier("Jean"));
+
+        // Add starting warehouse stop
+        tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", null));
 
         // First leg: warehouse to first pickup
         let { path, distance, segments } = this.plan.findShortestPath(this.plan.warehouse.id, this.demandsList[0].pickupAddress);
         let leg = new Leg(this.plan.warehouse, path[path.length - 1], path, segments, distance, distance);
         tour.addLeg(leg);
-        tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", this.demandsList[0]));
 
-        for (let i = 0; i < this.demandsList.length - 1; ++i) {
+        for (let i = 0; i < this.demandsList.length; i++) {
             let demand = this.demandsList[i];
-            let nextDemand = this.demandsList[i + 1];
-            let { path, distance, segments } = this.plan.findShortestPath(demand.pickupAddress, demand.deliveryAddress);
-            let leg = new Leg(path[0], path[path.length - 1], path, segments, distance, distance);
-            tour.addLeg(leg);
-            tour.addStop(new TourPoint(path[0], demand.pickupDuration, "PICKUP", demand));
-            tour.addStop(new TourPoint(path[path.length - 1], demand.deliveryDuration, "DELIVERY", demand));
 
-            let { path: nextPath, distance: nextDistance, segments: nextSegments } = this.plan.findShortestPath(demand.deliveryAddress, nextDemand.pickupAddress);
-            let nextLeg = new Leg(nextPath[0], nextPath[nextPath.length - 1], nextPath, nextSegments, nextDistance, nextDistance);
-            tour.addLeg(nextLeg);
+            // Pickup to delivery
+            let result = this.plan.findShortestPath(demand.pickupAddress, demand.deliveryAddress);
+            let leg = new Leg(result.path[0], result.path[result.path.length - 1], result.path, result.segments, result.distance, result.distance);
+            tour.addLeg(leg);
+            tour.addStop(new TourPoint(result.path[0], demand.pickupDuration, "PICKUP", demand));
+            tour.addStop(new TourPoint(result.path[result.path.length - 1], demand.deliveryDuration, "DELIVERY", demand));
+
+            // Delivery to next pickup (if not last)
+            if (i < this.demandsList.length - 1) {
+                let nextDemand = this.demandsList[i + 1];
+                result = this.plan.findShortestPath(demand.deliveryAddress, nextDemand.pickupAddress);
+                leg = new Leg(result.path[0], result.path[result.path.length - 1], result.path, result.segments, result.distance, result.distance);
+                tour.addLeg(leg);
+            }
         }
 
-        // Retour à l'entrepôt
+        // Return to warehouse
         let lastDemand = this.demandsList[this.demandsList.length - 1];
-        let { path: returnPath, distance: returnDistance, segments: returnSegments } = this.plan.findShortestPath(lastDemand.deliveryAddress, this.plan.warehouse.id);
-        let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnSegments, returnDistance, returnDistance);
+        let returnResult = this.plan.findShortestPath(lastDemand.deliveryAddress, this.plan.warehouse.id);
+        let returnLeg = new Leg(returnResult.path[0], this.plan.warehouse, returnResult.path, returnResult.segments, returnResult.distance, returnResult.distance);
         tour.addLeg(returnLeg);
-        tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", null));
-
-        this.toursList.push(tour);
+        tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", null)); this.toursList.push(tour);
         return tour;
     }
 
