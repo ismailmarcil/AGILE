@@ -181,7 +181,7 @@ class System {
         });
 
         (data.legs || []).forEach(l => {
-            const pathNodes = (l.path || []).map(getOrCreateNode);
+            const pathNodes = (l.pathNode || []).map(getOrCreateNode);
             const leg = new Leg(null, null, pathNodes, l.distance || 0, l.travelTime || 0);
             tour.addLeg(leg);
         });
