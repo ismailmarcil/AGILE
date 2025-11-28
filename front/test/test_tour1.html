@@ -190,7 +190,7 @@
                 if (entrepots.length > 0) {
                     const warehouseId = entrepots[0].getAttribute('adresse');
                     if (warehouseId) {
-                        const warehouseNode = system.plan.nodes.find(n => n.id === warehouseId);
+                        const warehouseNode = system.plan.nodes.get(warehouseId);
                         if (warehouseNode) {
                             system.plan.warehouse = warehouseNode;
                         }
@@ -208,6 +208,7 @@
                 });
 
                 renderDemandsPreview();
+                displayDemandsOnMap();
                 btnComputeTour.disabled = false;
                 btnClearDemands.disabled = false;
                 showInfo(`✅ ${system.demandsList.length} demandas cargadas correctamente`, 'success');
@@ -317,14 +318,14 @@
         }
 
         function renderPlanPreview() {
-            if (!system.plan || !system.plan.nodes || system.plan.nodes.length === 0) {
+            if (!system.plan || !system.plan.nodes || system.plan.nodes.size === 0) {
                 planPreview.innerHTML = '<em>📁 No hay nodos en el plan</em>';
                 return;
             }
             planPreview.innerHTML = '';
             const div = document.createElement('div');
             div.className = 'step';
-            div.innerHTML = `<strong>Nodos: ${system.plan.nodes.length}</strong><div class="small">Segmentos: ${system.plan.segments ? system.plan.segments.length : 0}</div>`;
+            div.innerHTML = `<strong>Nodos: ${system.plan.nodes.size}</strong><div class="small">Segmentos: ${system.plan.segments ? system.plan.segments.length : 0}</div>`;
             planPreview.appendChild(div);
         }
 
@@ -351,16 +352,53 @@
         function displayPlanOnMap() {
             if (!map || !system.plan || !system.plan.nodes) return;
             
-            // Draw nodes
-            system.plan.nodes.forEach(node => {
+            // Convert nodes Map to Array
+            const nodes = Array.from(system.plan.nodes.values());
+            
+            // Create sets to track special points
+            const pickupPoints = new Set();
+            const deliveryPoints = new Set();
+            
+            // Collect all pickup and delivery addresses from demands
+            system.demandsList.forEach(demand => {
+                if (demand.pickupAddress) {
+                    const pickupId = demand.pickupAddress.id || demand.pickupAddress;
+                    pickupPoints.add(pickupId);
+                }
+                if (demand.deliveryAddress) {
+                    const deliveryId = demand.deliveryAddress.id || demand.deliveryAddress;
+                    deliveryPoints.add(deliveryId);
+                }
+            });
+            
+            // Draw nodes with appropriate colors
+            nodes.forEach(node => {
+                let color = '#3498db'; // Default blue for other nodes
+                let radius = 4;
+                let label = `Nodo: ${node.id}`;
+                
+                if (system.plan.warehouse && node.id === system.plan.warehouse.id) {
+                    color = '#27ae60'; // Green for warehouse
+                    radius = 8;
+                    label = `Entrepôt: ${node.id}`;
+                } else if (pickupPoints.has(node.id)) {
+                    color = '#f39c12'; // Yellow for pickup
+                    radius = 6;
+                    label = `Enlevement: ${node.id}`;
+                } else if (deliveryPoints.has(node.id)) {
+                    color = '#e74c3c'; // Red for delivery
+                    radius = 6;
+                    label = `Livraison: ${node.id}`;
+                }
+                
                 L.circleMarker([node.latitude, node.longitude], {
-                    radius: 4,
-                    fillColor: '#3498db',
+                    radius: radius,
+                    fillColor: color,
                     color: '#fff',
                     weight: 2,
-                    opacity: 0.8,
-                    fillOpacity: 0.8
-                }).addTo(map).bindPopup(`Nodo: ${node.id}`);
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(map).bindPopup(label);
             });
 
             // Draw segments
@@ -375,23 +413,24 @@
                 });
             }
 
-            // Highlight warehouse
-            if (system.plan.warehouse) {
-                L.circleMarker([system.plan.warehouse.latitude, system.plan.warehouse.longitude], {
-                    radius: 8,
-                    fillColor: '#27ae60',
-                    color: '#fff',
-                    weight: 3,
-                    opacity: 1,
-                    fillOpacity: 0.9
-                }).addTo(map).bindPopup(`Entrepôt: ${system.plan.warehouse.id}`);
-            }
-
             // Fit map bounds
-            if (system.plan.nodes.length > 0) {
-                const bounds = system.plan.nodes.map(n => [n.latitude, n.longitude]);
+            if (nodes.length > 0) {
+                const bounds = nodes.map(n => [n.latitude, n.longitude]);
                 map.fitBounds(bounds, { padding: [50, 50] });
             }
+        }
+
+        function displayDemandsOnMap() {
+            if (!map || !system.demandsList || system.demandsList.length === 0) return;
+            // La visualización de demandas ahora se hace en displayPlanOnMap()
+            // Solo necesitamos redibujar el mapa con los nuevos colores
+            // Limpiar y redibujar
+            map.eachLayer((layer) => {
+                if (layer instanceof L.CircleMarker || layer instanceof L.Polyline) {
+                    map.removeLayer(layer);
+                }
+            });
+            displayPlanOnMap();
         }
 
         function showInfo(message, type = 'info') {

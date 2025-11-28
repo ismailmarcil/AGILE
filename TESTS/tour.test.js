@@ -184,7 +184,7 @@ describe('Tour Class - calculateTotalDuration Method', () => {
 
         const node1 = new Node('1', 45.75, 4.85, []);
         const node2 = new Node('2', 45.76, 4.86, []);
-        
+
         const pickup = new Node('1', 45.75, 4.85, []);
         const delivery = new Node('2', 45.76, 4.86, []);
         const demand = new Demand(pickup, delivery, 300, 240);
@@ -195,7 +195,7 @@ describe('Tour Class - calculateTotalDuration Method', () => {
         tour.addStop(pickupPoint);
         tour.addStop(deliveryPoint);
 
-        const leg = new Leg(pickupPoint, deliveryPoint, [node1, node2], 150, 60);
+        const leg = new Leg(pickupPoint, deliveryPoint, [node1, node2], [], 150, 60);
         tour.addLeg(leg);
 
         const duration = tour.calculateTotalDuration();
@@ -232,11 +232,11 @@ describe('Tour Class - calculateTotalDistance Method', () => {
 
         const node1 = new Node('1', 45.75, 4.85, []);
         const node2 = new Node('2', 45.76, 4.86, []);
-        
+
         const tourPoint1 = new TourPoint(node1, 0, TypePoint.ENTREPOT, null);
         const tourPoint2 = new TourPoint(node2, 300, TypePoint.PICKUP, null);
 
-        const leg = new Leg(tourPoint1, tourPoint2, [node1, node2], 150, 60);
+        const leg = new Leg(tourPoint1, tourPoint2, [node1, node2], [], 150, 60);
         tour.addLeg(leg);
 
         const distance = tour.calculateTotalDistance();
@@ -255,8 +255,8 @@ describe('Tour Class - calculateTotalDistance Method', () => {
         const tourPoint2 = new TourPoint(node2, 300, TypePoint.PICKUP, null);
         const tourPoint3 = new TourPoint(node3, 240, TypePoint.DELIVERY, null);
 
-        const leg1 = new Leg(tourPoint1, tourPoint2, [node1, node2], 150, 60);
-        const leg2 = new Leg(tourPoint2, tourPoint3, [node2, node3], 200, 80);
+        const leg1 = new Leg(tourPoint1, tourPoint2, [node1, node2], [], 150, 60);
+        const leg2 = new Leg(tourPoint2, tourPoint3, [node2, node3], [], 200, 80);
 
         tour.addLeg(leg1);
         tour.addLeg(leg2);
@@ -359,8 +359,8 @@ describe('Tour Class - toXML Method', () => {
 
         const node = new Node('123', 45.75, 4.85, []);
         const tourPoint = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
-        
-        const leg = new Leg(tourPoint, tourPoint, [node], 0, 0);
+
+        const leg = new Leg(tourPoint, tourPoint, [node], [], 0, 0);
         tour.addLeg(leg);
 
         const xml = tour.toXML();
@@ -378,12 +378,12 @@ describe('Tour Class - toXML Method', () => {
         const node1 = new Node('1', 45.75, 4.85, []);
         const node2 = new Node('2', 45.76, 4.86, []);
         const segment = new Segment(node1, node2, 'Main Street', 150);
-        
+
         node1.segments = [segment];
 
         const tourPoint1 = new TourPoint(node1, 0, TypePoint.ENTREPOT, null);
         const tourPoint2 = new TourPoint(node2, 0, TypePoint.PICKUP, null);
-        
+
         const leg = new Leg(tourPoint1, tourPoint2, [node1, node2], [segment], 150, 60);
         tour.addLeg(leg);
 

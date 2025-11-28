@@ -35,7 +35,7 @@ class System {
 
         if (!isXmlExtension && !isXmlMime) {
             return { success: false, error: "Le fichier sélectionné n'est pas un fichier XML."};
-        }  
+        }
 
         // 3. Lire le contenu du fichier
         let text;
@@ -43,7 +43,7 @@ class System {
             text = await file.text();
         } catch (error) {
             return { success: false, error: "Impossible de lire le fichier. Vérifiez qu'il n'est pas corrompu."};
-            
+
         }
 
         // 4. Parser le XML
@@ -417,12 +417,12 @@ class System {
             const courier = couriers[i];
             const startIdx = i * demandsPerCourier;
             const endIdx = Math.min((i + 1) * demandsPerCourier, this.demandsList.length);
-            
+
             if (startIdx >= this.demandsList.length) break;
 
             const assignedDemands = this.demandsList.slice(startIdx, endIdx);
             const tour = this.buildTourForCourier(courier, assignedDemands, allPoints, distanceMatrix);
-            
+
             if (tour) {
                 tours.push(tour);
                 this.toursList.push(tour);
@@ -548,7 +548,7 @@ class System {
             for (let i = 0; i < pointsToVisit.length; i++) {
                 const nextPoint = pointsToVisit[i].point;
                 const pointId = nextPoint.id || nextPoint;
-                
+
                 if (!visited.has(pointId)) {
                     const distance = distanceMatrix.has(currentPoint.id)
                         ? (distanceMatrix.get(currentPoint.id).get(pointId) || Infinity)
