@@ -126,12 +126,25 @@ class System {
 
             if (originNode) {
                 originNode.segments.push(seg);
+                
+                // Build distance matrix entry for this segment
+                if (!this.distanceMatrix) {
+                    this.distanceMatrix = new Map();
+                }
+                if (!this.distanceMatrix.has(originNode.id)) {
+                    this.distanceMatrix.set(originNode.id, new Map());
+                }
+                
+                // Calculate time for this segment (distance / 15 km/h * 60 minutes)
+                const travelTimeMinutes = (length / 15) * 60;
+                this.distanceMatrix.get(originNode.id).set(destinationNode.id, travelTimeMinutes);
             }
 
             return seg;
         });
 
         console.log("Segments loaded:", segments);
+        console.log("Distance matrix populated with segment times:", this.distanceMatrix);
 
         const planJSON = {
             nodes: nodes.map(n => n.toJSON()),
@@ -413,7 +426,7 @@ class System {
 
         // Build a distance matrix between all relevant nodes
         const allPoints = this.buildPointsList();
-        const distanceMatrix = this.computeDistanceMatrix(allPoints);
+        const distanceMatrix = this.distanceMatrix || new Map();
 
         // Divide demands among couriers
         const tours = [];
@@ -467,46 +480,6 @@ class System {
         });
 
         return Array.from(pointsSet).map(id => pointsMap.get(id));
-    }
-
-    /**
-     * Compute Euclidean distance matrix between all points
-     * @param {Array} points - List of points
-     * @returns {Map} Distance matrix as map of maps
-     */
-    computeDistanceMatrix(points) {
-        const distMatrix = new Map();
-
-        for (let i = 0; i < points.length; i++) {
-            const point1 = points[i];
-            if (!distMatrix.has(point1.id)) {
-                distMatrix.set(point1.id, new Map());
-            }
-
-            for (let j = 0; j < points.length; j++) {
-                if (i === j) {
-                    distMatrix.get(point1.id).set(points[j].id, 0);
-                } else {
-                    const point2 = points[j];
-                    const distance = this.calculateDistance(point1, point2);
-                    distMatrix.get(point1.id).set(point2.id, distance);
-                }
-            }
-        }
-
-        return distMatrix;
-    }
-
-    /**
-     * Calculate Euclidean distance between two points
-     * @param {Node} point1 - First point
-     * @param {Node} point2 - Second point
-     * @returns {number} Distance in degrees (approximation)
-     */
-    calculateDistance(point1, point2) {
-        const dx = point1.latitude - point2.latitude;
-        const dy = point1.longitude - point2.longitude;
-        return Math.sqrt(dx * dx + dy * dy);
     }
 
     /**
