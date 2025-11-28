@@ -9,6 +9,7 @@ const TypePoint = {
 
 /**
  * Class representing a point in a delivery tour (pickup, delivery, or warehouse)
+ * Uses composition (has-a relationship) with Node
  */
 class TourPoint {
 
@@ -24,6 +25,7 @@ class TourPoint {
         this.serviceDuration = serviceDuration;
         this.type = type;
         this.demand = demand;
+        this.relatedTourPoint = null; // Reference to related TourPoint (pickup/delivery pair)
     }
 
     /**
@@ -35,7 +37,8 @@ class TourPoint {
             node: this.node ? this.node.toJSON() : null,
             serviceDuration: this.serviceDuration,
             type: this.type,
-            demand: this.demand ? this.demand.toJSON() : null
+            demand: this.demand ? this.demand.toJSON() : null,
+            relatedTourPoint: this.relatedTourPoint ? this.relatedTourPoint.node.id : null
         };
     }
 
