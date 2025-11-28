@@ -34,6 +34,124 @@ async function handleLoadMap() {
     }
 }
 
+// Handle tour loading
+async function handleLoadTour() {
+    const input = document.getElementById("jsonTourInput");
+    const result = await system.loadTourFromFile(input);
+
+    if (!result.success) {
+        alert("Erreur lors du chargement de la tournée: " + result.error);
+        return;
+    }
+
+    const tour = result.tour;
+    console.log("Tournée chargée:", tour);
+
+    // Display the tour on the map
+    if (view.map) {
+        view.displayTour(tour);
+    }
+
+    // Update timeline with tour details
+    updateTimelineFromTour(tour);
+
+    alert(`Tournée ${tour.id} chargée avec succès!\nCoursier: ${tour.courier ? tour.courier.name : 'Non assigné'}\nDépart: ${tour.departureTime}\nArrêts: ${tour.stops.length}\nDistance: ${(tour.totalDistance / 1000).toFixed(2)} km\nDurée: ${Math.round(tour.totalDuration / 60)} min`);
+}
+
+// Update timeline UI from tour data
+function updateTimelineFromTour(tour) {
+    const timelineScroll = document.querySelector('.timeline-scroll');
+    if (!timelineScroll) return;
+
+    // Clear existing timeline
+    timelineScroll.innerHTML = '';
+
+    // Helper function to format time from departure time and elapsed seconds
+    function formatTime(departureTime, elapsedSeconds) {
+        const [hours, minutes] = departureTime.split(':').map(Number);
+        const totalMinutes = hours * 60 + minutes + Math.round(elapsedSeconds / 60);
+        const newHours = Math.floor(totalMinutes / 60) % 24;
+        const newMinutes = totalMinutes % 60;
+        return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
+    }
+
+    // Track cumulative time
+    let cumulativeTime = 0;
+
+    // Counters for pickup and delivery numbering
+    let pickupCounter = 1;
+    let deliveryCounter = 1;
+
+    // Add each stop to the timeline
+    tour.stops.forEach((stop, index) => {
+        const stepDiv = document.createElement('div');
+        stepDiv.className = 'step';
+
+        // Add drag handle for non-warehouse stops
+        const dragHandleDiv = document.createElement('div');
+        dragHandleDiv.className = 'drag-handle';
+        if (stop.type !== 'ENTREPOT') {
+            dragHandleDiv.innerHTML = '<i class="fa-solid fa-grip-vertical"></i>';
+        }
+        stepDiv.appendChild(dragHandleDiv);
+
+        // Add step icon
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'step-icon';
+
+        if (stop.type === 'ENTREPOT') {
+            iconDiv.style.background = 'var(--secondary-color)';
+            iconDiv.style.color = 'white';
+            iconDiv.innerHTML = '<i class="fa-solid fa-warehouse"></i>';
+        } else if (stop.type === 'PICKUP') {
+            iconDiv.style.borderColor = 'var(--accent-pickup)';
+            iconDiv.style.color = 'var(--accent-pickup)';
+            iconDiv.textContent = `P${pickupCounter}`;
+            pickupCounter++;
+        } else if (stop.type === 'DELIVERY') {
+            iconDiv.style.borderColor = 'var(--accent-delivery)';
+            iconDiv.style.color = 'var(--accent-delivery)';
+            iconDiv.textContent = `D${deliveryCounter}`;
+            deliveryCounter++;
+        }
+        stepDiv.appendChild(iconDiv);
+
+        // Add time
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'step-time';
+        timeDiv.textContent = formatTime(tour.departureTime, cumulativeTime);
+        stepDiv.appendChild(timeDiv);
+
+        // Add description
+        const descDiv = document.createElement('div');
+        descDiv.className = 'step-desc';
+        if (stop.type === 'ENTREPOT') {
+            descDiv.textContent = index === 0 ? 'Départ' : 'Arrivée';
+        } else {
+            // Try to get a short address description
+            const lat = stop.node?.latitude?.toFixed(3) || '?';
+            const lon = stop.node?.longitude?.toFixed(3) || '?';
+            descDiv.textContent = `${lat}, ${lon}`;
+        }
+        stepDiv.appendChild(descDiv);
+
+        timelineScroll.appendChild(stepDiv);
+
+        // Add service duration to cumulative time
+        cumulativeTime += stop.serviceDuration;
+
+        // Add travel time from the corresponding leg
+        if (index < tour.legs.length) {
+            cumulativeTime += tour.legs[index].travelTime;
+        }
+    });
+
+    // Réinitialiser le drag & drop après avoir reconstruit la timeline
+    if (window.timelineDragDrop) {
+        window.timelineDragDrop.refresh();
+    }
+}
+
 // Handle demands loading
 
 // Récupération des éléments du DOM

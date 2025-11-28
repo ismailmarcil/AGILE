@@ -238,10 +238,11 @@ class View {
         }
 
         legs.forEach((leg, index) => {
-            if (!leg.path || leg.path.length === 0) return;
+            const pathNodes = leg.pathNode || [];
+            if (pathNodes.length === 0) return;
 
             // Create array of coordinates for the path
-            const pathCoordinates = leg.path.map(node => [node.latitude, node.longitude]);
+            const pathCoordinates = pathNodes.map(node => [node.latitude, node.longitude]);
 
             // Draw the path
             const pathLine = L.polyline(pathCoordinates, {
@@ -284,7 +285,7 @@ class View {
             let label = 'Point';
 
             if (isWarehouse) {
-                markerColor = 'green';
+                markerColor = '#2C3E50';
                 label = '🏠 Entrepôt';
             } else if (isPickup) {
                 markerColor = '#FFA500';
@@ -337,8 +338,9 @@ class View {
         // Add all nodes from legs to bounds
         if (tour.legs && tour.legs.length > 0) {
             tour.legs.forEach(leg => {
-                if (leg.path && leg.path.length > 0) {
-                    leg.path.forEach(node => {
+                const pathNodes = leg.pathNode || [];
+                if (pathNodes.length > 0) {
+                    pathNodes.forEach(node => {
                         bounds.push([node.latitude, node.longitude]);
                     });
                 }

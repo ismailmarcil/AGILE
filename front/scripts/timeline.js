@@ -13,6 +13,13 @@ class TimelineDragDrop {
         this.setupDraggableSteps();
     }
 
+    /**
+     * Réinitialise le drag & drop (à appeler après modification de la timeline)
+     */
+    refresh() {
+        this.setupDraggableSteps();
+    }
+
     setupDraggableSteps() {
         const timelineScroll = document.querySelector('.timeline-scroll');
         if (!timelineScroll) return;

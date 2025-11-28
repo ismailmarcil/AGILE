@@ -195,14 +195,47 @@ class System {
         });
 
         (data.legs || []).forEach(l => {
-            const pathNodes = (l.path || []).map(getOrCreateNode);
-            const leg = new Leg(null, null, pathNodes, l.distance || 0, l.travelTime || 0);
+            const pathNodes = (l.path || l.pathNode || []).map(getOrCreateNode);
+            const leg = new Leg(null, null, pathNodes, [], l.distance || 0, l.travelTime || 0);
             tour.addLeg(leg);
         });
 
         tour.calculateTotalDistance();
         tour.calculateTotalDuration();
         return tour;
+    }
+
+    /**
+     * Load a tour from a JSON file (browser file input)
+     * Utilise loadTourFromJSON pour créer l'instance de Tour
+     * @param {HTMLInputElement} fileInput - File input element containing the JSON file
+     * @returns {Promise<{success: boolean, tour?: Tour, error?: string}>}
+     */
+    async loadTourFromFile(fileInput) {
+        if (fileInput.files.length === 0) {
+            return { success: false, error: "Aucun fichier sélectionné. Veuillez choisir un fichier JSON." };
+        }
+
+        const file = fileInput.files[0];
+
+        if (!file.name.toLowerCase().endsWith(".json")) {
+            return { success: false, error: "Le fichier sélectionné n'est pas un fichier JSON." };
+        }
+
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            const tour = this.loadTourFromJSON(data); // Utilise la méthode existante
+
+            if (!tour) {
+                return { success: false, error: "Données JSON invalides pour créer une tournée." };
+            }
+
+            this.toursList.push(tour);
+            return { success: true, tour };
+        } catch (error) {
+            return { success: false, error: "Erreur: " + error.message };
+        }
     }
 
 

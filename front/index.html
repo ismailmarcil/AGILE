@@ -25,6 +25,7 @@
             <div class="section-title"><i class="fa-regular fa-folder-open"></i> Fichiers</div>
             <input type="file" id="xmlMapInput" accept=".xml" style="display: none;" onchange="handleLoadMap()">
             <input type="file" id="xmlDeliveriesInput" accept=".xml" multiple style="display: none;" onchange="handleLoadDemands()">
+            <input type="file" id="jsonTourInput" accept=".json" style="display: none;" onchange="handleLoadTour()">
             <div class="upload-row">
                 <div class="file-upload-box" onclick="document.getElementById('xmlMapInput').click()" style="cursor: pointer;">
                     <i class="fa-solid fa-map"></i> Plan (XML)
@@ -86,7 +87,7 @@
             <button class="btn btn-sm" style="background:white; border:1px solid #bdc3c7; margin-right:5px;">
                 <i class="fa-solid fa-rotate-left"></i> Undo
             </button>
-            <button class="btn btn-sm" style="background:white; border:1px solid #bdc3c7; margin-right:5px;">
+            <button class="btn btn-sm" style="background:white; border:1px solid #bdc3c7; margin-right:5px;" onclick="document.getElementById('jsonTourInput').click()">
                 <i class="fa-solid fa-folder-open"></i> Restaurer
             </button>
             <button class="btn btn-sm btn-primary" style="width: auto;">
@@ -107,45 +108,14 @@
 
     <div class="tour-timeline">
         <div class="section-title">
-            <span><i class="fa-solid fa-stopwatch"></i> Détails de la tournée (Pierre)</span>
+            <span><i class="fa-solid fa-stopwatch"></i> Détails de la tournée</span>
             <span style="margin-left:auto; font-size:0.7rem; font-weight:400; color:#7f8c8d;">Glisser pour réorganiser</span>
         </div>
 
         <div class="timeline-scroll">
-            <div class="step">
-                <div class="drag-handle"></div>
-                <div class="step-icon" style="background: var(--secondary-color); color:white;"><i class="fa-solid fa-warehouse"></i></div>
-                <div class="step-time">08:00</div>
-                <div class="step-desc">Départ</div>
-            </div>
-
-            <div class="step">
-                <div class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></div>
-                <div class="step-icon" style="border-color: var(--accent-pickup); color: var(--accent-pickup);">P1</div>
-                <div class="step-time">08:15</div>
-                <div class="step-desc">R. Répu.</div>
-            </div>
-
-            <div class="step">
-                <div class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></div>
-                <div class="step-icon" style="border-color: var(--accent-pickup); color: var(--accent-pickup);">P2</div>
-                <div class="step-time">08:25</div>
-                <div class="step-desc">Av. Jaurès</div>
-            </div>
-
-            <div class="step">
-                <div class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></div>
-                <div class="step-icon" style="border-color: var(--accent-delivery); color: var(--accent-delivery);">L1</div>
-                <div class="step-time">08:45</div>
-                <div class="step-desc">C. Gambetta</div>
-            </div>
-
-            <div class="step">
-                <div class="drag-handle"></div>
-                <div class="step-icon" style="background: var(--secondary-color); color:white;"><i class="fa-solid fa-warehouse"></i></div>
-                <div class="step-time">09:10</div>
-                <div class="step-desc">Arrivée</div>
-            </div>
+            <p style="text-align: center; color: #95a5a6; font-size: 0.85rem; padding: 20px;">
+                Aucune tournée chargée. Calculez ou restaurez une tournée.
+            </p>
         </div>
     </div>
 </div>
@@ -158,6 +128,10 @@
 <script src="/backend/node.js"></script>
 <script src="/backend/segment.js"></script>
 <script src="/backend/plan.js"></script>
+<script src="/backend/courier.js"></script>
+<script src="/backend/tourpoint.js"></script>
+<script src="/backend/leg.js"></script>
+<script src="/backend/tours.js"></script>
 <script src="/backend/system.js"></script>
 
 <!-- View class -->
