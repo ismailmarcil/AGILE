@@ -263,6 +263,85 @@ class View {
         }
     }
 
+    displayTourDetails(tour, summaryElement, tableBodyElement) {
+        if (!summaryElement || !tableBodyElement) return;
+
+        // Si on veut juste nettoyer
+        if (!tour) {
+            summaryElement.textContent = "";
+            tableBodyElement.innerHTML = "";
+            return;
+        }
+
+        const totalKm = (tour.totalDistance / 1000).toFixed(2);
+        const totalMin = Math.round(tour.totalDuration / 60);
+        summaryElement.textContent =
+            `Tournée ${tour.id} – départ ${tour.departureTime}, ` +
+            `distance totale ${totalKm} km, durée totale ~${totalMin} min`;
+
+        tableBodyElement.innerHTML = "";
+
+        let currentSec = this._timeToSeconds(tour.departureTime);
+
+        tour.stops.forEach((stop, index) => {
+            const arrivalTime = this._secondsToTime(currentSec);
+            const serviceSec = stop.serviceDuration || 0;
+            const departureTime = this._secondsToTime(currentSec + serviceSec);
+
+            const tr = document.createElement("tr");
+
+            const tdIndex = document.createElement("td");
+            tdIndex.textContent = index + 1;
+
+            const tdType = document.createElement("td");
+            tdType.textContent = stop.type;
+
+            const tdNode = document.createElement("td");
+            tdNode.textContent = stop.node ? stop.node.id : "";
+
+            const tdDemand = document.createElement("td");
+            tdDemand.textContent = stop.demand ? stop.demand.id : "";
+
+            const tdArr = document.createElement("td");
+            tdArr.textContent = arrivalTime;
+
+            const tdServ = document.createElement("td");
+            tdServ.textContent = Math.round(serviceSec / 60);
+
+            const tdDep = document.createElement("td");
+            tdDep.textContent = departureTime;
+
+            tr.appendChild(tdIndex);
+            tr.appendChild(tdType);
+            tr.appendChild(tdNode);
+            tr.appendChild(tdDemand);
+            tr.appendChild(tdArr);
+            tr.appendChild(tdServ);
+            tr.appendChild(tdDep);
+            tableBodyElement.appendChild(tr);
+
+            currentSec += serviceSec;
+            if (index < tour.legs.length) {
+                currentSec += tour.legs[index].travelTime || 0;
+            }
+        });
+    }
+
+    _timeToSeconds(hhmm) {
+        const parts = (hhmm || "00:00").split(":").map(Number);
+        const h = parts[0] || 0;
+        const m = parts[1] || 0;
+        return h * 3600 + m * 60;
+    }
+
+    _secondsToTime(sec) {
+        sec = Math.max(0, Math.floor(sec));
+        const h = Math.floor(sec / 3600) % 24;
+        const m = Math.floor((sec % 3600) / 60);
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    }
+
+
     // Existing methods
     addPickupDeliveryPoint(tourPoint, startTime, endTime) {
         this.listPickupDeliveryPoints.push({ tourPoint, startTime, endTime });

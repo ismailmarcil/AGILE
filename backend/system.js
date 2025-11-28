@@ -134,6 +134,59 @@ class System {
         return { success: true, plan: planJSON }
     }
 
+    loadTourFromJSON(data) {
+        if (!data) return null;
+
+        const courier = data.courier
+            ? new Courier(data.courier.id, data.courier.name)
+            : null;
+
+        const tour = new Tour(data.id || null, data.departureTime || "08:00", courier);
+
+        const nodeMap = new Map();
+        const getOrCreateNode = (nodeJson) => {
+            if (!nodeJson) return null;
+            if (nodeMap.has(nodeJson.id)) return nodeMap.get(nodeJson.id);
+            const node = new Node(nodeJson.id, nodeJson.latitude, nodeJson.longitude, []);
+            nodeMap.set(node.id, node);
+            return node;
+        };
+
+        const demandMap = new Map();
+        const getOrCreateDemand = (demandJson) => {
+            if (!demandJson) return null;
+            if (demandMap.has(demandJson.id)) return demandMap.get(demandJson.id);
+            const demand = new Demand(
+                demandJson.pickupAddress,
+                demandJson.deliveryAddress,
+                demandJson.pickupDuration,
+                demandJson.deliveryDuration,
+                demandJson.id
+            );
+            demandMap.set(demand.id, demand);
+            return demand;
+        };
+
+        (data.stops || []).forEach(s => {
+            const node = getOrCreateNode(s.node);
+            const demand = s.demand ? getOrCreateDemand(s.demand) : null;
+            const tp = new TourPoint(node, s.serviceDuration || 0, s.type, demand);
+            tour.addStop(tp);
+        });
+
+        (data.legs || []).forEach(l => {
+            const pathNodes = (l.path || []).map(getOrCreateNode);
+            const leg = new Leg(null, null, pathNodes, l.distance || 0, l.travelTime || 0);
+            tour.addLeg(leg);
+        });
+
+        tour.calculateTotalDistance();
+        tour.calculateTotalDuration();
+        return tour;
+    }
+
+
+
     //lire un fichier XML de demandes de livraison.
     //parser parser <livraison .../>, pour chaque livraison créer un objet Demannd
     //Ajouter les objets Demande à this.demandsList
