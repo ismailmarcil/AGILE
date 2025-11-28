@@ -267,8 +267,8 @@ class System {
             const warehouseAddress = entrepot.getAttribute("adresse");
             const departureTime = entrepot.getAttribute("heureDepart");
 
-            // Vider la liste des demandes existantes
-            this.demandsList = [];
+            // Ne pas vider la liste pour conserver les demandes ajoutées manuellement
+            // this.demandsList = [];
 
             // Parser chaque livraison
             let demandsLoaded = 0;
@@ -329,8 +329,8 @@ class System {
             const livraisons = root.livraison;
             console.log("Nombre de livraisons :", livraisons.length);
 
-            // Vider la liste des demandes existantes
-            this.demandsList = [];
+            // Ne pas vider la liste pour conserver les demandes ajoutées manuellement
+            // this.demandsList = [];
 
             //On parcours chaque livraison
             for (const livraisonNode of livraisons) {
