@@ -99,6 +99,83 @@ class Tour {
     }
 
     /**
+     * Moves a point in the itinerary from oldIndex to newIndex
+     * @param {number} oldIndex - Current index of the point
+     * @param {number} newIndex - New index to move the point to
+     */
+
+    movePoint(oldIndex, newIndex) {
+        const result = this.isMoveValid(oldIndex, newIndex);
+
+        if (!result.valid) {
+            return result;  // renvoie l'objet contenant reason
+        }
+
+        const [point] = this.itinerary.splice(oldIndex, 1);
+        this.itinerary.splice(newIndex, 0, point);
+
+        return { valid: true };
+    }
+
+
+    /**
+     * Validates if moving a point from oldIndex to newIndex is valid
+     * @param {number} oldIndex - Current index of the point
+     * @param {number} newIndex - New index to move the point to
+     * @returns {boolean} True if the move is valid, false otherwise
+     */
+    
+    isMoveValid(oldIndex, newIndex) {
+        const itinerary = this.itinerary;
+        const point = itinerary[oldIndex];
+
+        if (newIndex < 0 || newIndex >= itinerary.length) {
+            return { valid: false, reason: "OUT_OF_RANGE" };
+        }
+
+        // Start warehouse immobile
+        if (oldIndex === 0 && point.type === "ENTREPOT") {
+            return { valid: false, reason: "DEPOT_START" };
+        }
+
+        // Final warehouse immobile
+        if (oldIndex === itinerary.length - 1 && point.type === "ENTREPOT") {
+            return { valid: false, reason: "DEPOT_END_MOVE" };
+        }
+
+        // Simulation
+        const newItinerary = [...itinerary];
+        const [moved] = newItinerary.splice(oldIndex, 1);
+        newItinerary.splice(newIndex, 0, moved);
+
+        // Warehouse always at the ends
+        if (newItinerary[0].type !== "ENTREPOT") {
+            return { valid: false, reason: "DEPOT_START_MUST_REMAIN" };
+        }
+        if (newItinerary[newItinerary.length - 1].type !== "ENTREPOT") {
+            return { valid: false, reason: "DEPOT_END_MUST_REMAIN" };
+        }
+
+        // Pickup & Delivery precedence rules
+        for (const p of newItinerary) {
+            if (!p.relatedId) continue;
+
+            const i = newItinerary.findIndex(x => x.id === p.id);
+            const j = newItinerary.findIndex(x => x.id === p.relatedId);
+
+            if (p.type === "PICKUP" && i > j) {
+                return { valid: false, reason: "PICKUP_AFTER_DELIVERY", pickup: p.id, delivery: p.relatedId };
+            }
+            if (p.type === "DELIVERY" && i < j) {
+                return { valid: false, reason: "DELIVERY_BEFORE_PICKUP", pickup: p.relatedId, delivery: p.id };
+            }
+        }
+
+        return { valid: true };
+    }
+
+
+    /**
      * Returns a JSON representation of the tour
      * @returns {Object} JSON object representing the tour
      */

@@ -1,5 +1,18 @@
 // Import Node class for inheritance
-const Node = require('./node.js');
+
+// Support Node.js (backend) AND browser (front)
+let NodeBase;
+
+// Node.js
+if (typeof module !== 'undefined' && module.exports) {
+    // adjust depending on the exact export in node.js
+    NodeBase = require('./node.js'); 
+}
+// Browser
+else {
+    NodeBase = Node; // Node already defined in the browser context
+}
+
 
 /**
  * Enum representing the type of a tour point
@@ -14,7 +27,7 @@ const TypePoint = {
  * Class representing a point in a delivery tour (pickup, delivery, or warehouse)
  * Inherits from Node to represent a specialized node in a tour
  */
-class TourPoint extends Node {
+class TourPoint extends NodeBase {
 
     /**
      * Constructor for the TourPoint class
@@ -31,6 +44,7 @@ class TourPoint extends Node {
         this.type = type;                 // TypePoint value
         this.serviceDuration = serviceDuration; // Duration in seconds
         this.demand = demand;             // Demand object or null
+        this.relatedId = null;            // ID of related point (for PICKUP/DELIVERY pairs)
     }
 
     /**
