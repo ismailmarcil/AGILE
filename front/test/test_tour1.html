@@ -317,14 +317,14 @@
         }
 
         function renderPlanPreview() {
-            if (!system.plan || !system.plan.nodes || system.plan.nodes.length === 0) {
+            if (!system.plan || !system.plan.nodes || system.plan.nodes.size === 0) {
                 planPreview.innerHTML = '<em>📁 No hay nodos en el plan</em>';
                 return;
             }
             planPreview.innerHTML = '';
             const div = document.createElement('div');
             div.className = 'step';
-            div.innerHTML = `<strong>Nodos: ${system.plan.nodes.length}</strong><div class="small">Segmentos: ${system.plan.segments ? system.plan.segments.length : 0}</div>`;
+            div.innerHTML = `<strong>Nodos: ${system.plan.nodes.size}</strong><div class="small">Segmentos: ${system.plan.segments ? system.plan.segments.length : 0}</div>`;
             planPreview.appendChild(div);
         }
 
@@ -351,8 +351,11 @@
         function displayPlanOnMap() {
             if (!map || !system.plan || !system.plan.nodes) return;
             
+            // Convert nodes Map to Array
+            const nodes = Array.from(system.plan.nodes.values());
+            
             // Draw nodes
-            system.plan.nodes.forEach(node => {
+            nodes.forEach(node => {
                 L.circleMarker([node.latitude, node.longitude], {
                     radius: 4,
                     fillColor: '#3498db',
@@ -388,8 +391,8 @@
             }
 
             // Fit map bounds
-            if (system.plan.nodes.length > 0) {
-                const bounds = system.plan.nodes.map(n => [n.latitude, n.longitude]);
+            if (nodes.length > 0) {
+                const bounds = nodes.map(n => [n.latitude, n.longitude]);
                 map.fitBounds(bounds, { padding: [50, 50] });
             }
         }
