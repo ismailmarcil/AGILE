@@ -29,8 +29,8 @@ class Leg {
         return {
             from: this.from ? this.from.toJSON() : null,
             to: this.to ? this.to.toJSON() : null,
-            pathNode: this.pathNode.map(node => node.toJSON()),
-            pathSegment: this.pathSegment.map(segment => segment.toJSON()),
+            pathNode: (this.pathNode && Array.isArray(this.pathNode)) ? this.pathNode.map(node => node ? node.toJSON() : null) : [],
+            pathSegment: (this.pathSegment && Array.isArray(this.pathSegment)) ? this.pathSegment.map(segment => segment ? segment.toJSON() : null) : [],
             distance: this.distance,
             travelTime: this.travelTime
         };

@@ -47,6 +47,15 @@ async function handleLoadTour() {
     const tour = result.tour;
     console.log("Tournée chargée:", tour);
 
+    // Store the displayed tour globally
+    window.currentDisplayedTour = tour;
+
+    // Show save button
+    const saveTourBtn = document.getElementById('saveTourBtn');
+    if (saveTourBtn) {
+        saveTourBtn.style.display = 'inline-flex';
+    }
+
     // Display the tour on the map
     if (view.map) {
         view.displayTour(tour);
@@ -546,4 +555,45 @@ function deleteDemand(demandId) {
         }
     }
 }
+
+// Sauvegarde de la tournée
+async function saveTour() {
+    // Vérifie qu'il y a une tournée actuellement affichée
+    if (!window.currentDisplayedTour) {
+        alert('Aucune tournée à sauvegarder. Calculez ou chargez une tournée d\'abord.');
+        return;
+    }
+
+    const saveTourBtn = document.getElementById('saveTourBtn');
+    const originalText = saveTourBtn.innerHTML;
+    saveTourBtn.innerHTML = '<i class="fa-solid fa-spinner"></i> Sauvegarde...';
+    saveTourBtn.disabled = true;
+
+    try {
+        const result = await system.saveTourToServer(window.currentDisplayedTour);
+
+        if (result.success) {
+            alert(result.message);
+            console.log('Tournée sauvegardée:', result.tourId);
+            // Optionnel: mark tour as saved (can be used to disable future saves/distinguish edits)
+            window.currentDisplayedTour._savedTourId = result.tourId;
+        } else {
+            alert('Erreur lors de la sauvegarde: ' + result.error);
+        }
+    } catch (error) {
+        alert('Erreur: ' + error.message);
+        console.error('Save error:', error);
+    } finally {
+        saveTourBtn.innerHTML = originalText;
+        saveTourBtn.disabled = false;
+    }
+}
+
+// Setup event listeners when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    const saveTourBtn = document.getElementById('saveTourBtn');
+    if (saveTourBtn) {
+        saveTourBtn.addEventListener('click', saveTour);
+    }
+});
 

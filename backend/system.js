@@ -252,6 +252,46 @@ class System {
         });
     }
 
+    saveTourToServer(tour) {
+        return new Promise((resolve, reject) => {
+            if (!tour) {
+                resolve({ success: false, error: "Aucune tournée à sauvegarder." });
+                return;
+            }
+
+            try {
+                const tourJSON = tour.toJSON ? tour.toJSON() : {
+                    id: tour.id || `tour_${Date.now()}`,
+                    departureTime: tour.departureTime,
+                    courier: tour.courier ? { id: tour.courier.id, name: tour.courier.name } : null,
+                    stops: tour.stops || [],
+                    legs: tour.legs || [],
+                    totalDistance: tour.totalDistance || 0,
+                    totalDuration: tour.totalDuration || 0
+                };
+
+                const payload = JSON.stringify(tourJSON);
+
+                fetch('/api/tours/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: payload
+                })
+                .then(response => response.json())
+                .then(data => {
+                    resolve({ success: true, message: data.message, tourId: data.tourId });
+                })
+                .catch(error => {
+                    resolve({ success: false, error: error.message });
+                });
+            } catch (error) {
+                resolve({ success: false, error: error.message });
+            }
+        });
+    }
+
 
 
     //lire un fichier XML de demandes de livraison.
