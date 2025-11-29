@@ -82,10 +82,40 @@ function updateTimelineFromTour(tour) {
     let pickupCounter = 1;
     let deliveryCounter = 1;
 
-    // Add each stop to the timeline
+    // Link related pickup/delivery tour points so validation can find pairs
+    function linkRelatedTourPoints(t) {
+        if (!t || !t.stops) return;
+        // clear existing links
+        t.stops.forEach(tp => { if (tp) delete tp.relatedTourPoint; });
+
+        const pickMap = new Map();
+        t.stops.forEach(tp => {
+            if (!tp) return;
+            // prefer an explicit demand id when present
+            const id = tp.demand && (tp.demand.id || tp.demand) ? (tp.demand.id || tp.demand) : (tp.node && tp.node.id);
+            if (!id) return;
+            if (tp.type === 'PICKUP') pickMap.set(String(id), tp);
+        });
+        t.stops.forEach(tp => {
+            if (!tp) return;
+            const id = tp.demand && (tp.demand.id || tp.demand) ? (tp.demand.id || tp.demand) : (tp.node && tp.node.id);
+            if (!id) return;
+            if (tp.type === 'DELIVERY' && pickMap.has(String(id))) {
+                const p = pickMap.get(String(id));
+                p.relatedTourPoint = tp;
+                tp.relatedTourPoint = p;
+            }
+        });
+    }
+
+    linkRelatedTourPoints(tour);
+
+    // Add each stop to the timeline (with left/right controls)
     tour.stops.forEach((stop, index) => {
         const stepDiv = document.createElement('div');
         stepDiv.className = 'step';
+        // index of the stop in the tour.stops array
+        stepDiv.dataset.stopIndex = index;
 
         // Add drag handle for non-warehouse stops
         const dragHandleDiv = document.createElement('div');
@@ -115,6 +145,68 @@ function updateTimelineFromTour(tour) {
             deliveryCounter++;
         }
         stepDiv.appendChild(iconDiv);
+
+        // Add left/right controls for non-depot stops
+        if (stop.type !== 'ENTREPOT') {
+            const controls = document.createElement('div');
+            controls.className = 'step-controls';
+
+            const leftBtn = document.createElement('button');
+            leftBtn.type = 'button';
+            leftBtn.textContent = '⇦';
+            leftBtn.title = 'Déplacer à gauche';
+            leftBtn.className = 'btn btn-sm';
+
+            const rightBtn = document.createElement('button');
+            rightBtn.type = 'button';
+            rightBtn.textContent = '⇨';
+            rightBtn.title = 'Déplacer à droite';
+            rightBtn.className = 'btn btn-sm';
+
+            // Disable left if this is immediately after the start depot
+            if (index === 1) leftBtn.disabled = true;
+            // Disable right if this is immediately before the final depot
+            if (index === (tour.stops.length - 2)) rightBtn.disabled = true;
+
+            // Click handlers call tour.movePoint and rebuild timeline/view
+            leftBtn.addEventListener('click', () => {
+                // compute current index from model (safer than relying on DOM dataset)
+                const oldIndex = tour.stops.indexOf(stop);
+                const newIndex = oldIndex - 1;
+                if (oldIndex === -1) return; // safety
+                const res = tour.movePoint(oldIndex, newIndex);
+                if (!res.valid) {
+                    alert(mapMoveReasonToMessage(res));
+                    // restore UI from model
+                    updateTimelineFromTour(tour);
+                    return;
+                }
+                // rebuild simple legs if possible
+                rebuildTourLegs(tour);
+                // refresh UI and map
+                updateTimelineFromTour(tour);
+                if (view && view.displayTour) view.displayTour(tour);
+            });
+
+            rightBtn.addEventListener('click', () => {
+                const oldIndex = tour.stops.indexOf(stop);
+                const newIndex = oldIndex + 1;
+                if (oldIndex === -1) return;
+                const res = tour.movePoint(oldIndex, newIndex);
+                if (!res.valid) {
+                    alert(mapMoveReasonToMessage(res));
+                    updateTimelineFromTour(tour);
+                    return;
+                }
+                rebuildTourLegs(tour);
+                updateTimelineFromTour(tour);
+                if (view && view.displayTour) view.displayTour(tour);
+            });
+
+            controls.appendChild(leftBtn);
+            controls.appendChild(rightBtn);
+            stepDiv.appendChild(controls);
+        }
 
         // Add time
         const timeDiv = document.createElement('div');
@@ -149,6 +241,44 @@ function updateTimelineFromTour(tour) {
     // Réinitialiser le drag & drop après avoir reconstruit la timeline
     if (window.timelineDragDrop) {
         window.timelineDragDrop.refresh();
+    }
+
+    // Helper: rebuild simple legs after stops reordering (best-effort)
+    function rebuildTourLegs(t) {
+        if (typeof Leg === 'undefined' || !t || !t.stops) return;
+        t.legs = [];
+        for (let i = 0; i < t.stops.length - 1; i++) {
+            const from = t.stops[i];
+            const to = t.stops[i + 1];
+            try {
+                const leg = new Leg(from, to, [from.node, to.node], 0, 0);
+                t.legs.push(leg);
+            } catch (e) {
+                // ignore if Leg signature differs
+            }
+        }
+    }
+
+    // Helper: map movePoint reason to a French message
+    function mapMoveReasonToMessage(res) {
+        const reason = typeof res === 'string' ? res : (res && res.reason ? res.reason : null);
+        switch (reason) {
+            case 'DEPOT_START':
+                return "❌ L'entrepôt de début ne peut pas être déplacé.";
+            case 'DEPOT_END_MOVE':
+                return "❌ L'entrepôt de fin ne peut pas être déplacé.";
+            case 'DEPOT_START_MUST_REMAIN':
+                return "❌ L'entrepôt de début doit rester en première position.";
+            case 'DEPOT_END_MUST_REMAIN':
+                return "❌ L'entrepôt final doit rester en dernière position.";
+            case 'PICKUP_AFTER_DELIVERY':
+            case 'DELIVERY_BEFORE_PICKUP':
+                return "❌ Violations d'ordre: un pickup doit toujours être avant sa livraison.";
+            case 'OUT_OF_RANGE':
+                return "❌ Indice hors plage.";
+            default:
+                return "❌ Déplacement interdit.";
+        }
     }
 }
 

@@ -273,7 +273,7 @@ body {
     height: 200px;
     background: white;
     border-top: 1px solid var(--border-color);
-    padding: 15px 20px;
+    padding: 10px 20px; /* moins d'espace vertical pour remonter la timeline */
     display: flex;
     flex-direction: column;
 }
@@ -281,11 +281,15 @@ body {
 .timeline-scroll {
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 30px 20px 20px 20px;
+    padding: 8px 20px 12px 20px; /* réduire le padding-top pour remonter le contenu */
     display: flex;
     align-items: center;
     position: relative;
     gap: 0;
+}
+
+.tour-timeline .section-title {
+    margin-bottom: 8px; 
 }
 
 .step {
@@ -370,6 +374,39 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     flex-shrink: 0;
+}
+
+/* Controls inside each timeline step (left/right arrows) */
+.step-controls {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+}
+
+.step-controls .btn {
+    background-color: #f6f7f9;
+    border: 1px solid var(--border-color);
+    color: var(--secondary-color);
+    padding: 4px 8px;
+    border-radius: 6px;
+    min-width: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    font-size: 0.85rem;
+}
+
+.step-controls .btn:hover {
+    background-color: white;
+}
+
+.step-controls .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 /* Styles pour le drag & drop */
