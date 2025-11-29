@@ -1,12 +1,15 @@
 // Demand is expected to be loaded before this script in browser environment
-// For Node.js environment - import Demand and Tour
+// For Node.js environment - import Demand, Tour, Leg, TourPoint
 
 if (typeof require !== 'undefined') {
     // Node.js environment
     Demand = require("./demand");
     Tour = require("./tours");
+    Leg = require("./leg");
+    TourPoint = require("./tourpoint");
 }
-// In browser, Demand and Tour will be available from the global scope after their scripts load
+
+// In browser, Demand, Tour, Leg, and TourPoint will be available from the global scope after their scripts load
 
 class System {
     plan;
@@ -523,6 +526,7 @@ class System {
      * Build a tour for a courier using Nearest Neighbor with Dijkstra pathfinding
      * Ensures pickup is visited before corresponding delivery
      * Uses real graph distances via Dijkstra algorithm
+     * Creates Leg objects for each segment of the path
      * @param {Courier} courier - The courier
      * @param {Array<Demand>} demands - Demands to fulfill
      * @param {Map} distanceMatrix - Pre-computed distance matrix from loadPlan
@@ -581,6 +585,17 @@ class System {
 
             if (targetDemandIndex === -1 || bestPath.length === 0) break; // No valid path found
 
+            // Convert path IDs to node objects
+            const pathNodes = bestPath.map(nodeId => this.plan.nodes.get(nodeId)).filter(n => n !== undefined);
+
+            // Create a Leg for this segment
+            if (pathNodes.length > 0) {
+                const originNode = pathNodes[0];
+                const destNode = pathNodes[pathNodes.length - 1];
+                const leg = new Leg(originNode, destNode, pathNodes, bestDistance, bestDistance);
+                tour.addLeg(leg);
+            }
+
             // Add all intermediate nodes from the Dijkstra path to sequence
             // Skip the first node (current) and add the rest
             for (let i = 1; i < bestPath.length; i++) {
@@ -602,13 +617,21 @@ class System {
             currentPoint = this.plan.nodes.get(nextTargetId);
         }
 
-        // Add warehouse as final point (return to origin)
+        // Add warehouse as final point (return to origin) with a Leg
         const returnPath = this.dijkstra(currentPoint.id, warehouse.id);
-        for (let i = 1; i < returnPath.path.length; i++) {
-            const nodeId = returnPath.path[i];
-            const node = this.plan.nodes.get(nodeId);
-            if (node) {
-                sequence.push(node);
+        if (returnPath.path.length > 0) {
+            const returnPathNodes = returnPath.path.map(nodeId => this.plan.nodes.get(nodeId)).filter(n => n !== undefined);
+            if (returnPathNodes.length > 0) {
+                const returnLeg = new Leg(returnPathNodes[0], warehouse, returnPathNodes, returnPath.distance, returnPath.distance);
+                tour.addLeg(returnLeg);
+            }
+
+            for (let i = 1; i < returnPath.path.length; i++) {
+                const nodeId = returnPath.path[i];
+                const node = this.plan.nodes.get(nodeId);
+                if (node) {
+                    sequence.push(node);
+                }
             }
         }
 
