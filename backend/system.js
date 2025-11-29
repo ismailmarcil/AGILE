@@ -1,12 +1,15 @@
 // Demand is expected to be loaded before this script in browser environment
-// For Node.js environment - import Demand and Tour
+// For Node.js environment - import Demand, Tour, Leg, TourPoint
 
 if (typeof require !== 'undefined') {
     // Node.js environment
     Demand = require("./demand");
     Tour = require("./tours");
+    Leg = require("./leg");
+    TourPoint = require("./tourpoint");
 }
-// In browser, Demand and Tour will be available from the global scope after their scripts load
+
+// In browser, Demand, Tour, Leg, and TourPoint will be available from the global scope after their scripts load
 
 class System {
     plan;
@@ -195,47 +198,14 @@ class System {
         });
 
         (data.legs || []).forEach(l => {
-            const pathNodes = (l.path || l.pathNode || []).map(getOrCreateNode);
-            const leg = new Leg(null, null, pathNodes, [], l.distance || 0, l.travelTime || 0);
+            const pathNodes = (l.path || []).map(getOrCreateNode);
+            const leg = new Leg(null, null, pathNodes, l.distance || 0, l.travelTime || 0);
             tour.addLeg(leg);
         });
 
         tour.calculateTotalDistance();
         tour.calculateTotalDuration();
         return tour;
-    }
-
-    /**
-     * Load a tour from a JSON file (browser file input)
-     * Utilise loadTourFromJSON pour créer l'instance de Tour
-     * @param {HTMLInputElement} fileInput - File input element containing the JSON file
-     * @returns {Promise<{success: boolean, tour?: Tour, error?: string}>}
-     */
-    async loadTourFromFile(fileInput) {
-        if (fileInput.files.length === 0) {
-            return { success: false, error: "Aucun fichier sélectionné. Veuillez choisir un fichier JSON." };
-        }
-
-        const file = fileInput.files[0];
-
-        if (!file.name.toLowerCase().endsWith(".json")) {
-            return { success: false, error: "Le fichier sélectionné n'est pas un fichier JSON." };
-        }
-
-        try {
-            const text = await file.text();
-            const data = JSON.parse(text);
-            const tour = this.loadTourFromJSON(data); // Utilise la méthode existante
-
-            if (!tour) {
-                return { success: false, error: "Données JSON invalides pour créer une tournée." };
-            }
-
-            this.toursList.push(tour);
-            return { success: true, tour };
-        } catch (error) {
-            return { success: false, error: "Erreur: " + error.message };
-        }
     }
 
 
@@ -446,14 +416,14 @@ class System {
      * @returns {Array<Tour>} List of computed tours
      */
     computeTours(couriers) {
+
         if (!this.plan || !this.plan.nodes || this.demandsList.length === 0) {
             console.error("Cannot compute tours: plan or demands are missing");
             return [];
         }
 
-        // Build a distance matrix between all relevant nodes
-        const allPoints = this.buildPointsList();
-        const distanceMatrix = this.computeDistanceMatrix(allPoints);
+        // Use pre-computed distance matrix from loadPlan
+        const distanceMatrix = this.distanceMatrix ;
 
         // Divide demands among couriers
         const tours = [];
@@ -467,8 +437,9 @@ class System {
             if (startIdx >= this.demandsList.length) break;
 
             const assignedDemands = this.demandsList.slice(startIdx, endIdx);
-            const tour = this.buildTourForCourier(courier, assignedDemands, allPoints, distanceMatrix);
+            const tour = this.buildTourForCourier(courier, assignedDemands, distanceMatrix);
 
+            console.log(`Tour for courier ${courier.id}:`, tour);
             if (tour) {
                 tours.push(tour);
                 this.toursList.push(tour);
@@ -479,170 +450,208 @@ class System {
     }
 
     /**
-     * Build a list of all delivery points (pickup and delivery addresses)
-     * @returns {Array} List of unique points
+     * Dijkstra's algorithm to find shortest path between two nodes
+     * @param {string} startId - Start node ID
+     * @param {string} endId - End node ID
+     * @returns {object} {path: [], distance: number} or {path: [], distance: Infinity} if unreachable
      */
-    buildPointsList() {
-        const pointsSet = new Set();
-        const pointsMap = new Map();
-
-        // Add warehouse as starting point
-        if (this.plan.warehouse) {
-            pointsMap.set(this.plan.warehouse.id, this.plan.warehouse);
-            pointsSet.add(this.plan.warehouse.id);
+    dijkstra(startId, endId) {
+        if (startId === endId) {
+            return { path: [startId], distance: 0 };
         }
 
-        // Add all pickup and delivery addresses
-        this.demandsList.forEach(demand => {
-            if (demand.pickupAddress) {
-                const pickupId = demand.pickupAddress.id || demand.pickupAddress;
-                pointsMap.set(pickupId, demand.pickupAddress);
-                pointsSet.add(pickupId);
-            }
-            if (demand.deliveryAddress) {
-                const deliveryId = demand.deliveryAddress.id || demand.deliveryAddress;
-                pointsMap.set(deliveryId, demand.deliveryAddress);
-                pointsSet.add(deliveryId);
-            }
-        });
+        const distances = new Map();
+        const previous = new Map();
+        const unvisited = new Set();
 
-        return Array.from(pointsSet).map(id => pointsMap.get(id));
-    }
+        // Initialize distances
+        for (const [nodeId] of this.plan.nodes) {
+            distances.set(nodeId, Infinity);
+            unvisited.add(nodeId);
+        }
+        distances.set(startId, 0);
 
-    /**
-     * Compute Euclidean distance matrix between all points
-     * @param {Array} points - List of points
-     * @returns {Map} Distance matrix as map of maps
-     */
-    computeDistanceMatrix(points) {
-        const distMatrix = new Map();
-
-        for (let i = 0; i < points.length; i++) {
-            const point1 = points[i];
-            if (!distMatrix.has(point1.id)) {
-                distMatrix.set(point1.id, new Map());
+        while (unvisited.size > 0) {
+            // Find unvisited node with minimum distance
+            let current = null;
+            let minDist = Infinity;
+            for (const nodeId of unvisited) {
+                const dist = distances.get(nodeId);
+                if (dist < minDist) {
+                    minDist = dist;
+                    current = nodeId;
+                }
             }
 
-            for (let j = 0; j < points.length; j++) {
-                if (i === j) {
-                    distMatrix.get(point1.id).set(points[j].id, 0);
-                } else {
-                    const point2 = points[j];
-                    const distance = this.calculateDistance(point1, point2);
-                    distMatrix.get(point1.id).set(point2.id, distance);
+            if (current === null || minDist === Infinity) break;
+            if (current === endId) break;
+
+            unvisited.delete(current);
+
+            // Check neighbors through distance matrix
+            if (this.distanceMatrix.has(current)) {
+                const neighbors = this.distanceMatrix.get(current);
+                for (const [neighborId, edgeDistance] of neighbors) {
+                    if (!unvisited.has(neighborId)) continue;
+
+                    const alt = distances.get(current) + edgeDistance;
+                    if (alt < distances.get(neighborId)) {
+                        distances.set(neighborId, alt);
+                        previous.set(neighborId, current);
+                    }
                 }
             }
         }
 
-        return distMatrix;
+        // Reconstruct path
+        const path = [];
+        let current = endId;
+
+        if (distances.get(endId) === Infinity) {
+            return { path: [], distance: Infinity };
+        }
+
+        while (current !== undefined) {
+            path.unshift(current);
+            current = previous.get(current);
+        }
+
+        return {
+            path: path,
+            distance: distances.get(endId)
+        };
     }
 
     /**
-     * Calculate Euclidean distance between two points
-     * @param {Node} point1 - First point
-     * @param {Node} point2 - Second point
-     * @returns {number} Distance in degrees (approximation)
-     */
-    calculateDistance(point1, point2) {
-        const dx = point1.latitude - point2.latitude;
-        const dy = point1.longitude - point2.longitude;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    /**
-     * Build a tour for a courier using Nearest Neighbor algorithm
+     * Build a tour for a courier using Nearest Neighbor with Dijkstra pathfinding
+     * Ensures pickup is visited before corresponding delivery
+     * Uses real graph distances via Dijkstra algorithm
+     * Creates Leg objects for each segment of the path
      * @param {Courier} courier - The courier
      * @param {Array<Demand>} demands - Demands to fulfill
-     * @param {Array} allPoints - All available points
-     * @param {Map} distanceMatrix - Pre-computed distance matrix
+     * @param {Map} distanceMatrix - Pre-computed distance matrix from loadPlan
      * @returns {Tour} Computed tour
      */
-    buildTourForCourier(courier, demands, allPoints, distanceMatrix) {
+    buildTourForCourier(courier, demands, distanceMatrix) {
         if (demands.length === 0) return null;
 
-        // Create list of points to visit (pickup and delivery for each demand)
-        const pointsToVisit = [];
-        const pointsMap = new Map();
-
-        demands.forEach(demand => {
-            if (demand.pickupAddress) {
-                const pickup = demand.pickupAddress;
-                pointsToVisit.push({ point: pickup, type: 'pickup', demand: demand });
-                pointsMap.set(pickup.id || pickup, pickup);
-            }
-            if (demand.deliveryAddress) {
-                const delivery = demand.deliveryAddress;
-                pointsToVisit.push({ point: delivery, type: 'delivery', demand: demand });
-                pointsMap.set(delivery.id || delivery, delivery);
-            }
-        });
-
-        // Start from warehouse
-        const warehouse = this.plan.warehouse || allPoints[0];
+        const warehouse = this.plan.warehouse;
         const tour = new Tour(null, "08:00", courier);
 
-        // Apply Nearest Neighbor algorithm
         let currentPoint = warehouse;
-        const visited = new Set([currentPoint.id]);
         const sequence = [currentPoint];
+        const pickupsVisited = new Set();
+        const deliveriesVisited = new Set();
 
-        while (pointsToVisit.length > 0) {
-            // Find nearest unvisited point
-            let nearestIdx = -1;
-            let minDistance = Infinity;
+        console.log("Building tour for courier", courier.id, "with demands:", demands);
 
-            for (let i = 0; i < pointsToVisit.length; i++) {
-                const nextPoint = pointsToVisit[i].point;
-                const pointId = nextPoint.id || nextPoint;
+        // Keep visiting points until all pickups and deliveries are done
+        while (pickupsVisited.size < demands.length || deliveriesVisited.size < demands.length) {
+            let bestDistance = Infinity;
+            let bestPath = [];
+            let nextTargetId = null;
+            let targetDemandIndex = -1;
+            let targetType = null; // 'pickup' or 'delivery'
 
-                if (!visited.has(pointId)) {
-                    const distance = distanceMatrix.has(currentPoint.id)
-                        ? (distanceMatrix.get(currentPoint.id).get(pointId) || Infinity)
-                        : this.calculateDistance(currentPoint, nextPoint);
+            // Find nearest target using Dijkstra from current position
+            for (let i = 0; i < demands.length; i++) {
+                const demand = demands[i];
+                const pickupId = demand.pickupAddress.id || demand.pickupAddress;
+                const deliveryId = demand.deliveryAddress.id || demand.deliveryAddress;
 
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        nearestIdx = i;
+                // Priority 1: Unvisited pickups - find shortest real path
+                if (!pickupsVisited.has(pickupId)) {
+                    const dijkstraResult = this.dijkstra(currentPoint.id, pickupId);
+                    if (dijkstraResult.distance < bestDistance && dijkstraResult.distance !== Infinity) {
+                        bestDistance = dijkstraResult.distance;
+                        bestPath = dijkstraResult.path;
+                        nextTargetId = pickupId;
+                        targetDemandIndex = i;
+                        targetType = 'pickup';
+                    }
+                }
+                // Priority 2: Deliveries where pickup is done - find shortest real path
+                else if (pickupsVisited.has(pickupId) && !deliveriesVisited.has(deliveryId)) {
+                    const dijkstraResult = this.dijkstra(currentPoint.id, deliveryId);
+                    if (dijkstraResult.distance < bestDistance && dijkstraResult.distance !== Infinity) {
+                        bestDistance = dijkstraResult.distance;
+                        bestPath = dijkstraResult.path;
+                        nextTargetId = deliveryId;
+                        targetDemandIndex = i;
+                        targetType = 'delivery';
                     }
                 }
             }
 
-            if (nearestIdx === -1) break; // All points visited
+            if (targetDemandIndex === -1 || bestPath.length === 0) break; // No valid path found
 
-            // Visit nearest point
-            const nextItem = pointsToVisit[nearestIdx];
-            const nextPoint = nextItem.point;
-            const pointId = nextPoint.id || nextPoint;
+            // Convert path IDs to node objects
+            const pathNodes = bestPath.map(nodeId => this.plan.nodes.get(nodeId)).filter(n => n !== undefined);
 
-            visited.add(pointId);
-            sequence.push(nextPoint);
+            // Create a Leg for this segment
+            if (pathNodes.length > 0) {
+                const originNode = pathNodes[0];
+                const destNode = pathNodes[pathNodes.length - 1];
+                const leg = new Leg(originNode, destNode, pathNodes, bestDistance, bestDistance);
+                tour.addLeg(leg);
+            }
 
-            currentPoint = nextPoint;
+            // Add all intermediate nodes from the Dijkstra path to sequence
+            // Skip the first node (current) and add the rest
+            for (let i = 1; i < bestPath.length; i++) {
+                const nodeId = bestPath[i];
+                const node = this.plan.nodes.get(nodeId);
+                if (node) {
+                    sequence.push(node);
+                }
+            }
+
+            // Mark demand points as visited
+            if (targetType === 'pickup') {
+                pickupsVisited.add(nextTargetId);
+            } else if (targetType === 'delivery') {
+                deliveriesVisited.add(nextTargetId);
+            }
+
+            // Update current point to the target
+            currentPoint = this.plan.nodes.get(nextTargetId);
         }
 
-        // Add warehouse as final point (return to origin)
-        sequence.push(warehouse);
+        // Add warehouse as final point (return to origin) with a Leg
+        const returnPath = this.dijkstra(currentPoint.id, warehouse.id);
+        if (returnPath.path.length > 0) {
+            const returnPathNodes = returnPath.path.map(nodeId => this.plan.nodes.get(nodeId)).filter(n => n !== undefined);
+            if (returnPathNodes.length > 0) {
+                const returnLeg = new Leg(returnPathNodes[0], warehouse, returnPathNodes, returnPath.distance, returnPath.distance);
+                tour.addLeg(returnLeg);
+            }
 
-        // Build tour with the sequence
+            for (let i = 1; i < returnPath.path.length; i++) {
+                const nodeId = returnPath.path[i];
+                const node = this.plan.nodes.get(nodeId);
+                if (node) {
+                    sequence.push(node);
+                }
+            }
+        }
+
+        // Build tour with the complete sequence
         for (let i = 0; i < sequence.length; i++) {
             const point = sequence[i];
-            // Create a simplified tour point (can be extended with TourPoint class)
             tour.addStop({
                 id: point.id,
                 address: point,
-                arrivalTime: "08:00", // Simplified, can be calculated
+                arrivalTime: "08:00",
                 departureTime: "08:00"
             });
         }
 
-        // Calculate tour metrics
+        // Calculate tour metrics by summing edge distances
         let totalDistance = 0;
         for (let i = 0; i < sequence.length - 1; i++) {
             const p1 = sequence[i];
             const p2 = sequence[i + 1];
-            const dist = distanceMatrix.has(p1.id)
-                ? (distanceMatrix.get(p1.id).get(p2.id) || 0)
-                : this.calculateDistance(p1, p2);
+            const dist = this.getDistance(distanceMatrix, p1.id, p2.id) || 0;
             totalDistance += dist;
         }
 
@@ -651,6 +660,20 @@ class System {
         console.log(`Tour computed for courier ${courier.id}: ${sequence.length} stops, distance: ${totalDistance.toFixed(2)}`);
 
         return tour;
+    }
+
+    /**
+     * Get distance from distanceMatrix, returns Infinity if no connection
+     * @param {Map} distanceMatrix - Pre-computed distance matrix
+     * @param {string} fromId - Origin node ID
+     * @param {string} toId - Destination node ID
+     * @returns {number} Distance/time or Infinity if not connected
+     */
+    getDistance(distanceMatrix, fromId, toId) {
+        if (fromId === toId) return 0;
+        if (!distanceMatrix.has(fromId)) return Infinity;
+        const distance = distanceMatrix.get(fromId).get(toId);
+        return distance !== undefined ? distance : Infinity;
     }
 
 
