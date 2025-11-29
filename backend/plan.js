@@ -12,7 +12,7 @@ class Plan {
      */
     constructor(nodes = new Map(), segments = [], warehouse = null) {
         /**
-         * @type {Array<Node>}
+         * @type {Map<idNode, Node>}
          */
         this.nodes = nodes;
 
