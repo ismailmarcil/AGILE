@@ -198,14 +198,58 @@ class System {
         });
 
         (data.legs || []).forEach(l => {
-            const pathNodes = (l.path || []).map(getOrCreateNode);
-            const leg = new Leg(null, null, pathNodes, l.distance || 0, l.travelTime || 0);
+            const pathNodes = (l.pathNode || l.path || []).map(getOrCreateNode);
+            const pathSegments = (l.pathSegment || []);
+            const leg = new Leg(null, null, pathNodes, pathSegments, l.distance || 0, l.travelTime || 0);
             tour.addLeg(leg);
         });
 
         tour.calculateTotalDistance();
         tour.calculateTotalDuration();
         return tour;
+    }
+
+    loadTourFromFile(fileInput) {
+        return new Promise((resolve, reject) => {
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                resolve({ success: false, error: "Aucun fichier sélectionné." });
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const fileName = file.name.toLowerCase();
+
+            // Vérifier que c'est un fichier JSON
+            if (!fileName.endsWith(".json")) {
+                resolve({ success: false, error: "Le fichier sélectionné n'est pas un fichier JSON." });
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = (event) => {
+                try {
+                    const jsonData = JSON.parse(event.target.result);
+                    const tour = this.loadTourFromJSON(jsonData);
+                    
+                    if (tour) {
+                        this.toursList.push(tour);
+                        resolve({ success: true, tour: tour });
+                    } else {
+                        resolve({ success: false, error: "Impossible de charger la tournée depuis le fichier JSON." });
+                    }
+                } catch (error) {
+                    resolve({ success: false, error: "Erreur lors de la lecture du fichier JSON: " + error.message });
+                }
+            };
+
+            reader.onerror = (error) => {
+                resolve({ success: false, error: "Erreur lors de la lecture du fichier: " + error.message });
+            };
+
+            // Lire le fichier en tant que texte
+            reader.readAsText(file);
+        });
     }
 
 
