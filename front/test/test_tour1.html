@@ -37,15 +37,15 @@
         .info-box.warning { border-left-color: #f39c12; background: #fef5e7; }
         .info-box.success { border-left-color: #27ae60; background: #eafaf1; }
         
-        /* Tour overlay */
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999; }
-        .tour-card { background: white; padding: 24px; border-radius: 8px; max-width: 600px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
-        .tour-card h2 { margin: 0 0 12px; font-size: 20px; color: #2c3e50; }
-        .tour-card .step-info { font-size: 14px; color: #7f8c8d; margin-bottom: 12px; }
-        .tour-card .location { padding: 8px; background: #ecf0f1; border-radius: 4px; margin: 6px 0; }
-        .tour-controls { display: flex; justify-content: space-between; gap: 8px; margin-top: 16px; }
-        .tour-controls button { padding: 8px 12px; }
-        .hidden { display: none; }
+        .tour-label {
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-weight: bold !important;
+            color: white !important;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.7) !important;
+            font-size: 14px !important;
+        }
     </style>
 </head>
 <body>
@@ -83,30 +83,16 @@
         <div class="section">
             <h2>3️⃣ Crear y Mostrar Tour</h2>
             <div class="controls">
-                <button id="btnComputeTour" class="success" disabled>Hacer el Tour</button>
+                <button id="btnComputeTour" class="success" disabled>Calcular Tour</button>
+                <button id="btnClearTour" class="danger" disabled>Limpiar Tour</button>
             </div>
             <div id="tourInfo"></div>
         </div>
     </div>
 
-    <!-- Tour overlay -->
-    <div id="overlay" class="overlay" role="dialog" aria-modal="true">
-        <div class="tour-card" id="tourCard">
-            <div class="step-info" id="stepIndex"></div>
-            <h2 id="stepTitle"></h2>
-            <div id="stepContent"></div>
-            <div class="tour-controls">
-                <div>
-                    <button id="btnPrev">⬅️ Anterior</button>
-                    <button id="btnNext">Siguiente ➡️</button>
-                </div>
-                <button id="btnClose" class="danger">Cerrar</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Backend Scripts -->
     <script src="/backend/demand.js"></script>
+    <script src="/backend/courier.js"></script>
     <script src="/backend/node.js"></script>
     <script src="/backend/segment.js"></script>
     <script src="/backend/plan.js"></script>
@@ -116,9 +102,10 @@
 
     <script>
         let system = new System();
-        let currentTourStep = 0;
-        let tourSteps = [];
         let map = null;
+        let currentTour = null;
+        let tourPolylines = [];
+        let tourMarkers = [];
 
         const planFileInput = document.getElementById('planFileInput');
         const demandsFileInput = document.getElementById('demandsFileInput');
@@ -126,18 +113,10 @@
         const btnLoadDemands = document.getElementById('btnLoadDemands');
         const btnClearDemands = document.getElementById('btnClearDemands');
         const btnComputeTour = document.getElementById('btnComputeTour');
+        const btnClearTour = document.getElementById('btnClearTour');
         const planPreview = document.getElementById('planPreview');
         const demandsPreview = document.getElementById('demandsPreview');
         const tourInfo = document.getElementById('tourInfo');
-        const mapContainer = document.getElementById('mapContainer');
-
-        const overlay = document.getElementById('overlay');
-        const stepTitle = document.getElementById('stepTitle');
-        const stepContent = document.getElementById('stepContent');
-        const stepIndex = document.getElementById('stepIndex');
-        const btnPrev = document.getElementById('btnPrev');
-        const btnNext = document.getElementById('btnNext');
-        const btnClose = document.getElementById('btnClose');
 
         // Initialize map
         function initMap() {
@@ -225,6 +204,8 @@
             tourInfo.innerHTML = '';
             btnComputeTour.disabled = true;
             btnClearDemands.disabled = true;
+            btnClearTour.disabled = true;
+            clearTourFromMap();
             showInfo('Demandas eliminadas', 'warning');
         });
 
@@ -239,82 +220,151 @@
                 return;
             }
 
-            const courier = { id: 'courier_1', name: 'Livreur 1' };
-            const tours = system.computeTours([courier]);
+            try {
+                console.log(`Calculando tour para ${system.demandsList.length} demandas...`);
+                
+                const courier = new Object();
+                courier.id = 'courier_1';
+                courier.name = 'Repartidor 1';
+                
+                const tours = system.computeTours([courier]);
 
-            if (tours.length === 0) {
-                alert('Error al crear el tour');
-                return;
-            }
+                if (!tours || tours.length === 0) {
+                    alert('Error al crear el tour - no se generó ninguna ruta');
+                    return;
+                }
 
-            buildTourSteps(tours[0]);
-            showInfo(`✅ Tour créé avec ${tourSteps.length} étapes`, 'success');
-            currentTourStep = 0;
-            showStep();
-            overlay.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        });
-
-        // Tour controls
-        btnPrev.addEventListener('click', () => {
-            if (currentTourStep > 0) {
-                currentTourStep--;
-                showStep();
-            }
-        });
-
-        btnNext.addEventListener('click', () => {
-            if (currentTourStep < tourSteps.length - 1) {
-                currentTourStep++;
-                showStep();
-            } else {
-                endTour();
-            }
-        });
-
-        btnClose.addEventListener('click', endTour);
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) endTour();
-        });
-
-        function buildTourSteps(tour) {
-            tourSteps = [];
-            tourSteps.push({
-                title: '🏪 Inicio - Entrepôt',
-                location: system.plan.warehouse.id,
-                text: 'Départ du tour de livraison'
-            });
-
-            if (tour.stops && tour.stops.length > 0) {
-                tour.stops.forEach((stop, i) => {
-                    tourSteps.push({
-                        title: `📍 Étape ${i + 1}`,
-                        location: stop.id,
-                        text: `Arrivée: ${stop.arrivalTime || 'N/A'}\nDépart: ${stop.departureTime || 'N/A'}`
-                    });
+                currentTour = tours[0];
+                console.log('Tour calculado:', {
+                    stops: currentTour.stops?.length || 0,
+                    distance: currentTour.totalDistance,
+                    courier: currentTour.courier?.id
                 });
+
+                // Draw tour on map
+                drawTourOnMap();
+                
+                showInfo(`✅ Tour calculado: ${currentTour.stops.length} paradas | Distancia: ${(currentTour.totalDistance || 0).toFixed(2)} unidades`, 'success');
+                btnClearTour.disabled = false;
+            } catch (err) {
+                console.error('Error en computeTour:', err);
+                alert('Error al calcular el tour: ' + err.message);
+            }
+        });
+
+        // Clear Tour
+        btnClearTour.addEventListener('click', () => {
+            clearTourFromMap();
+            currentTour = null;
+            tourInfo.innerHTML = '';
+            btnClearTour.disabled = true;
+            showInfo('Tour eliminado del mapa', 'warning');
+        });
+
+        function drawTourOnMap() {
+            if (!currentTour || !currentTour.stops || currentTour.stops.length === 0) return;
+
+            // Clear only tour markers and polylines, keep base map (nodes and segments)
+            clearTourFromMap();
+
+            const routeCoordinates = [];
+            
+            // Start from warehouse
+            if (system.plan.warehouse) {
+                routeCoordinates.push([system.plan.warehouse.latitude, system.plan.warehouse.longitude]);
+                
+                // Mark warehouse
+                const warehouseMarker = L.circleMarker([system.plan.warehouse.latitude, system.plan.warehouse.longitude], {
+                    radius: 12,
+                    fillColor: '#27ae60',
+                    color: '#fff',
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(map);
+                
+                const label = L.tooltip({
+                    permanent: true,
+                    direction: 'center',
+                    className: 'tour-label'
+                }).setContent('🏪');
+                warehouseMarker.bindTooltip(label);
+                warehouseMarker.bindPopup(`<b>Entrepôt</b><br>${system.plan.warehouse.id}`);
+                tourMarkers.push(warehouseMarker);
             }
 
-            tourSteps.push({
-                title: '✅ Fin - Retour à l\'entrepôt',
-                location: system.plan.warehouse.id,
-                text: `Distance totale: ${(tour.totalDistance || 0).toFixed(2)} km`
+            // Add all stops
+            currentTour.stops.forEach((stop, i) => {
+                const node = stop.address || system.plan.nodes.get(stop.id);
+                if (node) {
+                    routeCoordinates.push([node.latitude, node.longitude]);
+
+                    // Determine stop type
+                    let color = '#3498db';
+                    let icon = '📍';
+                    system.demandsList.forEach(demand => {
+                        const pickupId = demand.pickupAddress.id || demand.pickupAddress;
+                        const deliveryId = demand.deliveryAddress.id || demand.deliveryAddress;
+                        if (stop.id === pickupId) {
+                            color = '#f39c12';
+                            icon = '📦';
+                        } else if (stop.id === deliveryId) {
+                            color = '#e74c3c';
+                            icon = '🎯';
+                        }
+                    });
+
+                    // Mark stop
+                    const marker = L.circleMarker([node.latitude, node.longitude], {
+                        radius: 8,
+                        fillColor: color,
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    }).addTo(map);
+
+                    const stopLabel = L.tooltip({
+                        permanent: true,
+                        direction: 'center',
+                        className: 'tour-label'
+                    }).setContent((i + 1).toString());
+                    marker.bindTooltip(stopLabel);
+                    marker.bindPopup(`<b>Parada ${i + 1}</b><br>${icon} ${stop.id}`);
+                    tourMarkers.push(marker);
+                }
             });
+
+            // Return to warehouse
+            if (system.plan.warehouse) {
+                routeCoordinates.push([system.plan.warehouse.latitude, system.plan.warehouse.longitude]);
+            }
+
+            // Draw route polyline
+            if (routeCoordinates.length > 1) {
+                const line = L.polyline(routeCoordinates, {
+                    color: '#3498db',
+                    weight: 3,
+                    opacity: 0.8
+                }).addTo(map);
+                tourPolylines.push(line);
+
+                // Fit bounds to tour
+                const bounds = routeCoordinates.map(coord => [coord[0], coord[1]]);
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
         }
 
-        function showStep() {
-            if (tourSteps.length === 0) return;
-            const step = tourSteps[currentTourStep];
-            stepTitle.textContent = step.title;
-            stepContent.innerHTML = `<div class="location"><strong>Point:</strong> ${step.location}</div><div>${step.text}</div>`;
-            stepIndex.textContent = `Étape ${currentTourStep + 1} de ${tourSteps.length}`;
-            btnPrev.disabled = currentTourStep === 0;
-            btnNext.textContent = currentTourStep === tourSteps.length - 1 ? 'Terminer' : 'Suivant ➡️';
-        }
-
-        function endTour() {
-            overlay.style.display = 'none';
-            document.body.style.overflow = '';
+        function clearTourFromMap() {
+            tourMarkers.forEach(marker => {
+                try { map.removeLayer(marker); } catch(e) {}
+            });
+            tourMarkers = [];
+            
+            tourPolylines.forEach(line => {
+                try { map.removeLayer(line); } catch(e) {}
+            });
+            tourPolylines = [];
         }
 
         function renderPlanPreview() {
@@ -422,9 +472,6 @@
 
         function displayDemandsOnMap() {
             if (!map || !system.demandsList || system.demandsList.length === 0) return;
-            // La visualización de demandas ahora se hace en displayPlanOnMap()
-            // Solo necesitamos redibujar el mapa con los nuevos colores
-            // Limpiar y redibujar
             map.eachLayer((layer) => {
                 if (layer instanceof L.CircleMarker || layer instanceof L.Polyline) {
                     map.removeLayer(layer);
