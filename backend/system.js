@@ -478,7 +478,7 @@ class System {
             return null;
         }
 
-        let tour = new Tour(null, "8:00", new Courier("Jean"));
+        let tour = new Tour(null, "8:00", this.listCouriers[0]);
 
         // First leg: warehouse to first pickup
         let { path, distance, segments } = this.plan.findShortestPath(this.plan.warehouse.id, demands[0].pickupAddress);
