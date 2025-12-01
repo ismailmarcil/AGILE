@@ -20,13 +20,13 @@ class System {
         this.demandsList = [];
         this.toursList = [];
         this.nextDemandId = 1; //paramètre pour gérer les id des demandes ajoutées.
-     }
+    }
 
     async loadPlan(fileInput) {
 
         // 1. Vérifier qu'un fichier est sélectionné
         if (fileInput.files.length === 0) {
-                 return { success: false, error: " Aucun fichier sélectionné. Veuillez choisir un fichier XML."};
+            return { success: false, error: " Aucun fichier sélectionné. Veuillez choisir un fichier XML." };
         }
 
         const file = fileInput.files[0];
@@ -37,7 +37,7 @@ class System {
         const isXmlMime = file.type === "text/xml" || file.type === "application/xml" || file.type === "";
 
         if (!isXmlExtension && !isXmlMime) {
-            return { success: false, error: "Le fichier sélectionné n'est pas un fichier XML."};
+            return { success: false, error: "Le fichier sélectionné n'est pas un fichier XML." };
         }
 
         // 3. Lire le contenu du fichier
@@ -45,7 +45,7 @@ class System {
         try {
             text = await file.text();
         } catch (error) {
-            return { success: false, error: "Impossible de lire le fichier. Vérifiez qu'il n'est pas corrompu."};
+            return { success: false, error: "Impossible de lire le fichier. Vérifiez qu'il n'est pas corrompu." };
 
         }
 
@@ -54,7 +54,7 @@ class System {
 
         // Vérifier les erreurs de parsing
         if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
-            return { success: false, error: "Le contenu du fichier XML est invalide ou mal formé."};
+            return { success: false, error: "Le contenu du fichier XML est invalide ou mal formé." };
         }
 
         const reseau = xmlDoc.getElementsByTagName("reseau")[0];
@@ -62,15 +62,15 @@ class System {
         const troncons = xmlDoc.getElementsByTagName("troncon");
 
         if (!reseau) {
-            return { success: false, error: "Le XML ne contient pas la balise <reseau>. Ce n'est pas un plan valide."};
+            return { success: false, error: "Le XML ne contient pas la balise <reseau>. Ce n'est pas un plan valide." };
         }
 
         if (noeuds.length === 0) {
-            return { success: false, error: "Aucun noeud trouvé dans le XML. Ce fichier ne correspond pas à un plan."};
+            return { success: false, error: "Aucun noeud trouvé dans le XML. Ce fichier ne correspond pas à un plan." };
         }
 
         if (troncons.length === 0) {
-            return { success: false, error: "Aucun troncon trouvé dans le XML. Ce fichier ne correspond pas à un plan."};
+            return { success: false, error: "Aucun troncon trouvé dans le XML. Ce fichier ne correspond pas à un plan." };
         }
 
         // Validación de atributos esenciales
@@ -93,52 +93,52 @@ class System {
         }
 
         if (!estructuraValida) {
-            return { success: false, error: "Le XML n'a pas la structure d'un plan de carte (noeud/ troncon incorrects)."};
-       }
-
-    const nodes = Array.from(noeuds).map(n => new Node(
-        n.getAttribute("id"),
-        parseFloat(n.getAttribute("latitude")),
-        parseFloat(n.getAttribute("longitude")),
-        []
-    ));
-
-    const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
-    // Initialize distance matrix
-    this.distanceMatrix = new Map();
-
-    const segments = Array.from(troncons).map(t => {
-        const originId = t.getAttribute("origine");
-        const destId = t.getAttribute("destination");
-        const name = t.getAttribute("nomRue") || "";
-        const length = parseFloat(t.getAttribute("longueur"));
-
-        const originNode = nodeMap.get(originId) || null;
-        const destinationNode = nodeMap.get(destId) || null;
-
-        const seg = new Segment(
-            originNode,
-            destinationNode,
-            name,
-            length
-        );
-
-        if (originNode) {
-            originNode.segments.push(seg);
-            
-            // Add to distance matrix
-            if (!this.distanceMatrix.has(originNode.id)) {
-                this.distanceMatrix.set(originNode.id, new Map());
-            }
-            
-            // Calculate time for this segment (distance / 15 km/h * 60 minutes)
-            const travelTimeMinutes = (length / 15) * 60;
-            this.distanceMatrix.get(originNode.id).set(destinationNode.id, travelTimeMinutes);
+            return { success: false, error: "Le XML n'a pas la structure d'un plan de carte (noeud/ troncon incorrects)." };
         }
 
-        return seg;
-    });
+        const nodes = Array.from(noeuds).map(n => new Node(
+            n.getAttribute("id"),
+            parseFloat(n.getAttribute("latitude")),
+            parseFloat(n.getAttribute("longitude")),
+            []
+        ));
+
+        const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+        // Initialize distance matrix
+        this.distanceMatrix = new Map();
+
+        const segments = Array.from(troncons).map(t => {
+            const originId = t.getAttribute("origine");
+            const destId = t.getAttribute("destination");
+            const name = t.getAttribute("nomRue") || "";
+            const length = parseFloat(t.getAttribute("longueur"));
+
+            const originNode = nodeMap.get(originId) || null;
+            const destinationNode = nodeMap.get(destId) || null;
+
+            const seg = new Segment(
+                originNode,
+                destinationNode,
+                name,
+                length
+            );
+
+            if (originNode) {
+                originNode.segments.push(seg);
+
+                // Add to distance matrix
+                if (!this.distanceMatrix.has(originNode.id)) {
+                    this.distanceMatrix.set(originNode.id, new Map());
+                }
+
+                // Calculate time for this segment (distance / 15 km/h * 60 minutes)
+                const travelTimeMinutes = (length / 15) * 60;
+                this.distanceMatrix.get(originNode.id).set(destinationNode.id, travelTimeMinutes);
+            }
+
+            return seg;
+        });
 
         console.log("Segments loaded:", segments);
         console.log("Distance matrix populated:", this.distanceMatrix);
@@ -231,7 +231,7 @@ class System {
                 try {
                     const jsonData = JSON.parse(event.target.result);
                     const tour = this.loadTourFromJSON(jsonData);
-                    
+
                     if (tour) {
                         this.toursList.push(tour);
                         resolve({ success: true, tour: tour });
@@ -279,13 +279,13 @@ class System {
                     },
                     body: payload
                 })
-                .then(response => response.json())
-                .then(data => {
-                    resolve({ success: true, message: data.message, tourId: data.tourId });
-                })
-                .catch(error => {
-                    resolve({ success: false, error: error.message });
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        resolve({ success: true, message: data.message, tourId: data.tourId });
+                    })
+                    .catch(error => {
+                        resolve({ success: false, error: error.message });
+                    });
             } catch (error) {
                 resolve({ success: false, error: error.message });
             }
@@ -432,7 +432,7 @@ class System {
                 const deliveryDuration = Number(deliveryDurationStr);
 
                 //Créer un objet Demande et l'ajouter à la liste des demandes.
-                const demande = new Demand( pickupAddress,deliveryAddress,pickupDuration,deliveryDuration,this.nextDemandId++);
+                const demande = new Demand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration, this.nextDemandId++);
                 this.demandsList.push(demande);
             };
 
@@ -445,7 +445,7 @@ class System {
     }
 
     addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
-        const demande = new Demand( pickupAddress, deliveryAddress, pickupDuration, deliveryDuration,this.nextDemandId++);
+        const demande = new Demand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration, this.nextDemandId++);
         this.demandsList.push(demande);
         return demande;
     }
@@ -459,18 +459,36 @@ class System {
         return false;
     }
 
-    calculateTour() {
+    calculateTour(demands) {
+        // Check if demands list is empty or null
+        if (!demands || demands.length === 0) {
+            console.error("Cannot calculate tour: no demands provided");
+            return null;
+        }
+
+        // Check if there are couriers in the system
+        if (!this.listCouriers || this.listCouriers.length === 0) {
+            console.error("Cannot calculate tour: no couriers in the system");
+            return null;
+        }
+
+        // Check if plan and warehouse are set
+        if (!this.plan || !this.plan.warehouse) {
+            console.error("Cannot calculate tour: plan or warehouse not set");
+            return null;
+        }
+
         let tour = new Tour(null, "8:00", new Courier("Jean"));
 
         // First leg: warehouse to first pickup
-        let { path, distance, segments } = this.plan.findShortestPath(this.plan.warehouse.id, this.demandsList[0].pickupAddress);
+        let { path, distance, segments } = this.plan.findShortestPath(this.plan.warehouse.id, demands[0].pickupAddress);
         let leg = new Leg(this.plan.warehouse, path[path.length - 1], path, segments, distance, distance);
         tour.addLeg(leg);
-        tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", this.demandsList[0]));
+        tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", demands[0]));
 
-        for (let i = 0; i < this.demandsList.length - 1; ++i) {
-            let demand = this.demandsList[i];
-            let nextDemand = this.demandsList[i + 1];
+        for (let i = 0; i < demands.length - 1; ++i) {
+            let demand = demands[i];
+            let nextDemand = demands[i + 1];
             let { path, distance, segments } = this.plan.findShortestPath(demand.pickupAddress, demand.deliveryAddress);
             let leg = new Leg(path[0], path[path.length - 1], path, segments, distance, distance);
             tour.addLeg(leg);
@@ -483,7 +501,7 @@ class System {
         }
 
         // Retour à l'entrepôt
-        let lastDemand = this.demandsList[this.demandsList.length - 1];
+        let lastDemand = demands[demands.length - 1];
         let { path: returnPath, distance: returnDistance, segments: returnSegments } = this.plan.findShortestPath(lastDemand.deliveryAddress, this.plan.warehouse.id);
         let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnSegments, returnDistance, returnDistance);
         tour.addLeg(returnLeg);
@@ -507,7 +525,7 @@ class System {
         }
 
         // Use pre-computed distance matrix from loadPlan
-        const distanceMatrix = this.distanceMatrix ;
+        const distanceMatrix = this.distanceMatrix;
 
         // Divide demands among couriers
         const tours = [];
