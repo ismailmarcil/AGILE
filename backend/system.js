@@ -6,10 +6,13 @@ if (typeof require !== 'undefined') {
     Demand = require("./demand");
     Tour = require("./tours");
     Leg = require("./leg");
-    TourPoint = require("./tourpoint");
+    const tourpointModule = require("./tourpoint");
+    TourPoint = tourpointModule.TourPoint;
+    TypePoint = tourpointModule.TypePoint;
+    Courier = require("./courier");
 }
 
-// In browser, Demand, Tour, Leg, and TourPoint will be available from the global scope after their scripts load
+// In browser, Demand, Tour, Leg, TourPoint, and Courier will be available from the global scope after their scripts load
 
 class System {
     plan;
