@@ -50,41 +50,41 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚚 Planificador de Tours de Entrega</h1>
+        <h1>🚚 Planificateur de Tours de Livraison</h1>
 
         <!-- Section 1: Load Plan -->
         <div class="section">
-            <h2>1️⃣ Cargar Mapa del Plan</h2>
+            <h2>1️⃣ Charger la Carte du Plan</h2>
             <div class="controls">
                 <input id="planFileInput" type="file" accept=".xml" />
-                <button id="btnLoadPlan">Cargar Mapa</button>
+                <button id="btnLoadPlan">Charger la Carte</button>
             </div>
-            <div id="planPreview"><em>📁 No hay mapa cargado</em></div>
+            <div id="planPreview"><em>📁 Aucune carte chargée</em></div>
         </div>
 
         <!-- Section 2: Load Demands -->
         <div class="section">
-            <h2>2️⃣ Cargar Demandas de Entrega</h2>
+            <h2>2️⃣ Charger les Demandes de Livraison</h2>
             <div class="controls">
                 <input id="demandsFileInput" type="file" accept=".xml" />
-                <button id="btnLoadDemands" disabled>Cargar Demandas</button>
-                <button id="btnClearDemands" class="danger" disabled>Limpiar</button>
+                <button id="btnLoadDemands" disabled>Charger les Demandes</button>
+                <button id="btnClearDemands" class="danger" disabled>Effacer</button>
             </div>
-            <div id="demandsPreview"><em>📦 No hay demandas cargadas</em></div>
+            <div id="demandsPreview"><em>📦 Aucune demande chargée</em></div>
         </div>
 
         <!-- Section 3: Map Display -->
         <div class="section">
-            <h2>🗺️ Visualización del Mapa</h2>
+            <h2>🗺️ Visualisation de la Carte</h2>
             <div id="mapContainer"></div>
         </div>
 
         <!-- Section 4: Compute and Display Tour -->
         <div class="section">
-            <h2>3️⃣ Crear y Mostrar Tour</h2>
+            <h2>3️⃣ Créer et Afficher le Tour</h2>
             <div class="controls">
-                <button id="btnComputeTour" class="success" disabled>Calcular Tour</button>
-                <button id="btnClearTour" class="danger" disabled>Limpiar Tour</button>
+                <button id="btnComputeTour" class="success" disabled>Calculer le Tour</button>
+                <button id="btnClearTour" class="danger" disabled>Effacer le Tour</button>
             </div>
             <div id="tourInfo"></div>
         </div>
@@ -136,7 +136,7 @@
         btnLoadPlan.addEventListener('click', async () => {
             const file = planFileInput.files[0];
             if (!file) {
-                alert('Selecciona un archivo XML de mapa');
+                alert('Sélectionnez un fichier XML de carte');
                 return;
             }
             try {
@@ -146,12 +146,12 @@
                     initMap();
                     displayPlanOnMap();
                     btnLoadDemands.disabled = false;
-                    showInfo('✅ Mapa cargado correctamente', 'success');
+                    showInfo('✅ Carte chargée correctement', 'success');
                 } else {
-                    alert('Error: ' + result.error);
+                    alert('Erreur: ' + result.error);
                 }
             } catch (err) {
-                alert('Error al cargar mapa: ' + err.message);
+                alert('Erreur lors du chargement de la carte: ' + err.message);
             }
         });
 
@@ -159,7 +159,7 @@
         btnLoadDemands.addEventListener('click', async () => {
             const file = demandsFileInput.files[0];
             if (!file) {
-                alert('Selecciona un archivo XML de demandas');
+                alert('Sélectionnez un fichier XML de demandes');
                 return;
             }
             try {
@@ -192,9 +192,9 @@
                 displayDemandsOnMap();
                 btnComputeTour.disabled = false;
                 btnClearDemands.disabled = false;
-                showInfo(`✅ ${system.demandsList.length} demandas cargadas correctamente`, 'success');
+                showInfo(`✅ ${system.demandsList.length} demandes chargées correctement`, 'success');
             } catch (err) {
-                alert('Error al cargar demandas: ' + err.message);
+                alert('Erreur lors du chargement des demandes: ' + err.message);
             }
         });
 
@@ -202,28 +202,28 @@
         btnClearDemands.addEventListener('click', () => {
             system.demandsList = [];
             system.toursList = [];
-            demandsPreview.innerHTML = '<em>📦 No hay demandas cargadas</em>';
+            demandsPreview.innerHTML = '<em>📦 Aucune demande</em>';
             tourInfo.innerHTML = '';
             btnComputeTour.disabled = true;
             btnClearDemands.disabled = true;
             btnClearTour.disabled = true;
             clearTourFromMap();
-            showInfo('Demandas eliminadas', 'warning');
+            showInfo('Demandes supprimées', 'warning');
         });
 
         // Compute Tour
         btnComputeTour.addEventListener('click', () => {
             if (!system.plan || !system.plan.warehouse) {
-                alert('Falta cargar el mapa o no hay entrepôt');
+                alert('Vous devez charger la carte ou aucun entrepôt n\'existe');
                 return;
             }
             if (system.demandsList.length === 0) {
-                alert('No hay demandas cargadas');
+                alert('Aucune demande chargée');
                 return;
             }
 
             try {
-                console.log(`Calculando tour para ${system.demandsList.length} demandas...`);
+                console.log(`Calcul du tour pour ${system.demandsList.length} demandes...`);
                 
                 const courier = new Object();
                 courier.id = 'courier_1';
@@ -232,12 +232,12 @@
                 const tours = system.computeTours([courier]);
 
                 if (!tours || tours.length === 0) {
-                    alert('Error al crear el tour - no se generó ninguna ruta');
+                    alert('Erreur lors de la création du tour - aucune route générée');
                     return;
                 }
 
                 currentTour = tours[0];
-                console.log('Tour calculado:', {
+                console.log('Tour calculé:', {
                     stops: currentTour.stops?.length || 0,
                     distance: currentTour.totalDistance,
                     courier: currentTour.courier?.id
@@ -246,11 +246,11 @@
                 // Draw tour on map
                 drawTourOnMap();
                 
-                showInfo(`✅ Tour calculado: ${currentTour.stops.length} paradas | Distancia: ${(currentTour.totalDistance || 0).toFixed(2)} unidades`, 'success');
+                showInfo(`✅ Tour calculé: ${currentTour.stops.length} arrêts | Distance: ${(currentTour.totalDistance || 0).toFixed(2)} unités`, 'success');
                 btnClearTour.disabled = false;
             } catch (err) {
-                console.error('Error en computeTour:', err);
-                alert('Error al calcular el tour: ' + err.message);
+                console.error('Erreur en computeTour:', err);
+                alert('Erreur lors du calcul du tour: ' + err.message);
             }
         });
 
@@ -260,7 +260,7 @@
             currentTour = null;
             tourInfo.innerHTML = '';
             btnClearTour.disabled = true;
-            showInfo('Tour eliminado del mapa', 'warning');
+            showInfo('Tour supprimé de la carte', 'warning');
         });
 
         function drawTourOnMap() {
@@ -332,7 +332,7 @@
                         className: 'tour-label'
                     }).setContent((i + 1).toString());
                     marker.bindTooltip(stopLabel);
-                    marker.bindPopup(`<b>Parada ${i + 1}</b><br>${icon} ${stop.id}`);
+                    marker.bindPopup(`<b>Arrêt ${i + 1}</b><br>${icon} ${stop.id}`);
                     tourMarkers.push(marker);
                 }
             });
@@ -371,32 +371,32 @@
 
         function renderPlanPreview() {
             if (!system.plan || !system.plan.nodes || system.plan.nodes.size === 0) {
-                planPreview.innerHTML = '<em>📁 No hay nodos en el plan</em>';
+                planPreview.innerHTML = '<em>📁 Aucun nœud dans le plan</em>';
                 return;
             }
             planPreview.innerHTML = '';
             const div = document.createElement('div');
             div.className = 'step';
-            div.innerHTML = `<strong>Nodos: ${system.plan.nodes.size}</strong><div class="small">Segmentos: ${system.plan.segments ? system.plan.segments.length : 0}</div>`;
+            div.innerHTML = `<strong>Nœuds: ${system.plan.nodes.size}</strong><div class="small">Tronçons: ${system.plan.segments ? system.plan.segments.length : 0}</div>`;
             planPreview.appendChild(div);
         }
 
         function renderDemandsPreview() {
             if (system.demandsList.length === 0) {
-                demandsPreview.innerHTML = '<em>📦 No hay demandas</em>';
+                demandsPreview.innerHTML = '<em>📦 Aucune demande</em>';
                 return;
             }
             demandsPreview.innerHTML = '';
             system.demandsList.slice(0, 5).forEach((d, i) => {
                 const div = document.createElement('div');
                 div.className = 'step';
-                div.innerHTML = `<strong>${i + 1}. Recogida ${d.pickupAddress} → Entrega ${d.deliveryAddress}</strong>`;
+                div.innerHTML = `<strong>${i + 1}. Enlevement ${d.pickupAddress} → Livraison ${d.deliveryAddress}</strong>`;
                 demandsPreview.appendChild(div);
             });
             if (system.demandsList.length > 5) {
                 const div = document.createElement('div');
                 div.className = 'step';
-                div.innerHTML = `<em>... y ${system.demandsList.length - 5} más</em>`;
+                div.innerHTML = `<em>... et ${system.demandsList.length - 5} de plus</em>`;
                 demandsPreview.appendChild(div);
             }
         }
@@ -427,7 +427,7 @@
             nodes.forEach(node => {
                 let color = '#3498db'; // Default blue for other nodes
                 let radius = 4;
-                let label = `Nodo: ${node.id}`;
+                let label = `Nœud: ${node.id}`;
                 
                 if (system.plan.warehouse && node.id === system.plan.warehouse.id) {
                     color = '#27ae60'; // Green for warehouse
