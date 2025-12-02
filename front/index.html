@@ -82,18 +82,6 @@
             <button class="toggle-btn active">Vue Livreur</button>
             <button class="toggle-btn">Vue Globale</button>
         </div>
-
-        <div>
-            <button class="btn btn-sm" style="background:white; border:1px solid #bdc3c7; margin-right:5px;">
-                <i class="fa-solid fa-rotate-left"></i> Undo
-            </button>
-            <button class="btn btn-sm" style="background:white; border:1px solid #bdc3c7; margin-right:5px;" onclick="document.getElementById('jsonTourInput').click()">
-                <i class="fa-solid fa-folder-open"></i> Restaurer
-            </button>
-            <button class="btn btn-sm btn-primary" style="width: auto;">
-                <i class="fa-solid fa-floppy-disk"></i> Sauvegarder
-            </button>
-        </div>
     </div>
 
     <div class="map-container">
@@ -109,10 +97,15 @@
     <div class="tour-timeline">
         <div class="section-title">
             <span><i class="fa-solid fa-stopwatch"></i> Détails de la tournée</span>
-            <!-- Replace the helper text with the save button aligned to the right -->
-            <button class="btn btn-sm save-btn" id="saveTourBtn" style="background:white; border:1px solid #bdc3c7; display:none; margin-left:auto;">
-                <i class="fa-solid fa-floppy-disk" style="margin-right:6px"></i> Sauvegarder
-            </button>
+            <!-- Buttons aligned to the right -->
+            <div style="display: flex; gap: 8px; margin-left: auto;">
+                <button class="btn btn-sm save-btn" onclick="document.getElementById('jsonTourInput').click()" style="background:white; border:1px solid #bdc3c7;">
+                    <i class="fa-solid fa-folder-open" style="margin-right:6px"></i> Restaurer
+                </button>
+                <button class="btn btn-sm save-btn" id="saveTourBtn" style="background:white; border:1px solid #bdc3c7; display:none;">
+                    <i class="fa-solid fa-floppy-disk" style="margin-right:6px"></i> Sauvegarder
+                </button>
+            </div>
         </div>
         <div class="timeline-scroll">
             <p style="text-align: center; color: #95a5a6; font-size: 0.85rem; padding: 10px;">
