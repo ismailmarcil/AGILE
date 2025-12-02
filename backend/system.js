@@ -462,59 +462,6 @@ class System {
         return false;
     }
 
-    calculateTour(demands) {
-        // Check if demands list is empty or null
-        if (!demands || demands.length === 0) {
-            console.error("Cannot calculate tour: no demands provided");
-            return null;
-        }
-
-        // Check if there are couriers in the system
-        if (!this.listCouriers || this.listCouriers.length === 0) {
-            console.error("Cannot calculate tour: no couriers in the system");
-            return null;
-        }
-
-        // Check if plan and warehouse are set
-        if (!this.plan || !this.plan.warehouse) {
-            console.error("Cannot calculate tour: plan or warehouse not set");
-            return null;
-        }
-
-        let tour = new Tour(null, "8:00", this.listCouriers[0]);
-
-        // First leg: warehouse to first pickup
-        let { path, distance, segments } = this.plan.findShortestPath(this.plan.warehouse.id, demands[0].pickupAddress);
-        let leg = new Leg(this.plan.warehouse, path[path.length - 1], path, segments, distance, distance);
-        tour.addLeg(leg);
-        tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", demands[0]));
-
-        for (let i = 0; i < demands.length - 1; ++i) {
-            let demand = demands[i];
-            let nextDemand = demands[i + 1];
-            let { path, distance, segments } = this.plan.findShortestPath(demand.pickupAddress, demand.deliveryAddress);
-            let leg = new Leg(path[0], path[path.length - 1], path, segments, distance, distance);
-            tour.addLeg(leg);
-            tour.addStop(new TourPoint(path[0], demand.pickupDuration, "PICKUP", demand));
-            tour.addStop(new TourPoint(path[path.length - 1], demand.deliveryDuration, "DELIVERY", demand));
-
-            let { path: nextPath, distance: nextDistance, segments: nextSegments } = this.plan.findShortestPath(demand.deliveryAddress, nextDemand.pickupAddress);
-            let nextLeg = new Leg(nextPath[0], nextPath[nextPath.length - 1], nextPath, nextSegments, nextDistance, nextDistance);
-            tour.addLeg(nextLeg);
-        }
-
-        // Retour à l'entrepôt
-        let lastDemand = demands[demands.length - 1];
-        let { path: returnPath, distance: returnDistance, segments: returnSegments } = this.plan.findShortestPath(lastDemand.deliveryAddress, this.plan.warehouse.id);
-        let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnSegments, returnDistance, returnDistance);
-        tour.addLeg(returnLeg);
-        tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", null));
-
-        this.toursList.push(tour);
-        return tour;
-    }
-
-
     /**
      * Compute optimal tours for couriers using a simple Nearest Neighbor TSP algorithm
      * @param {Array<Courier>} couriers - List of available couriers
@@ -528,7 +475,7 @@ class System {
         }
         // Use pre-computed distance matrix from loadPlan
         const distanceMatrix = this.distanceMatrix;
-        const demandsList =  demands || this.demandsList;
+        const demandsList = demands || this.demandsList;
 
         // Divide demands among couriers
         const tours = [];

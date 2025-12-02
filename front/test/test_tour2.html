@@ -331,7 +331,7 @@
                 alert('Vous devez charger la carte ou aucun entrepôt n\'existe');
                 return;
             }
-            if (system.demandsList.length === 0) {
+            if (system.demandsList.length == 0) {
                 alert('Aucune demande chargée');
                 return;
             }
@@ -339,22 +339,22 @@
             try {
                 console.log(`Calcul du tour pour ${system.demandsList.length} demandes...`);
 
-                const courier = new Object();
+                let courier = new Object();
                 courier.id = 'courier_1';
                 courier.name = 'Repartidor 1';
                 system.listCouriers.push(courier);
 
-                system.calculateTour(system.demandsList);
+                let tours = system.calculateTour(system.demandsList);
 
-                if (!system.toursList || system.toursList.length === 0) {
+                if (!tours || tours.length === 0) {
                     alert('Erreur lors de la création du tour - aucune route générée');
                     return;
                 }
 
-                currentTour = system.toursList[0];
+                currentTour = tours[0];
                 console.log('Tour calculé:', {
                     stops: currentTour.stops?.length || 0,
-                    distance: currentTour.totalDistance,
+                    distance: currentTour.calculateTotalDistance(),
                     courier: currentTour.courier?.id
                 });
 
