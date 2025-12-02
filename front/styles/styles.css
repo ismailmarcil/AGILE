@@ -68,39 +68,6 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
-/* Conteneur des demandes avec hauteur limitée */
-#demandsContainer {
-    max-height: 450px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0; /* Empêche le conteneur de se compresser */
-}
-
-/* Empêcher les cartes de demande de se compresser */
-#demandsContainer > *:not(.section-title) {
-    flex-shrink: 0;
-}
-
-/* Style de la scrollbar pour le conteneur des demandes */
-#demandsContainer::-webkit-scrollbar {
-    width: 6px;
-}
-
-#demandsContainer::-webkit-scrollbar-track {
-    background: #f1f2f6;
-    border-radius: 3px;
-}
-
-#demandsContainer::-webkit-scrollbar-thumb {
-    background: #bdc3c7;
-    border-radius: 3px;
-}
-
-#demandsContainer::-webkit-scrollbar-thumb:hover {
-    background: #95a5a6;
-}
-
 .section-title {
     font-size: 0.85rem;
     text-transform: uppercase;
