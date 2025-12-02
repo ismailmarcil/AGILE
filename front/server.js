@@ -30,6 +30,23 @@ if (!fs.existsSync(SAVED_TOURS_DIR)) {
     fs.mkdirSync(SAVED_TOURS_DIR, { recursive: true });
 }
 
+// Dossier pour données persistées (coursiers, etc.)
+const SAVED_DATA_DIR = path.join(__dirname, '..', 'saved_data');
+const COURIERS_FILE = path.join(SAVED_DATA_DIR, 'couriers.json');
+
+// Ensure saved_data and couriers file exist
+if (!fs.existsSync(SAVED_DATA_DIR)) {
+    fs.mkdirSync(SAVED_DATA_DIR, { recursive: true });
+}
+
+if (!fs.existsSync(COURIERS_FILE)) {
+    try {
+        fs.writeFileSync(COURIERS_FILE, JSON.stringify([], null, 2));
+    } catch (e) {
+        console.error('Impossible de créer le fichier des coursiers:', e.message);
+    }
+}
+
 const server = http.createServer((req, res) => {
     const parsedUrl = url.parse(req.url, true);
     const pathname = parsedUrl.pathname;
@@ -45,6 +62,17 @@ const server = http.createServer((req, res) => {
 
     if (pathname === '/api/tours/list' && req.method === 'GET') {
         handleListTours(req, res);
+        return;
+    }
+
+    // Couriers API
+    if (pathname === '/api/couriers' && req.method === 'GET') {
+        handleListCouriers(req, res);
+        return;
+    }
+
+    if (pathname === '/api/couriers' && req.method === 'POST') {
+        handleCreateCourier(req, res);
         return;
     }
 
@@ -194,6 +222,67 @@ function handleLoadTourFile(tourId, res) {
             error: error.message
         }));
     }
+}
+
+// Gestionnaire de listage des coursiers (single file)
+function handleListCouriers(req, res) {
+    try {
+        if (!fs.existsSync(COURIERS_FILE)) {
+            fs.writeFileSync(COURIERS_FILE, JSON.stringify([], null, 2));
+        }
+        const content = fs.readFileSync(COURIERS_FILE, 'utf-8');
+        const couriers = JSON.parse(content || '[]');
+
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.end(JSON.stringify({ success: true, couriers: couriers }));
+    } catch (error) {
+        res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.end(JSON.stringify({ success: false, error: error.message }));
+    }
+}
+
+// Gestionnaire de création / mise à jour d'un coursier
+function handleCreateCourier(req, res) {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+        try {
+            const payload = JSON.parse(body || '{}');
+            const name = (payload.name || '').trim();
+            if (!name) {
+                res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+                res.end(JSON.stringify({ success: false, error: 'Nom du coursier requis' }));
+                return;
+            }
+
+            const fileContent = fs.existsSync(COURIERS_FILE) ? fs.readFileSync(COURIERS_FILE, 'utf-8') : '[]';
+            const list = JSON.parse(fileContent || '[]');
+
+            // If id supplied, update existing courier
+            if (payload.id) {
+                const idx = list.findIndex(c => String(c.id) === String(payload.id));
+                if (idx !== -1) {
+                    list[idx].name = name;
+                } else {
+                    list.push({ id: payload.id, name });
+                }
+            } else {
+                // generate a simple id
+                const nextId = Date.now();
+                const newCourier = { id: `C${nextId}`, name };
+                list.push(newCourier);
+                payload.id = newCourier.id;
+            }
+
+            fs.writeFileSync(COURIERS_FILE, JSON.stringify(list, null, 2));
+
+            res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+            res.end(JSON.stringify({ success: true, courier: { id: payload.id, name }, message: 'Coursier enregistré' }));
+        } catch (error) {
+            res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+            res.end(JSON.stringify({ success: false, error: error.message }));
+        }
+    });
 }
 
 server.listen(PORT, () => {

@@ -47,22 +47,12 @@ async function handleLoadTour() {
     const tour = result.tour;
     console.log("Tournée chargée:", tour);
 
-    // Store the displayed tour globally
-    window.currentDisplayedTour = tour;
+    // Store as an array for consistency
+    window.calculatedTours = [tour];
 
-    // Show save button
-    const saveTourBtn = document.getElementById('saveTourBtn');
-    if (saveTourBtn) {
-        saveTourBtn.style.display = 'inline-flex';
-    }
-
-    // Display the tour on the map
-    if (view.map) {
-        view.displayTour(tour);
-    }
-
-    // Update timeline with tour details
-    updateTimelineFromTour(tour);
+    // Display the tours selector and tour details
+    displayToursSelector([tour]);
+    displayTourDetails(tour, 0);
 
     alert(`Tournée ${tour.id} chargée avec succès!\nCoursier: ${tour.courier ? tour.courier.name : 'Non assigné'}\nDépart: ${tour.departureTime}\nArrêts: ${tour.stops.length}\nDistance: ${(tour.totalDistance / 1000).toFixed(2)} km\nDurée: ${Math.round(tour.totalDuration / 60)} min`);
 }
@@ -589,6 +579,102 @@ async function saveTour() {
     }
 }
 
+// Fetch list of couriers from server and populate select
+async function fetchCouriers() {
+    try {
+        const resp = await fetch('/api/couriers');
+        const data = await resp.json();
+        if (!data.success) return;
+
+        const select = document.getElementById('couriersSelect');
+        if (!select) return;
+
+        // Clear options
+        select.innerHTML = '';
+
+        const couriers = data.couriers || [];
+        system.listCouriers = [];
+
+        if (couriers.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = 'Aucun coursier';
+            select.appendChild(opt);
+            return;
+        }
+
+        couriers.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `${c.name} (${c.id})`;
+            select.appendChild(opt);
+            // Add to system list
+            try { system.listCouriers.push(new Courier(c.id, c.name)); } catch (e) { system.listCouriers.push(c); }
+        });
+    } catch (error) {
+        console.error('Erreur fetchCouriers:', error);
+    }
+}
+
+// Create a new courier via server API
+async function createCourier() {
+    const input = document.getElementById('courierNameInput');
+    if (!input) return;
+    const name = input.value.trim();
+    if (!name) { alert('Entrez un nom pour le coursier'); return; }
+
+    const btn = document.getElementById('createCourierBtn');
+    const orig = btn ? btn.innerHTML : null;
+    if (btn) { btn.disabled = true; btn.innerHTML = '...'; }
+
+    try {
+        const resp = await fetch('/api/couriers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            input.value = '';
+            await fetchCouriers();
+            // select the newly created courier
+            const sel = document.getElementById('couriersSelect');
+            if (sel && data.courier && data.courier.id) {
+                sel.value = data.courier.id;
+            }
+            alert('Coursier créé: ' + data.courier.name);
+        } else {
+            alert('Erreur: ' + (data.error || ''));
+        }
+    } catch (error) {
+        console.error('createCourier error:', error);
+        alert('Erreur lors de la création du coursier');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+    }
+}
+
+// Courier count widget helpers
+function setCourierCountDisplay(count) {
+    const input = document.getElementById('courierCountInput');
+    if (!input) return;
+    input.value = String(count);
+}
+
+function changeCourierCount(delta) {
+    const input = document.getElementById('courierCountInput');
+    if (!input) return;
+    const old = Number(input.value) || 1;
+    let next = old + delta;
+    if (next < 1) next = 1;
+    if (next > 99) next = 99;
+    setCourierCountDisplay(next);
+    // Keep system in sync
+    if (typeof system !== 'undefined') {
+        system.nbCouriers = next;
+    }
+}
+
 // Handle tour calculation
 async function handleCalculateTour() {
     // Vérifier que le plan est chargé
@@ -637,6 +723,9 @@ async function handleCalculateTour() {
         // Update timeline with tour details
         updateTimelineFromTour(tour);
 
+        // Update courier info
+        updateCourierInfo(tour);
+
         // Afficher un message de succès
         const distanceKm = (tour.totalDistance / 1000).toFixed(2);
         const durationMin = Math.round(tour.totalDuration / 60);
@@ -651,6 +740,29 @@ async function handleCalculateTour() {
     }
 }
 
+// Update courier info display
+function updateCourierInfo(tour) {
+    const courierInfo = document.getElementById('courierInfo');
+    const courierName = document.getElementById('courierName');
+
+    if (!courierInfo || !courierName) return;
+
+    if (tour && tour.courier) {
+        courierName.textContent = tour.courier.name || tour.courier.id || 'Non assigné';
+        courierInfo.style.display = 'flex';
+    } else {
+        courierInfo.style.display = 'none';
+    }
+}
+
+// Helper function to get the number of couriers
+// TODO: Cette fonction sera utilisée lors du calcul des tournées multiples
+// Exemple: const tours = system.calculateTours(system.demandsList, getCouriersCount());
+function getCouriersCount() {
+    const couriersCountInput = document.getElementById('couriersCount');
+    return parseInt(couriersCountInput?.value) || 1;
+}
+
 // Setup event listeners when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     const saveTourBtn = document.getElementById('saveTourBtn');
@@ -658,10 +770,59 @@ document.addEventListener('DOMContentLoaded', () => {
         saveTourBtn.addEventListener('click', saveTour);
     }
 
+    // Wire courier creation UI
+    const createCourierBtn = document.getElementById('createCourierBtn');
+    if (createCourierBtn) createCourierBtn.addEventListener('click', createCourier);
+    // Fetch existing couriers to populate select
+    fetchCouriers();
+
+    // Wire the courier count +/- widget
+    const plus = document.getElementById('courierPlusBtn');
+    const minus = document.getElementById('courierMinusBtn');
+    const countInput = document.getElementById('courierCountInput');
+
+    // Initialize display from system if available
+    if (countInput) {
+        const init = (typeof system !== 'undefined' && system.nbCouriers) ? system.nbCouriers : 1;
+        setCourierCountDisplay(init);
+        if (typeof system !== 'undefined') system.nbCouriers = init;
+    }
+
+    if (plus) plus.addEventListener('click', () => changeCourierCount(1));
+    if (minus) minus.addEventListener('click', () => changeCourierCount(-1));
+
     // Ajouter le listener pour le bouton de calcul de tournée
     const calculateBtn = document.querySelector('.sidebar .btn.btn-primary');
     if (calculateBtn) {
         calculateBtn.addEventListener('click', handleCalculateTour);
     }
+
+    // Gestion du nombre de coursiers
+    const couriersCountInput = document.getElementById('couriersCount');
+    const decreaseCouriersBtn = document.getElementById('decreaseCouriersBtn');
+    const increaseCouriersBtn = document.getElementById('increaseCouriersBtn');
+
+    if (decreaseCouriersBtn && couriersCountInput) {
+        decreaseCouriersBtn.addEventListener('click', () => {
+            let count = parseInt(couriersCountInput.value) || 1;
+            if (count > 1) {
+                count--;
+                couriersCountInput.value = count;
+                console.log('Nombre de coursiers:', count);
+            }
+        });
+    }
+
+    if (increaseCouriersBtn && couriersCountInput) {
+        increaseCouriersBtn.addEventListener('click', () => {
+            let count = parseInt(couriersCountInput.value) || 1;
+            if (count < 10) { // Limite maximale de 10 coursiers
+                count++;
+                couriersCountInput.value = count;
+                console.log('Nombre de coursiers:', count);
+            }
+        });
+    }
+
 });
 

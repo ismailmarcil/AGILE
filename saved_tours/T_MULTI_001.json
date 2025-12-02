@@ -36,23 +36,6 @@
     },
     {
       "node": {
-        "id": "4",
-        "latitude": 45.753757,
-        "longitude": 4.8601513
-      },
-      "serviceDuration": 300,
-      "type": "PICKUP",
-      "demand": {
-        "id": "DEM_20250101_011",
-        "pickupAddress": "4",
-        "deliveryAddress": "5",
-        "pickupDuration": 300,
-        "deliveryDuration": 300
-      },
-      "relatedTourPoint": "5"
-    },
-    {
-      "node": {
         "id": "3",
         "latitude": 45.75425,
         "longitude": 4.8591485
@@ -67,6 +50,23 @@
         "deliveryDuration": 180
       },
       "relatedTourPoint": "2"
+    },
+    {
+      "node": {
+        "id": "4",
+        "latitude": 45.753757,
+        "longitude": 4.8601513
+      },
+      "serviceDuration": 300,
+      "type": "PICKUP",
+      "demand": {
+        "id": "DEM_20250101_011",
+        "pickupAddress": "4",
+        "deliveryAddress": "5",
+        "pickupDuration": 300,
+        "deliveryDuration": 300
+      },
+      "relatedTourPoint": "5"
     },
     {
       "node": {
@@ -163,20 +163,20 @@
       },
       "to": {
         "node": {
-          "id": "4",
-          "latitude": 45.753757,
-          "longitude": 4.8601513
+          "id": "3",
+          "latitude": 45.75425,
+          "longitude": 4.8591485
         },
-        "serviceDuration": 300,
-        "type": "PICKUP",
+        "serviceDuration": 180,
+        "type": "DELIVERY",
         "demand": {
-          "id": "DEM_20250101_011",
-          "pickupAddress": "4",
-          "deliveryAddress": "5",
-          "pickupDuration": 300,
-          "deliveryDuration": 300
+          "id": "DEM_20250101_010",
+          "pickupAddress": "2",
+          "deliveryAddress": "3",
+          "pickupDuration": 240,
+          "deliveryDuration": 180
         },
-        "relatedTourPoint": "5"
+        "relatedTourPoint": "2"
       },
       "pathNode": [
         {
@@ -185,6 +185,57 @@
           "longitude": 4.8574653
         },
         {
+          "id": "3",
+          "latitude": 45.75425,
+          "longitude": 4.8591485
+        }
+      ],
+      "pathSegment": [],
+      "distance": 0,
+      "travelTime": 0
+    },
+    {
+      "from": {
+        "node": {
+          "id": "3",
+          "latitude": 45.75425,
+          "longitude": 4.8591485
+        },
+        "serviceDuration": 180,
+        "type": "DELIVERY",
+        "demand": {
+          "id": "DEM_20250101_010",
+          "pickupAddress": "2",
+          "deliveryAddress": "3",
+          "pickupDuration": 240,
+          "deliveryDuration": 180
+        },
+        "relatedTourPoint": "2"
+      },
+      "to": {
+        "node": {
+          "id": "4",
+          "latitude": 45.753757,
+          "longitude": 4.8601513
+        },
+        "serviceDuration": 300,
+        "type": "PICKUP",
+        "demand": {
+          "id": "DEM_20250101_011",
+          "pickupAddress": "4",
+          "deliveryAddress": "5",
+          "pickupDuration": 300,
+          "deliveryDuration": 300
+        },
+        "relatedTourPoint": "5"
+      },
+      "pathNode": [
+        {
+          "id": "3",
+          "latitude": 45.75425,
+          "longitude": 4.8591485
+        },
+        {
           "id": "4",
           "latitude": 45.753757,
           "longitude": 4.8601513
@@ -211,57 +262,6 @@
           "deliveryDuration": 300
         },
         "relatedTourPoint": "5"
-      },
-      "to": {
-        "node": {
-          "id": "3",
-          "latitude": 45.75425,
-          "longitude": 4.8591485
-        },
-        "serviceDuration": 180,
-        "type": "DELIVERY",
-        "demand": {
-          "id": "DEM_20250101_010",
-          "pickupAddress": "2",
-          "deliveryAddress": "3",
-          "pickupDuration": 240,
-          "deliveryDuration": 180
-        },
-        "relatedTourPoint": "2"
-      },
-      "pathNode": [
-        {
-          "id": "4",
-          "latitude": 45.753757,
-          "longitude": 4.8601513
-        },
-        {
-          "id": "3",
-          "latitude": 45.75425,
-          "longitude": 4.8591485
-        }
-      ],
-      "pathSegment": [],
-      "distance": 0,
-      "travelTime": 0
-    },
-    {
-      "from": {
-        "node": {
-          "id": "3",
-          "latitude": 45.75425,
-          "longitude": 4.8591485
-        },
-        "serviceDuration": 180,
-        "type": "DELIVERY",
-        "demand": {
-          "id": "DEM_20250101_010",
-          "pickupAddress": "2",
-          "deliveryAddress": "3",
-          "pickupDuration": 240,
-          "deliveryDuration": 180
-        },
-        "relatedTourPoint": "2"
       },
       "to": {
         "node": {
@@ -282,9 +282,9 @@
       },
       "pathNode": [
         {
-          "id": "3",
-          "latitude": 45.75425,
-          "longitude": 4.8591485
+          "id": "4",
+          "latitude": 45.753757,
+          "longitude": 4.8601513
         },
         {
           "id": "5",
