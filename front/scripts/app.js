@@ -47,12 +47,25 @@ async function handleLoadTour() {
     const tour = result.tour;
     console.log("Tournée chargée:", tour);
 
-    // Store as an array for consistency
-    window.calculatedTours = [tour];
+    // Store the displayed tour globally
+    window.currentDisplayedTour = tour;
 
-    // Display the tours selector and tour details
-    displayToursSelector([tour]);
-    displayTourDetails(tour, 0);
+    // Show save button
+    const saveTourBtn = document.getElementById('saveTourBtn');
+    if (saveTourBtn) {
+        saveTourBtn.style.display = 'inline-flex';
+    }
+
+    // Display the tour on the map
+    if (view.map) {
+        view.displayTour(tour);
+    }
+
+    // Update timeline with tour details
+    updateTimelineFromTour(tour);
+
+    // Update courier info
+    updateCourierInfo(tour);
 
     alert(`Tournée ${tour.id} chargée avec succès!\nCoursier: ${tour.courier ? tour.courier.name : 'Non assigné'}\nDépart: ${tour.departureTime}\nArrêts: ${tour.stops.length}\nDistance: ${(tour.totalDistance / 1000).toFixed(2)} km\nDurée: ${Math.round(tour.totalDuration / 60)} min`);
 }

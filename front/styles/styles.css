@@ -30,6 +30,8 @@ body {
 /* --- SIDEBAR --- */
 .sidebar {
     width: 380px; /* Un peu plus large pour les actions */
+    min-width: 380px;
+    flex-shrink: 0;
     background-color: var(--panel-bg);
     border-right: 1px solid var(--border-color);
     display: flex;
@@ -59,7 +61,9 @@ body {
 .controls {
     padding: 20px;
     overflow-y: auto;
+    overflow-x: hidden;
     flex-grow: 1;
+    min-width: 0;
 }
 
 .control-group {
@@ -193,6 +197,9 @@ body {
     margin-bottom: 10px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     transition: transform 0.2s;
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow: hidden;
 }
 
 .demand-card:hover {
