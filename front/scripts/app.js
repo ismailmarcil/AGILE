@@ -116,13 +116,6 @@ function updateTimelineFromTour(tour) {
         // index of the stop in the tour.stops array
         stepDiv.dataset.stopIndex = index;
 
-        // Add drag handle for non-warehouse stops
-        const dragHandleDiv = document.createElement('div');
-        dragHandleDiv.className = 'drag-handle';
-        if (stop.type !== 'ENTREPOT') {
-            dragHandleDiv.innerHTML = '<i class="fa-solid fa-grip-vertical"></i>';
-        }
-        stepDiv.appendChild(dragHandleDiv);
 
         // Add step icon
         const iconDiv = document.createElement('div');
@@ -237,10 +230,6 @@ function updateTimelineFromTour(tour) {
         }
     });
 
-    // Réinitialiser le drag & drop après avoir reconstruit la timeline
-    if (window.timelineDragDrop) {
-        window.timelineDragDrop.refresh();
-    }
 
     // Helper: rebuild simple legs after stops reordering (best-effort)
     function rebuildTourLegs(t) {

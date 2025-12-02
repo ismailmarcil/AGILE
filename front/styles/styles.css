@@ -328,36 +328,11 @@ body {
     height: 120px;
 }
 
-.step[draggable="true"] {
-    cursor: move;
-}
-
-.step:active {
-    cursor: grabbing;
-    transform: scale(0.98);
-}
-
 /* Masquer le connecteur - on utilise la ligne continue */
 .step-connector {
     display: none;
 }
 
-.drag-handle {
-    font-size: 0.7rem;
-    color: #bdc3c7;
-    height: 18px;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    opacity: 0;
-    transition: opacity 0.2s;
-    flex-shrink: 0;
-}
-
-.step:hover .drag-handle {
-    opacity: 1;
-}
 
 .step-icon {
     width: 45px;
@@ -432,44 +407,6 @@ body {
     cursor: not-allowed;
 }
 
-/* Styles pour le drag & drop */
-.step[draggable="true"] {
-    border-radius: 12px;
-    transition: background-color 0.2s;
-}
-
-.step[draggable="true"]:hover {
-    background-color: rgba(46, 204, 113, 0.05);
-}
-
-.step.dragging {
-    opacity: 0.5;
-    transform: scale(0.95);
-}
-
-.step.drag-over {
-    background-color: rgba(46, 204, 113, 0.1);
-}
-
-.step-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100px;
-    height: 120px;
-    border: 2px dashed #3498db;
-    border-radius: 12px;
-    background: rgba(52, 152, 219, 0.05);
-    position: relative;
-    flex-shrink: 0;
-}
-
-.step-placeholder::after {
-    content: '↓';
-    font-size: 24px;
-    color: #3498db;
-}
 
 /* --- MODAL STYLES --- */
 .modal-overlay {
