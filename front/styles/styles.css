@@ -78,6 +78,8 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
+    min-width: 0;
 }
 
 /* Small save button inside section titles (compact) */
@@ -244,6 +246,8 @@ body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .toolbar {
@@ -296,23 +300,47 @@ body {
     height: 200px;
     background: white;
     border-top: 1px solid var(--border-color);
-    padding: 10px 20px; /* moins d'espace vertical pour remonter la timeline */
+    padding: 10px 20px;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .timeline-scroll {
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 8px 20px 12px 20px; /* réduire le padding-top pour remonter le contenu */
+    padding: 8px 20px 16px 20px;
     display: flex;
     align-items: center;
     position: relative;
     gap: 0;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Style de la scrollbar pour timeline-scroll */
+.timeline-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+
+.timeline-scroll::-webkit-scrollbar-track {
+    background: #f1f2f6;
+    border-radius: 4px;
+}
+
+.timeline-scroll::-webkit-scrollbar-thumb {
+    background: #bdc3c7;
+    border-radius: 4px;
+}
+
+.timeline-scroll::-webkit-scrollbar-thumb:hover {
+    background: #95a5a6;
 }
 
 .tour-timeline .section-title {
-    margin-bottom: 8px; 
+    margin-bottom: 8px;
+    flex-shrink: 0;
 }
 
 .step {
