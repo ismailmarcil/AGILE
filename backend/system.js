@@ -3,13 +3,13 @@
 
 if (typeof require !== 'undefined') {
     // Node.js environment
-    Demand = require("./demand");
-    Tour = require("./tours");
-    Leg = require("./leg");
+    global.Demand = require("./demand");
+    global.Tour = require("./tours");
+    global.Leg = require("./leg");
     const tourpointModule = require("./tourpoint");
-    TourPoint = tourpointModule.TourPoint;
-    TypePoint = tourpointModule.TypePoint;
-    Courier = require("./courier");
+    global.TourPoint = tourpointModule.TourPoint;
+    global.TypePoint = tourpointModule.TypePoint;
+    global.Courier = require("./courier");
 }
 
 // In browser, Demand, Tour, Leg, TourPoint, and Courier will be available from the global scope after their scripts load
@@ -17,7 +17,7 @@ if (typeof require !== 'undefined') {
 class System {
     plan;
 
-    constructor(nbCouriers) {
+    constructor(nbCouriers = 1) {
         this.nbCouriers = nbCouriers;
         this.listCouriers = [];
         this.demandsList = [];
@@ -356,6 +356,24 @@ class System {
             // Récupérer l'adresse de l'entrepôt et l'heure de départ
             const warehouseAddress = entrepot.getAttribute("adresse");
             const departureTime = entrepot.getAttribute("heureDepart");
+
+            // Initialiser le warehouse dans le plan si le plan est chargé
+            if (this.plan && warehouseAddress) {
+                const warehouseNode = this.plan.getNodeById(warehouseAddress);
+                if (warehouseNode) {
+                    this.plan.warehouse = warehouseNode;
+                    console.log('Entrepôt défini:', warehouseAddress);
+                } else {
+                    console.warn('Noeud d\'entrepôt non trouvé dans le plan:', warehouseAddress);
+                }
+            }
+
+            // Créer un coursier par défaut si aucun n'existe
+            if (this.listCouriers.length === 0) {
+                const defaultCourier = new Courier(1, 'Pierre');
+                this.listCouriers.push(defaultCourier);
+                console.log('Coursier par défaut créé:', defaultCourier.name);
+            }
 
             // Ne pas vider la liste pour conserver les demandes ajoutées manuellement
             // this.demandsList = [];

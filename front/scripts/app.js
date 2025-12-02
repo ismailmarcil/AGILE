@@ -589,11 +589,79 @@ async function saveTour() {
     }
 }
 
+// Handle tour calculation
+async function handleCalculateTour() {
+    // Vérifier que le plan est chargé
+    if (!system.plan) {
+        alert('⚠️ Veuillez d\'abord charger un plan XML.');
+        return;
+    }
+
+    // Vérifier qu'il y a des demandes
+    if (!system.demandsList || system.demandsList.length === 0) {
+        alert('⚠️ Veuillez d\'abord charger ou ajouter des demandes.');
+        return;
+    }
+
+    // Récupérer le bouton pour afficher l'état
+    const calculateBtn = document.querySelector('.sidebar .btn.btn-primary');
+    const originalText = calculateBtn.innerHTML;
+    calculateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Calcul en cours...';
+    calculateBtn.disabled = true;
+
+    try {
+        // Appeler la fonction de calcul de tournée du système
+        const tour = system.calculateTour(system.demandsList);
+
+        if (!tour) {
+            alert('❌ Erreur lors du calcul de la tournée. Vérifiez que toutes les demandes sont valides.');
+            return;
+        }
+
+        console.log('Tournée calculée:', tour);
+
+        // Store the displayed tour globally
+        window.currentDisplayedTour = tour;
+
+        // Show save button
+        const saveTourBtn = document.getElementById('saveTourBtn');
+        if (saveTourBtn) {
+            saveTourBtn.style.display = 'inline-flex';
+        }
+
+        // Display the tour on the map
+        if (view.map) {
+            view.displayTour(tour);
+        }
+
+        // Update timeline with tour details
+        updateTimelineFromTour(tour);
+
+        // Afficher un message de succès
+        const distanceKm = (tour.totalDistance / 1000).toFixed(2);
+        const durationMin = Math.round(tour.totalDuration / 60);
+        alert(`✅ Tournée calculée avec succès!\n\nCoursier: ${tour.courier ? tour.courier.name : 'Non assigné'}\nDépart: ${tour.departureTime}\nArrêts: ${tour.stops.length}\nDistance: ${distanceKm} km\nDurée: ${durationMin} min`);
+
+    } catch (error) {
+        console.error('Erreur lors du calcul de la tournée:', error);
+        alert('❌ Erreur lors du calcul de la tournée: ' + error.message);
+    } finally {
+        calculateBtn.innerHTML = originalText;
+        calculateBtn.disabled = false;
+    }
+}
+
 // Setup event listeners when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     const saveTourBtn = document.getElementById('saveTourBtn');
     if (saveTourBtn) {
         saveTourBtn.addEventListener('click', saveTour);
+    }
+
+    // Ajouter le listener pour le bouton de calcul de tournée
+    const calculateBtn = document.querySelector('.sidebar .btn.btn-primary');
+    if (calculateBtn) {
+        calculateBtn.addEventListener('click', handleCalculateTour);
     }
 });
 
