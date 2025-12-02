@@ -47,22 +47,12 @@ async function handleLoadTour() {
     const tour = result.tour;
     console.log("Tournée chargée:", tour);
 
-    // Store the displayed tour globally
-    window.currentDisplayedTour = tour;
+    // Store as an array for consistency
+    window.calculatedTours = [tour];
 
-    // Show save button
-    const saveTourBtn = document.getElementById('saveTourBtn');
-    if (saveTourBtn) {
-        saveTourBtn.style.display = 'inline-flex';
-    }
-
-    // Display the tour on the map
-    if (view.map) {
-        view.displayTour(tour);
-    }
-
-    // Update timeline with tour details
-    updateTimelineFromTour(tour);
+    // Display the tours selector and tour details
+    displayToursSelector([tour]);
+    displayTourDetails(tour, 0);
 
     alert(`Tournée ${tour.id} chargée avec succès!\nCoursier: ${tour.courier ? tour.courier.name : 'Non assigné'}\nDépart: ${tour.departureTime}\nArrêts: ${tour.stops.length}\nDistance: ${(tour.totalDistance / 1000).toFixed(2)} km\nDurée: ${Math.round(tour.totalDuration / 60)} min`);
 }
@@ -733,6 +723,9 @@ async function handleCalculateTour() {
         // Update timeline with tour details
         updateTimelineFromTour(tour);
 
+        // Update courier info
+        updateCourierInfo(tour);
+
         // Afficher un message de succès
         const distanceKm = (tour.totalDistance / 1000).toFixed(2);
         const durationMin = Math.round(tour.totalDuration / 60);
@@ -745,6 +738,29 @@ async function handleCalculateTour() {
         calculateBtn.innerHTML = originalText;
         calculateBtn.disabled = false;
     }
+}
+
+// Update courier info display
+function updateCourierInfo(tour) {
+    const courierInfo = document.getElementById('courierInfo');
+    const courierName = document.getElementById('courierName');
+
+    if (!courierInfo || !courierName) return;
+
+    if (tour && tour.courier) {
+        courierName.textContent = tour.courier.name || tour.courier.id || 'Non assigné';
+        courierInfo.style.display = 'flex';
+    } else {
+        courierInfo.style.display = 'none';
+    }
+}
+
+// Helper function to get the number of couriers
+// TODO: Cette fonction sera utilisée lors du calcul des tournées multiples
+// Exemple: const tours = system.calculateTours(system.demandsList, getCouriersCount());
+function getCouriersCount() {
+    const couriersCountInput = document.getElementById('couriersCount');
+    return parseInt(couriersCountInput?.value) || 1;
 }
 
 // Setup event listeners when DOM is ready
@@ -780,5 +796,33 @@ document.addEventListener('DOMContentLoaded', () => {
     if (calculateBtn) {
         calculateBtn.addEventListener('click', handleCalculateTour);
     }
+
+    // Gestion du nombre de coursiers
+    const couriersCountInput = document.getElementById('couriersCount');
+    const decreaseCouriersBtn = document.getElementById('decreaseCouriersBtn');
+    const increaseCouriersBtn = document.getElementById('increaseCouriersBtn');
+
+    if (decreaseCouriersBtn && couriersCountInput) {
+        decreaseCouriersBtn.addEventListener('click', () => {
+            let count = parseInt(couriersCountInput.value) || 1;
+            if (count > 1) {
+                count--;
+                couriersCountInput.value = count;
+                console.log('Nombre de coursiers:', count);
+            }
+        });
+    }
+
+    if (increaseCouriersBtn && couriersCountInput) {
+        increaseCouriersBtn.addEventListener('click', () => {
+            let count = parseInt(couriersCountInput.value) || 1;
+            if (count < 10) { // Limite maximale de 10 coursiers
+                count++;
+                couriersCountInput.value = count;
+                console.log('Nombre de coursiers:', count);
+            }
+        });
+    }
+
 });
 
