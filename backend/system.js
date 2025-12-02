@@ -520,7 +520,7 @@ class System {
      * @param {Array<Courier>} couriers - List of available couriers
      * @returns {Array<Tour>} List of computed tours
      */
-    computeTours() {
+    computeTours(demands) {
 
         if (!this.plan || !this.plan.nodes || this.demandsList.length === 0) {
             console.error("Cannot compute tours: plan or demands are missing");
@@ -528,15 +528,16 @@ class System {
         }
         // Use pre-computed distance matrix from loadPlan
         const distanceMatrix = this.distanceMatrix;
+        const demandsList =  demands || this.demandsList;
 
         // Divide demands among couriers
         const tours = [];
-        const demandsPerCourier = Math.ceil(this.demandsList.length / this.listCouriers.length);
+        const demandsPerCourier = Math.ceil(demandsList / this.listCouriers.length);
         for (let i = 0; i < this.listCouriers.length; i++) {
             const courier = this.listCouriers[i];
             const startIdx = i * demandsPerCourier;
-            const endIdx = Math.min((i + 1) * demandsPerCourier, this.demandsList.length);
-            if (startIdx >= this.demandsList.length) break;
+            const endIdx = Math.min((i + 1) * demandsPerCourier, demandsList.length);
+            if (startIdx >= demandsList.length) break;
 
             const assignedDemands = this.demandsList.slice(startIdx, endIdx);
             const tour = this.buildTourForCourier(courier, assignedDemands, distanceMatrix);
