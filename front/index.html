@@ -38,14 +38,21 @@
 
         <div class="control-group">
             <div class="section-title"><i class="fa-solid fa-users"></i> Coursiers</div>
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                <button class="btn btn-sm" style="border:1px solid #ccc">-</button>
-                <input type="text" value="2" style="width:40px; text-align:center; border:1px solid #ccc; border-radius:4px;" readonly>
-                <button class="btn btn-sm" style="border:1px solid #ccc">+</button>
+
+            <!-- Courier count widget: - [count] + -->
+            <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+                <button id="courierMinusBtn" class="btn btn-sm" type="button" title="Réduire le nombre de coursiers">-</button>
+                <input id="courierCountInput" type="text" value="1" readonly style="width:48px; text-align:center; border:1px solid #ccc; border-radius:4px; padding:6px;">
+                <button id="courierPlusBtn" class="btn btn-sm" type="button" title="Augmenter le nombre de coursiers">+</button>
             </div>
-            <select style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #bdc3c7;">
-                <option>Pierre (Actif)</option>
-                <option>Paul</option>
+
+            <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+                <input id="courierNameInput" type="text" placeholder="Nom du coursier" style="flex:1; padding:8px; border-radius:4px; border:1px solid #bdc3c7;">
+                <button id="createCourierBtn" class="btn btn-sm" type="button">Créer</button>
+            </div>
+
+            <select id="couriersSelect" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #bdc3c7;">
+                <option value="">Aucun coursier</option>
             </select>
         </div>
 
