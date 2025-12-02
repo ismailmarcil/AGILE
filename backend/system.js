@@ -136,7 +136,7 @@ class System {
                 }
 
                 // Calculate time for this segment (distance / 15 km/h * 60 minutes)
-                const travelTimeMinutes = (length / 15) * 60;
+                const travelTimeMinutes = (length / 1000) / 15 * 60;
                 this.distanceMatrix.get(originNode.id).set(destinationNode.id, travelTimeMinutes);
             }
 
