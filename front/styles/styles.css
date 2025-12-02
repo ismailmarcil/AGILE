@@ -92,6 +92,17 @@ body {
     background: white;
 }
 
+/* Courier Info Display */
+#courierInfo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#courierInfo i {
+    color: var(--primary-color);
+}
+
 /* Boutons */
 .btn {
     display: inline-flex;
