@@ -521,8 +521,14 @@ class System {
             tour.addLeg(nextLeg);
         }
 
-        // Retour à l'entrepôt
+        // Last demand pickup and delivery
         let lastDemand = demands[demands.length - 1];
+        let { path: lastPath, distance: lastDistance, segments: lastSegments } = this.plan.findShortestPath(lastDemand.pickupAddress, lastDemand.deliveryAddress);
+        let lastLeg = new Leg(lastPath[0], lastPath[lastPath.length - 1], lastPath, lastSegments, lastDistance, lastDistance);
+        tour.addLeg(lastLeg);
+        tour.addStop(new TourPoint(lastPath[0], lastDemand.pickupDuration, "PICKUP", lastDemand));
+        tour.addStop(new TourPoint(lastPath[lastPath.length - 1], lastDemand.deliveryDuration, "DELIVERY", lastDemand));
+        // Retour à l'entrepôt
         let { path: returnPath, distance: returnDistance, segments: returnSegments } = this.plan.findShortestPath(lastDemand.deliveryAddress, this.plan.warehouse.id);
         let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnSegments, returnDistance, returnDistance);
         tour.addLeg(returnLeg);
