@@ -8,6 +8,9 @@ class View {
         this.mapElementId = mapElementId;
         this.map = null;
         this.nodeMap = new Map();
+        this.tourMarkers = []; // Array to store markers for each stop
+        this.selectedMarker = null; // Currently selected marker
+        this.selectedStopIndex = null; // Currently selected stop index
 
         if (mapElementId) {
             this.initMap();
@@ -104,6 +107,9 @@ class View {
             if (layer instanceof L.TileLayer) return;
             this.map.removeLayer(layer);
         });
+        this.tourMarkers = [];
+        this.selectedMarker = null;
+        this.selectedStopIndex = null;
     }
 
     /**
@@ -271,6 +277,9 @@ class View {
             return;
         }
 
+        // Clear previous markers array
+        this.tourMarkers = [];
+
         stops.forEach((tourPoint, index) => {
             if (!tourPoint || !tourPoint.node) {
                 return;
@@ -298,7 +307,7 @@ class View {
             // Create marker with icon
             const icon = L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div style="background-color: ${markerColor}; 
+                html: `<div class="tour-marker" data-stop-index="${index}" style="background-color: ${markerColor}; 
                               width: 30px; height: 30px; 
                               border-radius: 50%; 
                               border: 2px solid white;
@@ -306,7 +315,8 @@ class View {
                               align-items: center; 
                               justify-content: center;
                               font-weight: bold;
-                              color: white;">
+                              color: white;
+                              transition: all 0.2s;">
                         ${index + 1}
                       </div>`,
                 iconSize: [30, 30],
@@ -323,6 +333,20 @@ class View {
                 Noeud ID: ${node.id}
                 ${tourPoint.demand ? `<br>Demande ID: ${tourPoint.demand.id || 'N/A'}` : ''}
             `);
+
+            // Store marker with its index and original color
+            this.tourMarkers.push({
+                marker: marker,
+                index: index,
+                node: node,
+                tourPoint: tourPoint,
+                originalColor: markerColor
+            });
+
+            // Add click event to marker
+            marker.on('click', () => {
+                this.highlightStop(index);
+            });
         });
 
         console.log(`View: ${stops.length} stops displayed`);
@@ -440,6 +464,85 @@ class View {
         return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
     }
 
+
+    /**
+     * Highlight a specific stop on the map and timeline
+     * @param {number} stopIndex - Index of the stop to highlight
+     */
+    highlightStop(stopIndex) {
+        if (!this.tourMarkers || this.tourMarkers.length === 0) {
+            console.log('View: No markers to highlight');
+            return;
+        }
+
+        // Reset previous selection
+        if (this.selectedStopIndex !== null && this.selectedStopIndex !== stopIndex) {
+            const prevMarkerData = this.tourMarkers[this.selectedStopIndex];
+            if (prevMarkerData) {
+                const prevElement = prevMarkerData.marker.getElement();
+                if (prevElement) {
+                    const prevIcon = prevElement.querySelector('.tour-marker');
+                    if (prevIcon) {
+                        prevIcon.style.backgroundColor = prevMarkerData.originalColor;
+                        prevIcon.style.width = '30px';
+                        prevIcon.style.height = '30px';
+                        prevIcon.style.boxShadow = 'none';
+                        prevIcon.style.zIndex = '1000';
+                    }
+                }
+            }
+        }
+
+        // Highlight new selection
+        const markerData = this.tourMarkers[stopIndex];
+        if (markerData) {
+            this.selectedStopIndex = stopIndex;
+            this.selectedMarker = markerData.marker;
+
+            // Highlight on map
+            const element = markerData.marker.getElement();
+            if (element) {
+                const icon = element.querySelector('.tour-marker');
+                if (icon) {
+                    icon.style.backgroundColor = '#3498db';
+                    icon.style.width = '40px';
+                    icon.style.height = '40px';
+                    icon.style.boxShadow = '0 0 20px rgba(52, 152, 219, 0.8)';
+                    icon.style.zIndex = '2000';
+                }
+            }
+
+            // Center map on selected marker
+            this.map.setView([markerData.node.latitude, markerData.node.longitude], this.map.getZoom());
+
+            // Open popup
+            markerData.marker.openPopup();
+
+            // Highlight on timeline
+            this.highlightTimelineStep(stopIndex);
+
+            console.log(`View: Stop ${stopIndex} highlighted`);
+        }
+    }
+
+    /**
+     * Highlight the corresponding step in the timeline
+     * @param {number} stopIndex - Index of the stop
+     */
+    highlightTimelineStep(stopIndex) {
+        // Remove previous highlights
+        document.querySelectorAll('.step').forEach(step => {
+            step.classList.remove('step-selected');
+        });
+
+        // Add highlight to selected step
+        const steps = document.querySelectorAll('.step');
+        if (steps[stopIndex]) {
+            steps[stopIndex].classList.add('step-selected');
+            // Scroll into view
+            steps[stopIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+    }
 
     // Existing methods
     addPickupDeliveryPoint(tourPoint, startTime, endTime) {

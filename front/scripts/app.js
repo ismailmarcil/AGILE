@@ -129,6 +129,12 @@ function updateTimelineFromTour(tour) {
         // index of the stop in the tour.stops array
         stepDiv.dataset.stopIndex = index;
 
+        // Add click event to highlight the stop on the map
+        stepDiv.addEventListener('click', () => {
+            if (view && view.highlightStop) {
+                view.highlightStop(index);
+            }
+        });
 
         // Add step icon
         const iconDiv = document.createElement('div');
