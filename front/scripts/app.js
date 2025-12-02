@@ -9,65 +9,87 @@ const view = new View("08:00", "map");
 // Handle map loading
 async function handleLoadMap() {
     const input = document.getElementById("xmlMapInput");
-    const result = await system.loadPlan(input);
 
-    if (!result.success) {
-        alert("Erreur lors du chargement: " + result.error);
-        return;
-    }
+    // Activer le curseur de chargement
+    document.body.style.cursor = 'wait';
+    document.body.classList.add('loading');
 
-    // Hide placeholder and initialize map if first time
-    const placeholder = document.getElementById("mapPlaceholder");
-    if (placeholder) {
-        placeholder.style.display = "none";
-    }
+    try {
+        const result = await system.loadPlan(input);
 
-    // Display the plan
-    view.displayPlan(result.plan);
-    console.log("Plan chargé avec succès!");
+        if (!result.success) {
+            alert("Erreur lors du chargement: " + result.error);
+            return;
+        }
 
-    // Enable deliveries upload button
-    const deliveriesBox = document.getElementById("deliveriesUploadBox");
-    if (deliveriesBox) {
-        deliveriesBox.style.opacity = "1";
-        deliveriesBox.style.pointerEvents = "auto";
+        // Hide placeholder and initialize map if first time
+        const placeholder = document.getElementById("mapPlaceholder");
+        if (placeholder) {
+            placeholder.style.display = "none";
+        }
+
+        // Display the plan
+        view.displayPlan(result.plan);
+        console.log("Plan chargé avec succès!");
+
+        // Enable deliveries upload button
+        const deliveriesBox = document.getElementById("deliveriesUploadBox");
+        if (deliveriesBox) {
+            deliveriesBox.style.opacity = "1";
+            deliveriesBox.style.pointerEvents = "auto";
+        }
+    } finally {
+        // Restaurer le curseur normal
+        document.body.style.cursor = 'default';
+        document.body.classList.remove('loading');
     }
 }
 
 // Handle tour loading
 async function handleLoadTour() {
     const input = document.getElementById("jsonTourInput");
-    const result = await system.loadTourFromFile(input);
 
-    if (!result.success) {
-        alert("Erreur lors du chargement de la tournée: " + result.error);
-        return;
+    // Activer le curseur de chargement
+    document.body.style.cursor = 'wait';
+    document.body.classList.add('loading');
+
+    try {
+        const result = await system.loadTourFromFile(input);
+
+        if (!result.success) {
+            alert("Erreur lors du chargement de la tournée: " + result.error);
+            return;
+        }
+
+        const tour = result.tour;
+        console.log("Tournée chargée:", tour);
+
+        // Store the displayed tour globally
+        window.currentDisplayedTour = tour;
+
+        // Show save button
+        const saveTourBtn = document.getElementById('saveTourBtn');
+        if (saveTourBtn) {
+            saveTourBtn.style.display = 'inline-flex';
+        }
+
+        // Display the tour on the map
+        if (view.map) {
+            view.displayTour(tour);
+        }
+
+        // Update timeline with tour details
+        updateTimelineFromTour(tour);
+
+        // Update courier info
+        updateCourierInfo(tour);
+
+        alert(`Tournée ${tour.id} chargée avec succès!\nCoursier: ${tour.courier ? tour.courier.name : 'Non assigné'}\nDépart: ${tour.departureTime}\nArrêts: ${tour.stops.length}\nDistance: ${(tour.totalDistance / 1000).toFixed(2)} km\nDurée: ${Math.round(tour.totalDuration / 60)} min`);
+    } finally {
+        // Restaurer le curseur normal
+        document.body.style.cursor = 'default';
+        document.body.classList.remove('loading');
     }
-
-    const tour = result.tour;
-    console.log("Tournée chargée:", tour);
-
-    // Store the displayed tour globally
-    window.currentDisplayedTour = tour;
-
-    // Show save button
-    const saveTourBtn = document.getElementById('saveTourBtn');
-    if (saveTourBtn) {
-        saveTourBtn.style.display = 'inline-flex';
-    }
-
-    // Display the tour on the map
-    if (view.map) {
-        view.displayTour(tour);
-    }
-
-    // Update timeline with tour details
-    updateTimelineFromTour(tour);
-
-    // Update courier info
-    updateCourierInfo(tour);
-
-    alert(`Tournée ${tour.id} chargée avec succès!\nCoursier: ${tour.courier ? tour.courier.name : 'Non assigné'}\nDépart: ${tour.departureTime}\nArrêts: ${tour.stops.length}\nDistance: ${(tour.totalDistance / 1000).toFixed(2)} km\nDurée: ${Math.round(tour.totalDuration / 60)} min`);
 }
 
 // Update timeline UI from tour data
@@ -405,11 +427,16 @@ async function handleLoadDemands() {
         return;
     }
 
-    let totalDemandsLoaded = 0;
-    const fileNames = [];
+    // Activer le curseur de chargement
+    document.body.style.cursor = 'wait';
+    document.body.classList.add('loading');
 
-    // Process each selected file
-    for (let i = 0; i < input.files.length; i++) {
+    try {
+        let totalDemandsLoaded = 0;
+        const fileNames = [];
+
+        // Process each selected file
+        for (let i = 0; i < input.files.length; i++) {
         const file = input.files[i];
         const fileName = file.name.replace(/\.xml$/i, '');
         fileNames.push(fileName);
@@ -440,11 +467,16 @@ async function handleLoadDemands() {
         console.log(`${result.count} demandes chargées depuis ${fileName}`);
     }
 
-    // Update UI with loaded demands
-    updateDemandsUI();
+        // Update UI with loaded demands
+        updateDemandsUI();
 
-    if (totalDemandsLoaded > 0) {
-        alert(`${totalDemandsLoaded} demandes chargées avec succès depuis ${input.files.length} fichier(s)!\nFichiers: ${fileNames.join(', ')}`);
+        if (totalDemandsLoaded > 0) {
+            alert(`${totalDemandsLoaded} demandes chargées avec succès depuis ${input.files.length} fichier(s)!\nFichiers: ${fileNames.join(', ')}`);
+        }
+    } finally {
+        // Restaurer le curseur normal
+        document.body.style.cursor = 'default';
+        document.body.classList.remove('loading');
     }
 }
 
@@ -703,49 +735,61 @@ async function handleCalculateTour() {
     calculateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Calcul en cours...';
     calculateBtn.disabled = true;
 
-    try {
-        // Appeler la fonction de calcul de tournée du système
-        const tour = system.calculateTour(system.demandsList);
+    // Activer le curseur de chargement sur toute la page
+    document.body.style.cursor = 'wait';
+    document.body.classList.add('loading');
 
-        if (!tour) {
-            alert('❌ Erreur lors du calcul de la tournée. Vérifiez que toutes les demandes sont valides.');
-            return;
+    // Utiliser setTimeout pour permettre au navigateur de mettre à jour l'interface
+    // avant de lancer le calcul synchrone qui bloque l'UI
+    setTimeout(() => {
+        try {
+            // Appeler la fonction de calcul de tournée du système
+            const tour = system.calculateTour(system.demandsList);
+
+            if (!tour) {
+                alert('❌ Erreur lors du calcul de la tournée. Vérifiez que toutes les demandes sont valides.');
+                return;
+            }
+
+            console.log('Tournée calculée:', tour);
+
+            // Store the displayed tour globally
+            window.currentDisplayedTour = tour;
+
+            // Show save button
+            const saveTourBtn = document.getElementById('saveTourBtn');
+            if (saveTourBtn) {
+                saveTourBtn.style.display = 'inline-flex';
+            }
+
+            // Display the tour on the map
+            if (view.map) {
+                view.displayTour(tour);
+            }
+
+            // Update timeline with tour details
+            updateTimelineFromTour(tour);
+
+            // Update courier info
+            updateCourierInfo(tour);
+
+            // Afficher un message de succès
+            const distanceKm = (tour.totalDistance / 1000).toFixed(2);
+            const durationMin = Math.round(tour.totalDuration / 60);
+            alert(`✅ Tournée calculée avec succès!\n\nCoursier: ${tour.courier ? tour.courier.name : 'Non assigné'}\nDépart: ${tour.departureTime}\nArrêts: ${tour.stops.length}\nDistance: ${distanceKm} km\nDurée: ${durationMin} min`);
+
+        } catch (error) {
+            console.error('Erreur lors du calcul de la tournée:', error);
+            alert('❌ Erreur lors du calcul de la tournée: ' + error.message);
+        } finally {
+            // Restaurer le curseur normal
+            document.body.style.cursor = 'default';
+            document.body.classList.remove('loading');
+
+            calculateBtn.innerHTML = originalText;
+            calculateBtn.disabled = false;
         }
-
-        console.log('Tournée calculée:', tour);
-
-        // Store the displayed tour globally
-        window.currentDisplayedTour = tour;
-
-        // Show save button
-        const saveTourBtn = document.getElementById('saveTourBtn');
-        if (saveTourBtn) {
-            saveTourBtn.style.display = 'inline-flex';
-        }
-
-        // Display the tour on the map
-        if (view.map) {
-            view.displayTour(tour);
-        }
-
-        // Update timeline with tour details
-        updateTimelineFromTour(tour);
-
-        // Update courier info
-        updateCourierInfo(tour);
-
-        // Afficher un message de succès
-        const distanceKm = (tour.totalDistance / 1000).toFixed(2);
-        const durationMin = Math.round(tour.totalDuration / 60);
-        alert(`✅ Tournée calculée avec succès!\n\nCoursier: ${tour.courier ? tour.courier.name : 'Non assigné'}\nDépart: ${tour.departureTime}\nArrêts: ${tour.stops.length}\nDistance: ${distanceKm} km\nDurée: ${durationMin} min`);
-
-    } catch (error) {
-        console.error('Erreur lors du calcul de la tournée:', error);
-        alert('❌ Erreur lors du calcul de la tournée: ' + error.message);
-    } finally {
-        calculateBtn.innerHTML = originalText;
-        calculateBtn.disabled = false;
-    }
+    }, 50); // 50ms de délai pour permettre la mise à jour de l'interface
 }
 
 // Update courier info display

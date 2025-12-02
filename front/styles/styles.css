@@ -27,6 +27,22 @@ body {
     overflow: hidden;
 }
 
+/* État de chargement global */
+body.loading {
+    cursor: wait !important;
+}
+
+body.loading * {
+    cursor: wait !important;
+    pointer-events: none;
+}
+
+body.loading button,
+body.loading input,
+body.loading select {
+    cursor: wait !important;
+}
+
 /* --- SIDEBAR --- */
 .sidebar {
     width: 380px; /* Un peu plus large pour les actions */
