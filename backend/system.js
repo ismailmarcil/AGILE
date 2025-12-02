@@ -264,7 +264,7 @@ class System {
 
             try {
                 const tourJSON = tour.toJSON ? tour.toJSON() : {
-                    id: tour.id || `tour_${Date.now()}`,
+                    id: tour.id || `T_1_${Date.now()}`,
                     departureTime: tour.departureTime,
                     courier: tour.courier ? { id: tour.courier.id, name: tour.courier.name } : null,
                     stops: tour.stops || [],
@@ -273,22 +273,37 @@ class System {
                     totalDuration: tour.totalDuration || 0
                 };
 
-                const payload = JSON.stringify(tourJSON);
+                // Ensure the tour has an ID
+                if (!tourJSON.id) {
+                    tourJSON.id = `T_1_${Date.now()}`;
+                }
 
-                fetch('/api/tours/save', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: payload
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        resolve({ success: true, message: data.message, tourId: data.tourId });
-                    })
-                    .catch(error => {
-                        resolve({ success: false, error: error.message });
-                    });
+                // Create a JSON string with nice formatting
+                const jsonString = JSON.stringify(tourJSON, null, 2);
+
+                // Create a Blob from the JSON string
+                const blob = new Blob([jsonString], { type: 'application/json' });
+
+                // Create a temporary download link
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${tourJSON.id}.json`;
+
+                // Trigger the download
+                document.body.appendChild(a);
+                a.click();
+
+                // Clean up
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                resolve({
+                    success: true,
+                    message: `Tournée sauvegardée: ${tourJSON.id}.json (téléchargé dans vos Téléchargements)`,
+                    tourId: tourJSON.id
+                });
+
             } catch (error) {
                 resolve({ success: false, error: error.message });
             }
