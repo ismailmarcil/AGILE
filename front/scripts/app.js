@@ -436,13 +436,18 @@ if (addDemandForm) {
 
         // Appel de la fonction back déjà existante dans System
         // addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration)
-        const demand = system.addDemand(
+        const result = system.addDemand(
             pickupAddress,
             deliveryAddress,
             pickupDuration,
             deliveryDuration
         );
+        if (!result.success) {
+            alert(result.error);
+            return;
+        }
 
+        const demand = result.demand;
         // Assign a default name for manually added demands
         if (demand) {
             demand.clientName = `Demande manuelle #${demand.id}`;
