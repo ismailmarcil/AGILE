@@ -192,7 +192,7 @@ async function handleLoadHistory() {
             view.displayTour(tour);
         }
 
-        updateTimelineFromTour(tour);
+        updateTimelineFromTour(tour, true);
         updateCourierInfo(tour);
     };
 
