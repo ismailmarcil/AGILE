@@ -511,7 +511,7 @@ function updateDemandsUI() {
     });
 
     // Update map display if plan is loaded
-    if (system.plan && view.map) {
+    if (system.plan && view.map && system.toursList == []) {
         // Redisplay plan (light segments and nodes)
         const planJSON = system.plan.toJSON();
         view.clearMap();
