@@ -466,7 +466,17 @@ class System {
     }
 
     addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
-        const demande = new Demand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration, this.nextDemandId++);
+        //Vérifie si un plan est chargé
+        if (!this.plan) {
+            return { success: false, error: "Aucun plan chargé. Impossible d'ajouter une demande." };
+        }
+        //Verfier que les noeuds existent dans le plan
+        const pickupNode = this.plan.getNodeById(pickupAddress);
+        const deliveryNode = this.plan.getNodeById(deliveryAddress);
+        if (!pickupNode || !deliveryNode) {
+            return { success: false, error: `Le noeud indiqué n'existe pas sur la map` };
+        }
+        const demande = new Demand(pickupNode, deliveryNode, pickupDuration, deliveryDuration, this.nextDemandId++);
         this.demandsList.push(demande);
         return demande;
     }
