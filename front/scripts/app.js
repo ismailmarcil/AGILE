@@ -490,6 +490,9 @@ async function handleLoadDemands() {
             alert(`Erreur lors du chargement de ${fileName}: ${result.error}`);
             continue;
         }
+        if (result.warning) {
+            alert(result.warning);
+        }
 
         // Update client names for the newly added demands
         for (let j = demandsCountBefore; j < system.demandsList.length; j++) {

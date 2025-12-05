@@ -378,34 +378,65 @@ class System {
             // Ne pas vider la liste pour conserver les demandes ajoutées manuellement
             // this.demandsList = [];
 
-            // Parser chaque livraison
             let demandsLoaded = 0;
+            let invalidCount = 0;
+
             for (let livraison of livraisons) {
                 const pickupAddress = livraison.getAttribute("adresseEnlevement");
                 const deliveryAddress = livraison.getAttribute("adresseLivraison");
                 const pickupDuration = parseInt(livraison.getAttribute("dureeEnlevement"));
                 const deliveryDuration = parseInt(livraison.getAttribute("dureeLivraison"));
 
-                if (pickupAddress && deliveryAddress && !isNaN(pickupDuration) && !isNaN(deliveryDuration)) {
-                    const demande = new Demand(
-                        pickupAddress,
-                        deliveryAddress,
-                        pickupDuration,
-                        deliveryDuration,
-                        this.nextDemandId++
-                    );
-                    this.demandsList.push(demande);
-                    demandsLoaded++;
+                // Vérification basique des champs
+                if (!pickupAddress || !deliveryAddress || isNaN(pickupDuration) || isNaN(deliveryDuration)) {
+                    invalidCount++;
+                    continue;
                 }
+
+                // Si un plan est chargé, vérifier que les nœuds existent
+                if (this.plan && typeof this.plan.getNodeById === "function") {
+                    const pickupNode = this.plan.getNodeById(pickupAddress);
+                    const deliveryNode = this.plan.getNodeById(deliveryAddress);
+
+                    if (!pickupNode || !deliveryNode) {
+                        console.warn(
+                            "Demande invalide (noeud introuvable) :",
+                            { pickupAddress, deliveryAddress }
+                        );
+                        invalidCount++;
+                        continue;
+                    }
+                }
+
+                // Demande valide → on l'ajoute
+                const demande = new Demand(
+                    pickupAddress,
+                    deliveryAddress,
+                    pickupDuration,
+                    deliveryDuration,
+                    this.nextDemandId++
+                );
+                this.demandsList.push(demande);
+                demandsLoaded++;
             }
 
-            console.log(`${demandsLoaded} demandes chargées avec succès!`);
-            return {
-                success: true,
+            console.log(`${demandsLoaded} demandes valides chargées. ${invalidCount} demandes invalides ignorées.`);
+
+            const result = {
+                success: demandsLoaded > 0,
                 demands: this.demandsList,
                 warehouse: { address: warehouseAddress, departureTime: departureTime },
-                count: demandsLoaded
+                count: demandsLoaded,
+                invalidCount: invalidCount
             };
+
+            if (invalidCount > 0 && demandsLoaded > 0) {
+                result.warning = `${invalidCount} demandes ne sont pas valides et ont été ignorées.`;
+            } else if (demandsLoaded === 0) {
+                result.error = "Toutes les demandes du fichier sont invalides.";
+            }
+
+            return result;
         }
 
         // Cas 2: Node.js - filePath (string)
@@ -418,52 +449,76 @@ class System {
             const fs = require("fs");
             const xml2js = require("xml2js");
 
-            //contenu du fichier en string
             xmlContent = await fs.promises.readFile(filePathOrInput, "utf-8");
 
-            //Parser en objet JSon
             const json = await xml2js.parseStringPromise(xmlContent);
 
-            //Récupérer la racine demandeDeLivraisons du json (ce code ne marche que pour les VF des XML)
             const root = json.demandeDeLivraisons;
             if (!root || !root.livraison) {
                 console.log("Aucune balise <livraison> trouvée dans le XML.");
                 return { success: false, error: "Aucune balise <livraison> trouvée dans le XML." };
             }
-            //liste des livraisons du Json
-            // livraisons c'est une liste dont chaque élément est une <livraison> du XML
-            //chaque élément est un objet ayant un champ $(contient les attributs de la balise).
 
             const livraisons = root.livraison;
             console.log("Nombre de livraisons :", livraisons.length);
 
-            // Ne pas vider la liste pour conserver les demandes ajoutées manuellement
-            // this.demandsList = [];
+            let demandsLoaded = 0;
+            let invalidCount = 0;
 
-            //On parcours chaque livraison
             for (const livraisonNode of livraisons) {
-                const attrs = livraisonNode.$ || {};  //pour chaque livraisonNode on recup soit le champ $ (avec les attributs) soit un objet vide
-                //récupérer les attributs
+                const attrs = livraisonNode.$ || {};
                 const pickupAddress = attrs.adresseEnlevement;
                 const deliveryAddress = attrs.adresseLivraison;
-                const pickupDurationStr = attrs.dureeEnlevement;
-                const deliveryDurationStr = attrs.dureeLivraison;
-                //convertir les durées en nombres
-                const pickupDuration = Number(pickupDurationStr);
-                const deliveryDuration = Number(deliveryDurationStr);
+                const pickupDuration = Number(attrs.dureeEnlevement);
+                const deliveryDuration = Number(attrs.dureeLivraison);
 
-                //Créer un objet Demande et l'ajouter à la liste des demandes.
-                const demande = new Demand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration, this.nextDemandId++);
+                if (!pickupAddress || !deliveryAddress || isNaN(pickupDuration) || isNaN(deliveryDuration)) {
+                    invalidCount++;
+                    continue;
+                }
+
+                // Validation optionnelle via plan si disponible dans les tests Node
+                if (this.plan && typeof this.plan.getNodeById === "function") {
+                    const pickupNode = this.plan.getNodeById(pickupAddress);
+                    const deliveryNode = this.plan.getNodeById(deliveryAddress);
+                    if (!pickupNode || !deliveryNode) {
+                        invalidCount++;
+                        continue;
+                    }
+                }
+
+                const demande = new Demand(
+                    pickupAddress,
+                    deliveryAddress,
+                    pickupDuration,
+                    deliveryDuration,
+                    this.nextDemandId++
+                );
                 this.demandsList.push(demande);
+                demandsLoaded++;
+            }
+
+            const result = {
+                success: demandsLoaded > 0,
+                demands: this.demandsList,
+                count: demandsLoaded,
+                invalidCount: invalidCount
             };
 
-            return { success: true, demands: this.demandsList, count: this.demandsList.length };
+            if (invalidCount > 0 && demandsLoaded > 0) {
+                result.warning = `${invalidCount} demandes ne sont pas valides et ont été ignorées.`;
+            } else if (demandsLoaded === 0) {
+                result.error = "Toutes les demandes du fichier sont invalides.";
+            }
+
+            return result;
 
         } catch (error) {
             console.error("Error while reading demand XML:", error);
             return { success: false, error: error.message };
         }
     }
+
 
     addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
         //Vérifie si un plan est chargé
