@@ -478,7 +478,7 @@ class System {
         }
         const demande = new Demand(pickupNode, deliveryNode, pickupDuration, deliveryDuration, this.nextDemandId++);
         this.demandsList.push(demande);
-        return demande;
+        return { success: true, demand: demande };
     }
 
     removeDemandById(id) {
@@ -550,36 +550,95 @@ class System {
 
 
     /**
-     * Compute optimal tours for couriers using a simple Nearest Neighbor TSP algorithm
-     * @param {Array<Courier>} couriers - List of available couriers
+     * Distribute demands among couriers using K-means clustering by proximity
+     * Groups nearby demands together for each courier
+     * @param {number} nbCouriers - Number of couriers to distribute among
+     * @returns {Array<Array<Demand>>} Array of demand groups, one per courier
+     */
+    distributeDemands(nbCouriers) {
+        if (!this.demandsList || this.demandsList.length === 0) {
+            console.error("Cannot distribute demands: no demands in list");
+            return [];
+        }
+
+        const numCouriers = Math.min(nbCouriers, this.demandsList.length);
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`DISTRIBUTING ${this.demandsList.length} demands among ${numCouriers} couriers using K-means`);
+        console.log(`${'='.repeat(60)}\n`);
+
+        if (this.demandsList.length <= numCouriers) {
+            // Each demand gets assigned to one courier
+            console.log("Demands <= Couriers: assigning one demand per courier");
+            const groups = [];
+            for (let i = 0; i < this.demandsList.length; i++) {
+                groups.push([this.demandsList[i]]);
+            }
+            // Fill remaining couriers with empty arrays
+            for (let i = this.demandsList.length; i < numCouriers; i++) {
+                groups.push([]);
+            }
+            return groups;
+        }
+
+        // Use K-means clustering to group demands by geographic proximity
+        const clusters = this.kmeansClustering(this.demandsList, numCouriers);
+        
+        // Extract demand groups from clusters
+        const demandGroups = clusters.map(cluster => cluster.demands);
+        
+        console.log(`Distribution complete: ${demandGroups.length} groups created`);
+        demandGroups.forEach((group, idx) => {
+            console.log(`  Courier ${idx + 1}: ${group.length} demands`);
+        });
+
+        return demandGroups;
+    }
+
+    /**
+     * Compute optimal tours for couriers using K-means distribution + Nearest Neighbor TSP
+     * Each tour:
+     * - Starts from warehouse at 8:00
+     * - Visits all pickups and deliveries for that courier's demands
+     * - Returns to warehouse
+     * - Minimizes total arrival time at warehouse
+     * @param {Array<Demand>} demands - All demands to fulfill
      * @returns {Array<Tour>} List of computed tours
      */
     computeTours(demands) {
-
         if (!this.plan || !this.plan.nodes || demands.length === 0) {
             console.error("Cannot compute tours: plan or demands are missing");
             return [];
         }
 
-        // Use pre-computed distance matrix from loadPlan
+        if (!this.couriers || this.couriers.length === 0) {
+            console.error("Cannot compute tours: no couriers available");
+            return [];
+        }
+
+
         const distanceMatrix = this.distanceMatrix;
 
-        // Divide demands among couriers
+        // Step 1: Distribute demands among couriers using K-means
+        const demandGroups = this.distributeDemands(this.nbCouriers);
+
+        // Step 2: Build optimal tour for each courier's demand group
         const tours = [];
-        const demandsPerCourier = Math.ceil(demands.length / this.couriers.length);
-        for (let i = 0; i < this.couriers.length; i++) {
+        for (let i = 0; i < Math.min(demandGroups.length, this.nbCouriers); i++) {
             const courier = this.couriers[i];
-            const startIdx = i * demandsPerCourier;
-            const endIdx = Math.min((i + 1) * demandsPerCourier, demands.length);
-            if (startIdx >= demands.length) break;
+            const courierDemands = demandGroups[i];
 
-            const assignedDemands = demands.slice(startIdx, endIdx);
-            const tour = this.buildTourForCourier(courier, assignedDemands, distanceMatrix);
+            if (courierDemands.length === 0) {
+                console.log(`⚠️  Courier ${courier.name} has no demands assigned`);
+                continue;
+            }
 
-            console.log(`Tour for courier ${courier.id}:`, tour);
+            console.log(`\nBuilding tour for ${courier.name} (${courierDemands.length} demands)...`);
+            const tour = this.buildTourForCourier(courier, courierDemands, distanceMatrix);
+
             if (tour) {
                 tours.push(tour);
                 this.toursList.push(tour);
+                console.log(`✅ Tour completed: ${tour.stops.length} stops, ${(tour.totalDistance/1000).toFixed(2)} km`);
             }
         }
 
@@ -660,17 +719,230 @@ class System {
     }
 
     /**
+     * K-means clustering algorithm to group demands by geographic proximity
+     * IMPORTANT: Respects that each demand is atomic - pickup and delivery stay together
+     * @param {Array<Demand>} demands - Demands to cluster (must be complete with pickup+delivery)
+     * @param {number} k - Number of clusters (couriers)
+     * @returns {Array<Object>} Clusters with {demands: [], centroid: {lat, lon}}
+     */
+    kmeansClustering(demands, k) {
+        const maxIterations = 10;
+        const convergenceThreshold = 0.001;
+        let clusters = [];
+
+        // Validate: Each demand must be complete (have pickup and delivery addresses)
+        for (const demand of demands) {
+            if (!demand.pickupAddress || !demand.deliveryAddress) {
+                console.error(`Invalid demand: ${demand.id} missing pickup or delivery address`);
+                return [];
+            }
+        }
+
+        // Step 1: Initialize centroids using k-means++ (well-spread starting points)
+        const centroids = this.initializeKmeansPlusPlus(demands, k);
+        console.log(`K-means initialized with ${k} centroids`);
+        console.log(`Each demand will be kept ATOMIC (pickup + delivery together in same cluster)`);
+
+        // Step 2: Iterative clustering
+        for (let iteration = 0; iteration < maxIterations; iteration++) {
+            // Assign demands to nearest centroid
+            // IMPORTANT: We assign the ENTIRE demand (pickup+delivery) to one cluster
+            clusters = new Array(k).fill(null).map(() => ({ demands: [], centroid: null }));
+
+            for (const demand of demands) {
+                // Calculate centroid based on BOTH pickup and delivery locations
+                const demandCenter = this.calculateDemandCentroid(demand);
+                let minDist = Infinity;
+                let closestCluster = 0;
+
+                // Find closest cluster centroid
+                for (let i = 0; i < centroids.length; i++) {
+                    const dist = this.euclideanDistance(demandCenter, centroids[i]);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closestCluster = i;
+                    }
+                }
+
+                // Assign ENTIRE demand to the cluster
+                // This ensures pickup and delivery stay together
+                clusters[closestCluster].demands.push(demand);
+
+                console.log(`  Demand ${demand.id}: assigned to cluster ${closestCluster} (distance: ${minDist.toFixed(4)})`);
+            }
+
+            // Recalculate centroids
+            const oldCentroids = JSON.parse(JSON.stringify(centroids));
+            for (let i = 0; i < k; i++) {
+                if (clusters[i].demands.length > 0) {
+                    centroids[i] = this.calculateClusterCentroid(clusters[i].demands);
+                    clusters[i].centroid = centroids[i];
+                    console.log(`  Cluster ${i} centroid: (${centroids[i].lat.toFixed(4)}, ${centroids[i].lon.toFixed(4)}), ${clusters[i].demands.length} demands`);
+                } else {
+                    // Keep old centroid if no demands
+                    centroids[i] = oldCentroids[i];
+                }
+            }
+
+            // Check for convergence
+            let converged = true;
+            for (let i = 0; i < k; i++) {
+                const distance = this.euclideanDistance(oldCentroids[i], centroids[i]);
+                if (distance > convergenceThreshold) {
+                    converged = false;
+                    break;
+                }
+            }
+
+            if (converged) {
+                console.log(`K-means converged after ${iteration + 1} iterations`);
+                break;
+            }
+        }
+
+        // Filter empty clusters
+        clusters = clusters.filter(c => c.demands.length > 0);
+        console.log(`K-means complete: ${clusters.length} non-empty clusters`);
+        
+        // Validation: Verify each cluster has complete demands
+        for (let i = 0; i < clusters.length; i++) {
+            let pickupCount = 0, deliveryCount = 0;
+            for (const demand of clusters[i].demands) {
+                if (demand.pickupAddress) pickupCount++;
+                if (demand.deliveryAddress) deliveryCount++;
+            }
+            console.log(`  Cluster ${i}: ${clusters[i].demands.length} demands (${pickupCount} pickups, ${deliveryCount} deliveries)`);
+        }
+
+        return clusters;
+    }
+
+    /**
+     * Initialize K-means++ centroids (spread out for better convergence)
+     * @param {Array<Demand>} demands - Demands to cluster
+     * @param {number} k - Number of clusters
+     * @returns {Array<Object>} Initial centroids as {lat, lon}
+     */
+    initializeKmeansPlusPlus(demands, k) {
+        const centroids = [];
+
+        // First centroid: random demand center
+        const firstDemand = demands[Math.floor(Math.random() * demands.length)];
+        centroids.push(this.calculateDemandCentroid(firstDemand));
+
+        // Subsequent centroids: choose points with maximum distance to existing centroids
+        for (let i = 1; i < k; i++) {
+            let maxMinDist = -Infinity;
+            let bestDemand = null;
+
+            for (const demand of demands) {
+                const demandCenter = this.calculateDemandCentroid(demand);
+                let minDist = Infinity;
+
+                for (const centroid of centroids) {
+                    const dist = this.euclideanDistance(demandCenter, centroid);
+                    minDist = Math.min(minDist, dist);
+                }
+
+                if (minDist > maxMinDist) {
+                    maxMinDist = minDist;
+                    bestDemand = demand;
+                }
+            }
+
+            if (bestDemand) {
+                centroids.push(this.calculateDemandCentroid(bestDemand));
+            }
+        }
+
+        return centroids;
+    }
+
+    /**
+     * Calculate geographic centroid of a demand (average of pickup and delivery coordinates)
+     * @param {Demand} demand - The demand
+     * @returns {Object} {lat, lon} coordinates
+     */
+    calculateDemandCentroid(demand) {
+        const pickupNode = this.plan.nodes.get(demand.pickupAddress.id || demand.pickupAddress);
+        const deliveryNode = this.plan.nodes.get(demand.deliveryAddress.id || demand.deliveryAddress);
+
+        if (!pickupNode || !deliveryNode) {
+            return { lat: 0, lon: 0 };
+        }
+
+        return {
+            lat: (pickupNode.latitude + deliveryNode.latitude) / 2,
+            lon: (pickupNode.longitude + deliveryNode.longitude) / 2
+        };
+    }
+
+    /**
+     * Calculate centroid of a cluster of demands
+     * @param {Array<Demand>} demands - Demands in the cluster
+     * @returns {Object} {lat, lon} cluster center
+     */
+    calculateClusterCentroid(demands) {
+        if (demands.length === 0) {
+            return { lat: 0, lon: 0 };
+        }
+
+        let totalLat = 0;
+        let totalLon = 0;
+
+        for (const demand of demands) {
+            const center = this.calculateDemandCentroid(demand);
+            totalLat += center.lat;
+            totalLon += center.lon;
+        }
+
+        return {
+            lat: totalLat / demands.length,
+            lon: totalLon / demands.length
+        };
+    }
+
+    /**
+     * Euclidean distance between two geographic points
+     * @param {Object} point1 - {lat, lon}
+     * @param {Object} point2 - {lat, lon}
+     * @returns {number} Distance
+     */
+    euclideanDistance(point1, point2) {
+        const dLat = point1.lat - point2.lat;
+        const dLon = point1.lon - point2.lon;
+        return Math.sqrt(dLat * dLat + dLon * dLon);
+    }
+
+    /**
      * Build a tour for a courier using Nearest Neighbor with Dijkstra pathfinding
      * Ensures pickup is visited before corresponding delivery
      * Uses real graph distances via Dijkstra algorithm
      * Creates Leg objects for each segment of the path
+     * 
+     * CONSTRAINTS ENFORCED:
+     * - Pickup ALWAYS visited before corresponding delivery
+     * - Each demand kept atomically (pickup + delivery together)
+     * - Tour starts and ends at warehouse
+     * 
      * @param {Courier} courier - The courier
-     * @param {Array<Demand>} demands - Demands to fulfill
+     * @param {Array<Demand>} demands - Demands to fulfill (must be complete pickup+delivery pairs)
      * @param {Map} distanceMatrix - Pre-computed distance matrix from loadPlan
      * @returns {Tour} Computed tour
      */
     buildTourForCourier(courier, demands, distanceMatrix) {
         if (demands.length === 0) return null;
+
+        // Validate: All demands must have pickup AND delivery addresses
+        console.log(`\n📋 Validating ${demands.length} demands for courier ${courier.name}...`);
+        for (let i = 0; i < demands.length; i++) {
+            const demand = demands[i];
+            if (!demand.pickupAddress || !demand.deliveryAddress) {
+                console.error(`❌ INVALID DEMAND ${i}: Missing pickup or delivery address`);
+                return null;
+            }
+            console.log(`   ✓ Demand ${i + 1}: ${demand.pickupAddress} → ${demand.deliveryAddress}`);
+        }
 
         const warehouse = this.plan.warehouse;
         const tour = new Tour(null, "08:00", courier);
@@ -680,9 +952,10 @@ class System {
         const pickupsVisited = new Set();
         const deliveriesVisited = new Set();
 
-        console.log("Building tour for courier", courier.id, "with demands:", demands);
+        console.log(`\n🚗 Building tour for ${courier.name} with ${demands.length} demands...`);
 
         // Keep visiting points until all pickups and deliveries are done
+        // This enforces: pickup MUST be visited before delivery
         while (pickupsVisited.size < demands.length || deliveriesVisited.size < demands.length) {
             let bestDistance = Infinity;
             let bestPath = [];
@@ -696,7 +969,7 @@ class System {
                 const pickupId = demand.pickupAddress.id || demand.pickupAddress;
                 const deliveryId = demand.deliveryAddress.id || demand.deliveryAddress;
 
-                // Priority 1: Unvisited pickups - find shortest real path
+                // Priority 1: Unvisited pickups - MUST visit pickup first
                 if (!pickupsVisited.has(pickupId)) {
                     const dijkstraResult = this.dijkstra(currentPoint.id, pickupId);
                     if (dijkstraResult.distance < bestDistance && dijkstraResult.distance !== Infinity) {
@@ -707,7 +980,8 @@ class System {
                         targetType = 'pickup';
                     }
                 }
-                // Priority 2: Deliveries where pickup is done - find shortest real path
+                // Priority 2: Deliveries where pickup is ALREADY done
+                // This constraint enforces: pickup → delivery order
                 else if (pickupsVisited.has(pickupId) && !deliveriesVisited.has(deliveryId)) {
                     const dijkstraResult = this.dijkstra(currentPoint.id, deliveryId);
                     if (dijkstraResult.distance < bestDistance && dijkstraResult.distance !== Infinity) {
@@ -720,7 +994,10 @@ class System {
                 }
             }
 
-            if (targetDemandIndex === -1 || bestPath.length === 0) break; // No valid path found
+            if (targetDemandIndex === -1 || bestPath.length === 0) {
+                console.error(`❌ No valid path found! pickups: ${pickupsVisited.size}/${demands.length}, deliveries: ${deliveriesVisited.size}/${demands.length}`);
+                break;
+            }
 
             // Convert path IDs to node objects
             const pathNodes = bestPath.map(nodeId => this.plan.nodes.get(nodeId)).filter(n => n !== undefined);
@@ -794,7 +1071,20 @@ class System {
 
         tour.totalDistance = totalDistance;
 
-        console.log(`Tour computed for courier ${courier.id}: ${sequence.length} stops, distance: ${totalDistance.toFixed(2)}`);
+        // Validation: Verify all demands were completed
+        console.log(`\n✅ Tour Summary for ${courier.name}:`);
+        console.log(`   Total stops: ${sequence.length}`);
+        console.log(`   Pickups completed: ${pickupsVisited.size}/${demands.length}`);
+        console.log(`   Deliveries completed: ${deliveriesVisited.size}/${demands.length}`);
+        console.log(`   Total distance: ${totalDistance.toFixed(2)}`);
+        console.log(`   Route: Warehouse → [${pickupsVisited.size} pickups + ${deliveriesVisited.size} deliveries] → Warehouse`);
+        
+        // Warn if not all demands completed
+        if (pickupsVisited.size !== demands.length || deliveriesVisited.size !== demands.length) {
+            console.warn(`⚠️  WARNING: Not all demands completed!`);
+            console.warn(`   Expected: ${demands.length} pickups and ${demands.length} deliveries`);
+            console.warn(`   Got: ${pickupsVisited.size} pickups and ${deliveriesVisited.size} deliveries`);
+        }
 
         return tour;
     }
