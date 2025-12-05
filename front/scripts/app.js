@@ -112,9 +112,35 @@ function updateTimelineFromTour(tour) {
     // Track cumulative time
     let cumulativeTime = 0;
 
-    // Counters for pickup and delivery numbering
-    let pickupCounter = 1;
-    let deliveryCounter = 1;
+    // Shared numbering for pickup/delivery pairs (stable across reorders)
+    function getDemandKey(stop) {
+        if (!stop) return null;
+        const demandId = stop.demand && (stop.demand.id || stop.demand);
+        if (demandId) return String(demandId);
+        return stop.node && stop.node.id ? `node-${stop.node.id}` : null;
+    }
+
+    if (!tour._demandNumberMap) {
+        const uniqueKeys = Array.from(
+            new Set(
+                tour.stops
+                    .map(getDemandKey)
+                    .filter(Boolean)
+            )
+        ).sort();
+        tour._demandNumberMap = new Map(uniqueKeys.map((k, idx) => [k, idx + 1]));
+    }
+    const demandNumberMap = tour._demandNumberMap;
+    let nextPairNumber = (demandNumberMap.size ? Math.max(...demandNumberMap.values()) : 0) + 1;
+
+    function getPairNumber(stop) {
+        const key = getDemandKey(stop);
+        if (!key) return null;
+        if (!demandNumberMap.has(key)) {
+            demandNumberMap.set(key, nextPairNumber++);
+        }
+        return demandNumberMap.get(key);
+    }
 
     // Link related pickup/delivery tour points so validation can find pairs
     function linkRelatedTourPoints(t) {
@@ -169,13 +195,13 @@ function updateTimelineFromTour(tour) {
         } else if (stop.type === 'PICKUP') {
             iconDiv.style.borderColor = 'var(--accent-pickup)';
             iconDiv.style.color = 'var(--accent-pickup)';
-            iconDiv.textContent = `P${pickupCounter}`;
-            pickupCounter++;
+            const pairNum = getPairNumber(stop);
+            iconDiv.textContent = pairNum ? `P${pairNum}` : 'P?';
         } else if (stop.type === 'DELIVERY') {
             iconDiv.style.borderColor = 'var(--accent-delivery)';
             iconDiv.style.color = 'var(--accent-delivery)';
-            iconDiv.textContent = `D${deliveryCounter}`;
-            deliveryCounter++;
+            const pairNum = getPairNumber(stop);
+            iconDiv.textContent = pairNum ? `D${pairNum}` : 'D?';
         }
         stepDiv.appendChild(iconDiv);
 
