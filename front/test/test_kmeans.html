@@ -333,17 +333,21 @@
                 const tours = system.computeTours(system.demandsList);
 
                 if (!tours || tours.length === 0) {
-                    alert('Aucun tour généré');
+                    alert('❌ Aucun tour généré');
                     return;
                 }
 
-                console.log('Tours computed:', tours);
+                console.log('✅ Tours computed:', tours);
 
-                // Display tours on map
-                if (view.displayTours) {
+                // Display all tours on map with distinct colors
+                console.log(`🗺️ Affichage de ${tours.length} tours avec couleurs distinctes...`);
+                if (view.displayTours && typeof view.displayTours === 'function') {
                     view.displayTours(tours);
-                } else if (tours.length > 0 && view.displayTour) {
-                    view.displayTour(tours[0]);
+                } else {
+                    console.error('❌ view.displayTours not available');
+                    if (tours.length > 0 && view.displayTour) {
+                        view.displayTour(tours[0]);
+                    }
                 }
 
                 // Display results
@@ -362,17 +366,29 @@
             const resultsSection = document.getElementById('resultsSection');
             const resultsContainer = document.getElementById('resultsContainer');
             
+            // Define same colors as in view.js displayTours - 4 high contrast colors
+            const colors = [
+                '#FF0000', // Red - Bright
+                '#0066FF', // Blue - Bright
+                '#00CC00', // Green - Bright
+                '#FFB300'  // Orange - Bright
+            ];
+            
             let totalDistance = 0;
             let html = '';
 
             tours.forEach((tour, idx) => {
                 const distKm = (tour.totalDistance / 1000).toFixed(2);
                 const durationMin = Math.round(tour.totalDuration / 60);
+                const color = colors[idx % colors.length];
                 totalDistance += tour.totalDistance;
 
                 html += `
                     <div class="result-card">
-                        <h4>📍 ${tour.courier?.name || `Coursier ${idx + 1}`}</h4>
+                        <h4 style="display: flex; align-items: center; gap: 10px;">
+                            <span style="display: inline-block; width: 20px; height: 20px; background-color: ${color}; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></span>
+                            📍 ${tour.courier?.name || `Coursier ${idx + 1}`}
+                        </h4>
                         <div class="metric">
                             <span>Arrêts:</span>
                             <span class="metric-value">${tour.stops?.length || 0}</span>
