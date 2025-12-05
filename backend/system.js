@@ -478,7 +478,7 @@ class System {
         }
         const demande = new Demand(pickupNode, deliveryNode, pickupDuration, deliveryDuration, this.nextDemandId++);
         this.demandsList.push(demande);
-        return demande;
+        return { success: true, demand: demande };
     }
 
     removeDemandById(id) {

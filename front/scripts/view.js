@@ -549,7 +549,7 @@ class View {
         this.listPickupDeliveryPoints.push({ tourPoint, startTime, endTime });
     }
 
-    addPickupDeliveryPair(fromTourPoint, toTourPoint) {
+    addPickupDeliveryPair(fromTourPoint, toTourPoi  nt) {
         this.pairPickupDelivery.push({ fromTourPoint, toTourPoint });
     }
 
