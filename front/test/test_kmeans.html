@@ -139,6 +139,7 @@
             <h2>3️⃣ Calculer les Tours avec K-means</h2>
             <div class="controls">
                 <button id="btnComputeTours" class="success" disabled>Calculer Tours (K-means)</button>
+                <button id="btnShowClusters" class="info" disabled style="background: #9b59b6;">Ver Clusters</button>
                 <button id="btnClearTours" class="danger" disabled>Effacer Tours</button>
             </div>
             <div id="computeInfo"></div>
@@ -308,7 +309,47 @@
             const count = selectedCouriers.length;
             document.getElementById('selectedCountLabel').textContent = `Sélectionnés: ${count}`;
             document.getElementById('btnComputeTours').disabled = (count === 0);
+            document.getElementById('btnShowClusters').disabled = (count === 0);
         }
+
+        // Show K-means Clusters Visualization
+        document.getElementById('btnShowClusters').addEventListener('click', () => {
+            if (system.demandsList.length === 0) {
+                alert('Aucune demande chargée');
+                return;
+            }
+
+            if (selectedCouriers.length === 0) {
+                alert('Sélectionnez au moins un coursier');
+                return;
+            }
+
+            try {
+                const k = selectedCouriers.length;
+                console.log(`\n🎯 Visualizing K-means clusters with ${k} couriers`);
+                
+                // Get clusters from system
+                const clusters = system.getKMeansClusters(k);
+
+                if (!clusters || clusters.length === 0) {
+                    alert('❌ No clusters generated');
+                    return;
+                }
+
+                // Display clusters on map
+                if (view.displayKMeansClustering && typeof view.displayKMeansClustering === 'function') {
+                    view.displayKMeansClustering(clusters);
+                    console.log(`✅ Clusters visualization displayed on map`);
+                } else {
+                    console.error('❌ view.displayKMeansClustering not available');
+                    alert('Error: displayKMeansClustering function not available');
+                }
+
+            } catch (error) {
+                console.error('Error showing clusters:', error);
+                alert('Erreur: ' + error.message);
+            }
+        });
 
         // Compute Tours with K-means
         document.getElementById('btnComputeTours').addEventListener('click', () => {

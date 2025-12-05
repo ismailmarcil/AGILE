@@ -395,6 +395,7 @@ class System {
                         this.nextDemandId++
                     );
                     this.demandsList.push(demande);
+                    console.log(`Demande ajoutée: ${demande.toString()}`);
                     demandsLoaded++;
                 }
             }
@@ -455,6 +456,7 @@ class System {
                 //Créer un objet Demande et l'ajouter à la liste des demandes.
                 const demande = new Demand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration, this.nextDemandId++);
                 this.demandsList.push(demande);
+                console.log(`Demande ajoutée: ${demande.toString()}`);
             };
 
             return { success: true, demands: this.demandsList, count: this.demandsList.length };
@@ -603,8 +605,9 @@ class System {
      * - Minimizes total arrival time at warehouse
      * @param {Array<Demand>} demands - All demands to fulfill
      * @returns {Array<Tour>} List of computed tours
+     * list couriers
      */
-    computeTours(demands) {
+    computeTours(couriers) {
         if (!this.plan || !this.plan.nodes || demands.length === 0) {
             console.error("Cannot compute tours: plan or demands are missing");
             return [];
@@ -615,15 +618,16 @@ class System {
             return [];
         }
 
-
+        const nomCouriers = couriers.length;
+        
         const distanceMatrix = this.distanceMatrix;
 
         // Step 1: Distribute demands among couriers using K-means
-        const demandGroups = this.distributeDemands(this.nbCouriers);
+        const demandGroups = this.distributeDemands(nomCouriers);
 
         // Step 2: Build optimal tour for each courier's demand group
         const tours = [];
-        for (let i = 0; i < Math.min(demandGroups.length, this.nbCouriers); i++) {
+        for (let i = 0; i < Math.min(demandGroups.length, nomCouriers); i++) {
             const courier = this.couriers[i];
             const courierDemands = demandGroups[i];
 
@@ -1087,6 +1091,29 @@ class System {
         }
 
         return tour;
+    }
+
+    /**
+     * Get K-means clusters for the current demands
+     * @param {number} k - Number of clusters (couriers)
+     * @returns {Array} Array of clusters with demands and centroids
+     */
+    getKMeansClusters(k) {
+        if (!this.demandsList || this.demandsList.length === 0) {
+            console.warn('No demands loaded');
+            return [];
+        }
+
+        if (k < 1 || k > this.demandsList.length) {
+            console.warn(`Invalid k: ${k}. Must be between 1 and ${this.demandsList.length}`);
+            return [];
+        }
+
+        console.log(`\n📊 Computing K-means clusters for ${this.demandsList.length} demands with ${k} couriers`);
+        const clusters = this.kmeansClustering(this.demandsList, k);
+        console.log(`✅ K-means clustering complete: ${clusters.length} clusters\n`);
+        
+        return clusters;
     }
 
     /**
