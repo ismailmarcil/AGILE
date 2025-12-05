@@ -490,6 +490,16 @@ class System {
         return false;
     }
 
+    /**
+     * Calculate travel time from distance
+     * @param {number} distance - Distance in meters
+     * @returns {number} Travel time in seconds (assuming 15 km/h average speed)
+     */
+    calculateTravelTime(distance) {
+        const speedMPerS = 15000 / 3600; // 15 km/h = 4.17 m/s
+        return Math.round(distance / speedMPerS);
+    }
+
     calculateTour(demands) {
         // Check if demands list is empty or null
         if (!demands || demands.length === 0) {
@@ -513,7 +523,8 @@ class System {
 
         // First leg: warehouse to first pickup
         let { path, distance, segments } = this.plan.findShortestPath(this.plan.warehouse.id, demands[0].pickupAddress);
-        let leg = new Leg(this.plan.warehouse, path[path.length - 1], path, segments, distance, distance);
+        let travelTime = this.calculateTravelTime(distance);
+        let leg = new Leg(this.plan.warehouse, path[path.length - 1], path, segments, distance, travelTime);
         tour.addLeg(leg);
         tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", demands[0]));
 
@@ -521,28 +532,36 @@ class System {
             let demand = demands[i];
             let nextDemand = demands[i + 1];
             let { path, distance, segments } = this.plan.findShortestPath(demand.pickupAddress, demand.deliveryAddress);
-            let leg = new Leg(path[0], path[path.length - 1], path, segments, distance, distance);
+            let travelTime = this.calculateTravelTime(distance);
+            let leg = new Leg(path[0], path[path.length - 1], path, segments, distance, travelTime);
             tour.addLeg(leg);
             tour.addStop(new TourPoint(path[0], demand.pickupDuration, "PICKUP", demand));
             tour.addStop(new TourPoint(path[path.length - 1], demand.deliveryDuration, "DELIVERY", demand));
 
             let { path: nextPath, distance: nextDistance, segments: nextSegments } = this.plan.findShortestPath(demand.deliveryAddress, nextDemand.pickupAddress);
-            let nextLeg = new Leg(nextPath[0], nextPath[nextPath.length - 1], nextPath, nextSegments, nextDistance, nextDistance);
+            let nextTravelTime = this.calculateTravelTime(nextDistance);
+            let nextLeg = new Leg(nextPath[0], nextPath[nextPath.length - 1], nextPath, nextSegments, nextDistance, nextTravelTime);
             tour.addLeg(nextLeg);
         }
 
         // Last demand pickup and delivery
         let lastDemand = demands[demands.length - 1];
         let { path: lastPath, distance: lastDistance, segments: lastSegments } = this.plan.findShortestPath(lastDemand.pickupAddress, lastDemand.deliveryAddress);
-        let lastLeg = new Leg(lastPath[0], lastPath[lastPath.length - 1], lastPath, lastSegments, lastDistance, lastDistance);
+        let lastTravelTime = this.calculateTravelTime(lastDistance);
+        let lastLeg = new Leg(lastPath[0], lastPath[lastPath.length - 1], lastPath, lastSegments, lastDistance, lastTravelTime);
         tour.addLeg(lastLeg);
         tour.addStop(new TourPoint(lastPath[0], lastDemand.pickupDuration, "PICKUP", lastDemand));
         tour.addStop(new TourPoint(lastPath[lastPath.length - 1], lastDemand.deliveryDuration, "DELIVERY", lastDemand));
         // Retour à l'entrepôt
         let { path: returnPath, distance: returnDistance, segments: returnSegments } = this.plan.findShortestPath(lastDemand.deliveryAddress, this.plan.warehouse.id);
-        let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnSegments, returnDistance, returnDistance);
+        let returnTravelTime = this.calculateTravelTime(returnDistance);
+        let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnSegments, returnDistance, returnTravelTime);
         tour.addLeg(returnLeg);
         tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", null));
+
+        // Calculate total distance and duration
+        tour.calculateTotalDistance();
+        tour.calculateTotalDuration();
 
         this.toursList.push(tour);
         return tour;
@@ -729,7 +748,8 @@ class System {
             if (pathNodes.length > 0) {
                 const originNode = pathNodes[0];
                 const destNode = pathNodes[pathNodes.length - 1];
-                const leg = new Leg(originNode, destNode, pathNodes, bestDistance, bestDistance);
+                const travelTime = this.calculateTravelTime(bestDistance);
+                const leg = new Leg(originNode, destNode, pathNodes, [], bestDistance, travelTime);
                 tour.addLeg(leg);
             }
 
@@ -759,7 +779,8 @@ class System {
         if (returnPath.path.length > 0) {
             const returnPathNodes = returnPath.path.map(nodeId => this.plan.nodes.get(nodeId)).filter(n => n !== undefined);
             if (returnPathNodes.length > 0) {
-                const returnLeg = new Leg(returnPathNodes[0], warehouse, returnPathNodes, returnPath.distance, returnPath.distance);
+                const returnTravelTime = this.calculateTravelTime(returnPath.distance);
+                const returnLeg = new Leg(returnPathNodes[0], warehouse, returnPathNodes, [], returnPath.distance, returnTravelTime);
                 tour.addLeg(returnLeg);
             }
 
@@ -783,18 +804,11 @@ class System {
             });
         }
 
-        // Calculate tour metrics by summing edge distances
-        let totalDistance = 0;
-        for (let i = 0; i < sequence.length - 1; i++) {
-            const p1 = sequence[i];
-            const p2 = sequence[i + 1];
-            const dist = this.getDistance(distanceMatrix, p1.id, p2.id) || 0;
-            totalDistance += dist;
-        }
+        // Calculate total distance and duration using Tour's methods
+        tour.calculateTotalDistance();
+        tour.calculateTotalDuration();
 
-        tour.totalDistance = totalDistance;
-
-        console.log(`Tour computed for courier ${courier.id}: ${sequence.length} stops, distance: ${totalDistance.toFixed(2)}`);
+        console.log(`Tour computed for courier ${courier.id}: ${sequence.length} stops, distance: ${tour.totalDistance.toFixed(2)}m, duration: ${tour.totalDuration.toFixed(0)}s`);
 
         return tour;
     }
