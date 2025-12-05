@@ -378,35 +378,65 @@ class System {
             // Ne pas vider la liste pour conserver les demandes ajoutées manuellement
             // this.demandsList = [];
 
-            // Parser chaque livraison
             let demandsLoaded = 0;
+            let invalidCount = 0;
+
             for (let livraison of livraisons) {
                 const pickupAddress = livraison.getAttribute("adresseEnlevement");
                 const deliveryAddress = livraison.getAttribute("adresseLivraison");
                 const pickupDuration = parseInt(livraison.getAttribute("dureeEnlevement"));
                 const deliveryDuration = parseInt(livraison.getAttribute("dureeLivraison"));
 
-                if (pickupAddress && deliveryAddress && !isNaN(pickupDuration) && !isNaN(deliveryDuration)) {
-                    const demande = new Demand(
-                        pickupAddress,
-                        deliveryAddress,
-                        pickupDuration,
-                        deliveryDuration,
-                        this.nextDemandId++
-                    );
-                    this.demandsList.push(demande);
-                    console.log(`Demande ajoutée: ${demande.toString()}`);
-                    demandsLoaded++;
+                // Vérification basique des champs
+                if (!pickupAddress || !deliveryAddress || isNaN(pickupDuration) || isNaN(deliveryDuration)) {
+                    invalidCount++;
+                    continue;
                 }
+
+                // Si un plan est chargé, vérifier que les nœuds existent
+                if (this.plan && typeof this.plan.getNodeById === "function") {
+                    const pickupNode = this.plan.getNodeById(pickupAddress);
+                    const deliveryNode = this.plan.getNodeById(deliveryAddress);
+
+                    if (!pickupNode || !deliveryNode) {
+                        console.warn(
+                            "Demande invalide (noeud introuvable) :",
+                            { pickupAddress, deliveryAddress }
+                        );
+                        invalidCount++;
+                        continue;
+                    }
+                }
+
+                // Demande valide → on l'ajoute
+                const demande = new Demand(
+                    pickupAddress,
+                    deliveryAddress,
+                    pickupDuration,
+                    deliveryDuration,
+                    this.nextDemandId++
+                );
+                this.demandsList.push(demande);
+                demandsLoaded++;
             }
 
-            console.log(`${demandsLoaded} demandes chargées avec succès!`);
-            return {
-                success: true,
+            console.log(`${demandsLoaded} demandes valides chargées. ${invalidCount} demandes invalides ignorées.`);
+
+            const result = {
+                success: demandsLoaded > 0,
                 demands: this.demandsList,
                 warehouse: { address: warehouseAddress, departureTime: departureTime },
-                count: demandsLoaded
+                count: demandsLoaded,
+                invalidCount: invalidCount
             };
+
+            if (invalidCount > 0 && demandsLoaded > 0) {
+                result.warning = `${invalidCount} demandes ne sont pas valides et ont été ignorées.`;
+            } else if (demandsLoaded === 0) {
+                result.error = "Toutes les demandes du fichier sont invalides.";
+            }
+
+            return result;
         }
 
         // Cas 2: Node.js - filePath (string)
@@ -419,44 +449,52 @@ class System {
             const fs = require("fs");
             const xml2js = require("xml2js");
 
-            //contenu du fichier en string
             xmlContent = await fs.promises.readFile(filePathOrInput, "utf-8");
 
-            //Parser en objet JSon
             const json = await xml2js.parseStringPromise(xmlContent);
 
-            //Récupérer la racine demandeDeLivraisons du json (ce code ne marche que pour les VF des XML)
             const root = json.demandeDeLivraisons;
             if (!root || !root.livraison) {
                 console.log("Aucune balise <livraison> trouvée dans le XML.");
                 return { success: false, error: "Aucune balise <livraison> trouvée dans le XML." };
             }
-            //liste des livraisons du Json
-            // livraisons c'est une liste dont chaque élément est une <livraison> du XML
-            //chaque élément est un objet ayant un champ $(contient les attributs de la balise).
 
             const livraisons = root.livraison;
             console.log("Nombre de livraisons :", livraisons.length);
 
-            // Ne pas vider la liste pour conserver les demandes ajoutées manuellement
-            // this.demandsList = [];
+            let demandsLoaded = 0;
+            let invalidCount = 0;
 
-            //On parcours chaque livraison
             for (const livraisonNode of livraisons) {
-                const attrs = livraisonNode.$ || {};  //pour chaque livraisonNode on recup soit le champ $ (avec les attributs) soit un objet vide
-                //récupérer les attributs
+                const attrs = livraisonNode.$ || {};
                 const pickupAddress = attrs.adresseEnlevement;
                 const deliveryAddress = attrs.adresseLivraison;
-                const pickupDurationStr = attrs.dureeEnlevement;
-                const deliveryDurationStr = attrs.dureeLivraison;
-                //convertir les durées en nombres
-                const pickupDuration = Number(pickupDurationStr);
-                const deliveryDuration = Number(deliveryDurationStr);
+                const pickupDuration = Number(attrs.dureeEnlevement);
+                const deliveryDuration = Number(attrs.dureeLivraison);
 
-                //Créer un objet Demande et l'ajouter à la liste des demandes.
-                const demande = new Demand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration, this.nextDemandId++);
+                if (!pickupAddress || !deliveryAddress || isNaN(pickupDuration) || isNaN(deliveryDuration)) {
+                    invalidCount++;
+                    continue;
+                }
+
+                // Validation optionnelle via plan si disponible dans les tests Node
+                if (this.plan && typeof this.plan.getNodeById === "function") {
+                    const pickupNode = this.plan.getNodeById(pickupAddress);
+                    const deliveryNode = this.plan.getNodeById(deliveryAddress);
+                    if (!pickupNode || !deliveryNode) {
+                        invalidCount++;
+                        continue;
+                    }
+                }
+
+                const demande = new Demand(
+                    pickupAddress,
+                    deliveryAddress,
+                    pickupDuration,
+                    deliveryDuration,
+                    this.nextDemandId++
+                );
                 this.demandsList.push(demande);
-                console.log(`Demande ajoutée: ${demande.toString()}`);
             };
 
             return { success: true, demands: this.demandsList, count: this.demandsList.length };
@@ -466,6 +504,7 @@ class System {
             return { success: false, error: error.message };
         }
     }
+
 
     addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
         //Vérifie si un plan est chargé
@@ -480,7 +519,7 @@ class System {
         }
         const demande = new Demand(pickupNode, deliveryNode, pickupDuration, deliveryDuration, this.nextDemandId++);
         this.demandsList.push(demande);
-        return { success: true, demand: demande };
+        return demande;
     }
 
     removeDemandById(id) {
@@ -490,6 +529,16 @@ class System {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Calculate travel time from distance
+     * @param {number} distance - Distance in meters
+     * @returns {number} Travel time in seconds (assuming 15 km/h average speed)
+     */
+    calculateTravelTime(distance) {
+        const speedMPerS = 15000 / 3600; // 15 km/h = 4.17 m/s
+        return Math.round(distance / speedMPerS);
     }
 
     calculateTour(demands) {
@@ -515,7 +564,8 @@ class System {
 
         // First leg: warehouse to first pickup
         let { path, distance, segments } = this.plan.findShortestPath(this.plan.warehouse.id, demands[0].pickupAddress);
-        let leg = new Leg(this.plan.warehouse, path[path.length - 1], path, segments, distance, distance);
+        let travelTime = this.calculateTravelTime(distance);
+        let leg = new Leg(this.plan.warehouse, path[path.length - 1], path, segments, distance, travelTime);
         tour.addLeg(leg);
         tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", demands[0]));
 
@@ -523,28 +573,36 @@ class System {
             let demand = demands[i];
             let nextDemand = demands[i + 1];
             let { path, distance, segments } = this.plan.findShortestPath(demand.pickupAddress, demand.deliveryAddress);
-            let leg = new Leg(path[0], path[path.length - 1], path, segments, distance, distance);
+            let travelTime = this.calculateTravelTime(distance);
+            let leg = new Leg(path[0], path[path.length - 1], path, segments, distance, travelTime);
             tour.addLeg(leg);
             tour.addStop(new TourPoint(path[0], demand.pickupDuration, "PICKUP", demand));
             tour.addStop(new TourPoint(path[path.length - 1], demand.deliveryDuration, "DELIVERY", demand));
 
             let { path: nextPath, distance: nextDistance, segments: nextSegments } = this.plan.findShortestPath(demand.deliveryAddress, nextDemand.pickupAddress);
-            let nextLeg = new Leg(nextPath[0], nextPath[nextPath.length - 1], nextPath, nextSegments, nextDistance, nextDistance);
+            let nextTravelTime = this.calculateTravelTime(nextDistance);
+            let nextLeg = new Leg(nextPath[0], nextPath[nextPath.length - 1], nextPath, nextSegments, nextDistance, nextTravelTime);
             tour.addLeg(nextLeg);
         }
 
         // Last demand pickup and delivery
         let lastDemand = demands[demands.length - 1];
         let { path: lastPath, distance: lastDistance, segments: lastSegments } = this.plan.findShortestPath(lastDemand.pickupAddress, lastDemand.deliveryAddress);
-        let lastLeg = new Leg(lastPath[0], lastPath[lastPath.length - 1], lastPath, lastSegments, lastDistance, lastDistance);
+        let lastTravelTime = this.calculateTravelTime(lastDistance);
+        let lastLeg = new Leg(lastPath[0], lastPath[lastPath.length - 1], lastPath, lastSegments, lastDistance, lastTravelTime);
         tour.addLeg(lastLeg);
         tour.addStop(new TourPoint(lastPath[0], lastDemand.pickupDuration, "PICKUP", lastDemand));
         tour.addStop(new TourPoint(lastPath[lastPath.length - 1], lastDemand.deliveryDuration, "DELIVERY", lastDemand));
         // Retour à l'entrepôt
         let { path: returnPath, distance: returnDistance, segments: returnSegments } = this.plan.findShortestPath(lastDemand.deliveryAddress, this.plan.warehouse.id);
-        let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnSegments, returnDistance, returnDistance);
+        let returnTravelTime = this.calculateTravelTime(returnDistance);
+        let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnSegments, returnDistance, returnTravelTime);
         tour.addLeg(returnLeg);
         tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", null));
+
+        // Calculate total distance and duration
+        tour.calculateTotalDistance();
+        tour.calculateTotalDuration();
 
         this.toursList.push(tour);
         return tour;
@@ -584,10 +642,10 @@ class System {
 
         // Use K-means clustering to group demands by geographic proximity
         const clusters = this.kmeansClustering(this.demandsList, numCouriers);
-        
+
         // Extract demand groups from clusters
         const demandGroups = clusters.map(cluster => cluster.demands);
-        
+
         console.log(`Distribution complete: ${demandGroups.length} groups created`);
         demandGroups.forEach((group, idx) => {
             console.log(`  Courier ${idx + 1}: ${group.length} demands`);
@@ -807,7 +865,7 @@ class System {
         // Filter empty clusters
         clusters = clusters.filter(c => c.demands.length > 0);
         console.log(`K-means complete: ${clusters.length} non-empty clusters`);
-        
+
         // Validation: Verify each cluster has complete demands
         for (let i = 0; i < clusters.length; i++) {
             let pickupCount = 0, deliveryCount = 0;
@@ -923,12 +981,12 @@ class System {
      * Ensures pickup is visited before corresponding delivery
      * Uses real graph distances via Dijkstra algorithm
      * Creates Leg objects for each segment of the path
-     * 
+     *
      * CONSTRAINTS ENFORCED:
      * - Pickup ALWAYS visited before corresponding delivery
      * - Each demand kept atomically (pickup + delivery together)
      * - Tour starts and ends at warehouse
-     * 
+     *
      * @param {Courier} courier - The courier
      * @param {Array<Demand>} demands - Demands to fulfill (must be complete pickup+delivery pairs)
      * @param {Map} distanceMatrix - Pre-computed distance matrix from loadPlan
@@ -1010,7 +1068,8 @@ class System {
             if (pathNodes.length > 0) {
                 const originNode = pathNodes[0];
                 const destNode = pathNodes[pathNodes.length - 1];
-                const leg = new Leg(originNode, destNode, pathNodes, bestDistance, bestDistance);
+                const travelTime = this.calculateTravelTime(bestDistance);
+                const leg = new Leg(originNode, destNode, pathNodes, [], bestDistance, travelTime);
                 tour.addLeg(leg);
             }
 
@@ -1040,7 +1099,8 @@ class System {
         if (returnPath.path.length > 0) {
             const returnPathNodes = returnPath.path.map(nodeId => this.plan.nodes.get(nodeId)).filter(n => n !== undefined);
             if (returnPathNodes.length > 0) {
-                const returnLeg = new Leg(returnPathNodes[0], warehouse, returnPathNodes, returnPath.distance, returnPath.distance);
+                const returnTravelTime = this.calculateTravelTime(returnPath.distance);
+                const returnLeg = new Leg(returnPathNodes[0], warehouse, returnPathNodes, [], returnPath.distance, returnTravelTime);
                 tour.addLeg(returnLeg);
             }
 
@@ -1064,14 +1124,9 @@ class System {
             });
         }
 
-        // Calculate tour metrics by summing edge distances
-        let totalDistance = 0;
-        for (let i = 0; i < sequence.length - 1; i++) {
-            const p1 = sequence[i];
-            const p2 = sequence[i + 1];
-            const dist = this.getDistance(distanceMatrix, p1.id, p2.id) || 0;
-            totalDistance += dist;
-        }
+        // Calculate total distance and duration using Tour's methods
+        tour.calculateTotalDistance();
+        tour.calculateTotalDuration();
 
         tour.totalDistance = totalDistance;
 
@@ -1082,7 +1137,7 @@ class System {
         console.log(`   Deliveries completed: ${deliveriesVisited.size}/${demands.length}`);
         console.log(`   Total distance: ${totalDistance.toFixed(2)}`);
         console.log(`   Route: Warehouse → [${pickupsVisited.size} pickups + ${deliveriesVisited.size} deliveries] → Warehouse`);
-        
+
         // Warn if not all demands completed
         if (pickupsVisited.size !== demands.length || deliveriesVisited.size !== demands.length) {
             console.warn(`⚠️  WARNING: Not all demands completed!`);
