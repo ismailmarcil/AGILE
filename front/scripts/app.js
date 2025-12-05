@@ -288,10 +288,31 @@ function updateTimelineFromTour(tour) {
         if (stop.type === 'ENTREPOT') {
             descDiv.textContent = index === 0 ? 'Départ' : 'Arrivée';
         } else {
-            // Try to get a short address description
-            const lat = stop.node?.latitude?.toFixed(3) || '?';
-            const lon = stop.node?.longitude?.toFixed(3) || '?';
-            descDiv.textContent = `${lat}, ${lon}`;
+            // Afficher "Chargement..." pendant la récupération de l'adresse
+            const lat = stop.node?.latitude;
+            const lon = stop.node?.longitude;
+
+            if (lat && lon) {
+                descDiv.textContent = 'Chargement...';
+
+                // Récupérer l'adresse de manière asynchrone
+                if (window.geocodingService) {
+                    window.geocodingService.getShortAddress(lat, lon)
+                        .then(address => {
+                            descDiv.textContent = address;
+                            descDiv.title = address; // Tooltip avec l'adresse complète
+                        })
+                        .catch(() => {
+                            // En cas d'erreur, afficher les coordonnées
+                            descDiv.textContent = `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+                        });
+                } else {
+                    // Fallback si le service n'est pas disponible
+                    descDiv.textContent = `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+                }
+            } else {
+                descDiv.textContent = 'Position inconnue';
+            }
         }
         stepDiv.appendChild(descDiv);
 
@@ -836,6 +857,26 @@ async function handleCalculateTour() {
 
             // Populate courier selector
             populateCourierTourSelector(tours);
+
+            // Pré-charger toutes les adresses pour améliorer les performances
+            if (window.geocodingService) {
+                const allCoordinates = [];
+                tours.forEach(tour => {
+                    tour.stops.forEach(stop => {
+                        if (stop.node && stop.node.latitude && stop.node.longitude) {
+                            allCoordinates.push({
+                                latitude: stop.node.latitude,
+                                longitude: stop.node.longitude
+                            });
+                        }
+                    });
+                });
+
+                // Pré-chargement asynchrone (ne bloque pas l'affichage)
+                window.geocodingService.preloadAddresses(allCoordinates)
+                    .then(() => console.log('✅ Adresses préchargées'))
+                    .catch(err => console.warn('⚠️ Erreur préchargement adresses:', err));
+            }
 
             // Display the first tour on the map
             if (view.map) {
