@@ -544,6 +544,71 @@ class View {
         }
     }
 
+    /**
+     * Affiche la liste des tournées sauvegardées dans une liste jolie.
+     * @param {Array} tours - [{ filename, id, departureTime, courier, totalDuration, totalDistance }]
+     * @param {HTMLElement} container - élément où afficher la liste
+     * @param {HTMLElement} errorElement - élément pour les messages d'erreur (optionnel)
+     */
+    displayHistoryList(tours, container, errorElement = null, onSelect = null) {
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (!Array.isArray(tours) || tours.length === 0) {
+            container.innerHTML = '<p style="color:#95a5a6;">Aucune tournée trouvée.</p>';
+            return;
+        }
+
+        const list = document.createElement('div');
+        list.className = 'history-list';
+
+        tours.forEach(t => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'history-item';
+            item.dataset.tourId = t.tourId || '';
+            item.dataset.filename = t.filename || '';
+
+            const title = document.createElement('div');
+            title.className = 'history-title';
+            title.textContent = t.id || t.filename || '';
+
+            const meta = document.createElement('div');
+            meta.className = 'history-meta';
+            const time = t.departureTime || '';
+            const courier = t.courier || '';
+            meta.textContent = [time, courier].filter(Boolean).join(' · ');
+
+            item.appendChild(title);
+            item.appendChild(meta);
+
+            if (onSelect) {
+                item.addEventListener('click', () => onSelect(t));
+            }
+
+            list.appendChild(item);
+        });
+
+        container.appendChild(list);
+
+        if (errorElement) {
+            errorElement.textContent = '';
+        }
+    }
+
+
+    _escapeHtml(s) {
+        if (!s) return '';
+        return s.replace(/[&<>"']/g, c => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;'
+        }[c] || c));
+    }
+
+
     // Existing methods
     addPickupDeliveryPoint(tourPoint, startTime, endTime) {
         this.listPickupDeliveryPoints.push({ tourPoint, startTime, endTime });
