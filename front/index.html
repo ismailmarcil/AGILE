@@ -19,108 +19,122 @@
             <i class="fa-regular fa-user"></i>&nbsp; Planner
         </div>
     </div>
+    <div id="sidebar-livreur">
+        <div class="controls">
+            <div class="control-group">
+                <div class="section-title"><i class="fa-regular fa-folder-open"></i> Fichiers</div>
+                <input type="file" id="xmlMapInput" accept=".xml" style="display: none;" onchange="handleLoadMap()">
+                <input type="file" id="xmlDeliveriesInput" accept=".xml" multiple style="display: none;" onchange="handleLoadDemands()">
+                <input type="file" id="jsonTourInput" accept=".json" style="display: none;" onchange="handleLoadTour()">
+                <div class="upload-row">
+                    <div class="file-upload-box" onclick="document.getElementById('xmlMapInput').click()" style="cursor: pointer;">
+                        <i class="fa-solid fa-map"></i> Plan (XML)
+                    </div>
+                    <div class="file-upload-box" id="deliveriesUploadBox" onclick="document.getElementById('xmlDeliveriesInput').click()" style="cursor: pointer; opacity: 0.5; pointer-events: none;">
+                        <i class="fa-solid fa-box-open"></i> Livraisons (XML)
+                    </div>
+                </div>
+            </div>
 
-    <div class="controls">
-        <div class="control-group">
-            <div class="section-title"><i class="fa-regular fa-folder-open"></i> Fichiers</div>
-            <input type="file" id="xmlMapInput" accept=".xml" style="display: none;" onchange="handleLoadMap()">
-            <input type="file" id="xmlDeliveriesInput" accept=".xml" multiple style="display: none;" onchange="handleLoadDemands()">
-            <input type="file" id="jsonTourInput" accept=".json" style="display: none;" onchange="handleLoadTour()">
-            <div class="upload-row">
-                <div class="file-upload-box" onclick="document.getElementById('xmlMapInput').click()" style="cursor: pointer;">
-                    <i class="fa-solid fa-map"></i> Plan (XML)
+            <div class="control-group">
+                <div class="section-title"><i class="fa-solid fa-users"></i> Coursiers</div>
+
+                <!-- Courier count widget: - [count] + -->
+                <div style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">
+                    <button id="courierMinusBtn" class="btn btn-sm" type="button" title="Réduire le nombre de coursiers">-</button>
+                    <input id="courierCountInput" type="text" value="1" readonly style="width:48px; text-align:center; border:1px solid #ccc; border-radius:4px; padding:6px;">
+                    <button id="courierPlusBtn" class="btn btn-sm" type="button" title="Augmenter le nombre de coursiers">+</button>
                 </div>
-                <div class="file-upload-box" id="deliveriesUploadBox" onclick="document.getElementById('xmlDeliveriesInput').click()" style="cursor: pointer; opacity: 0.5; pointer-events: none;">
-                    <i class="fa-solid fa-box-open"></i> Livraisons (XML)
+
+                <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+                    <input id="courierNameInput" type="text" placeholder="Nom du coursier" style="flex:1; padding:8px; border-radius:4px; border:1px solid #bdc3c7;">
+                    <button id="createCourierBtn" class="btn btn-sm" type="button">Créer</button>
                 </div>
+
+                <select id="couriersSelect" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #bdc3c7;">
+                    <option value="">Aucun coursier</option>
+                </select>
+            </div>
+
+            <div class="control-group" style="border:none;" id="demandsContainer">
+                <div class="section-title" style="justify-content: space-between;">
+                    <span><i class="fa-solid fa-list-check"></i> Demandes</span>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn-icon" id="clearDemandsBtn" title="Effacer toutes les demandes">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                        <button class="btn-icon" id="addDemandBtn" title="Ajouter une demande">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <p style="text-align: center; color: #95a5a6; font-size: 0.85rem; padding: 20px;">
+                    Aucune demande chargée. Chargez un fichier XML de livraisons.
+                </p>
+
             </div>
         </div>
 
-        <div class="control-group">
-            <div class="section-title"><i class="fa-solid fa-users"></i> Coursiers</div>
-
-            <!-- Courier count widget: - [count] + -->
-            <div style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">
-                <button id="courierMinusBtn" class="btn btn-sm" type="button" title="Réduire le nombre de coursiers">-</button>
-                <input id="courierCountInput" type="text" value="1" readonly style="width:48px; text-align:center; border:1px solid #ccc; border-radius:4px; padding:6px;">
-                <button id="courierPlusBtn" class="btn btn-sm" type="button" title="Augmenter le nombre de coursiers">+</button>
-            </div>
-
-            <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
-                <input id="courierNameInput" type="text" placeholder="Nom du coursier" style="flex:1; padding:8px; border-radius:4px; border:1px solid #bdc3c7;">
-                <button id="createCourierBtn" class="btn btn-sm" type="button">Créer</button>
-            </div>
-
-            <select id="couriersSelect" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #bdc3c7;">
-                <option value="">Aucun coursier</option>
-            </select>
-        </div>
-
-        <div class="control-group" style="border:none;" id="demandsContainer">
-            <div class="section-title" style="justify-content: space-between;">
-                <span><i class="fa-solid fa-list-check"></i> Demandes</span>
-                <div style="display: flex; gap: 5px;">
-                    <button class="btn-icon" id="clearDemandsBtn" title="Effacer toutes les demandes">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                    <button class="btn-icon" id="addDemandBtn" title="Ajouter une demande">
-                        <i class="fa-solid fa-plus"></i>
-                    </button>
-                </div>
-            </div>
-
-            <p style="text-align: center; color: #95a5a6; font-size: 0.85rem; padding: 20px;">
-                Aucune demande chargée. Chargez un fichier XML de livraisons.
-            </p>
-
+        <div style="padding: 20px; border-top: 1px solid var(--border-color);">
+            <button class="btn btn-primary">
+                <i class="fa-solid fa-calculator"></i> Calculer la tournée
+            </button>
         </div>
     </div>
 
-    <div style="padding: 20px; border-top: 1px solid var(--border-color);">
-        <button class="btn btn-primary">
-            <i class="fa-solid fa-calculator"></i> Calculer la tournée
+    <div id="sidebar-history" style="display:none; padding:20px; overflow-y:auto;">
+        <h3 style="margin-bottom:10px;">Historique des tournées</h3>
+        <button id="historyBtn" class="btn btn-sm btn-primary" style="width:auto; margin-bottom:10px;">
+            Charger l'historique
         </button>
+        <div id="historyError" style="color:#b00020; margin-bottom:8px;"></div>
+        <div id="historyResults"></div>
     </div>
+
 </div>
 
 <div class="main-content">
     <div class="toolbar">
         <div class="view-toggles">
-            <button class="toggle-btn active">Vue Livreur</button>
-            <button class="toggle-btn">Vue Globale</button>
+            <button class="toggle-btn active" data-view="courier">Vue Livreur</button>
+            <button class="toggle-btn" data-view="global">Vue Globale</button>
+            <button class="toggle-btn" data-view="history">Vue Historique</button>
         </div>
     </div>
 
-    <div class="map-container">
-        <div id="map" style="width: 100%; height: 100%;">
-            <div class="map-placeholder" id="mapPlaceholder" style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                <i class="fa-solid fa-map-location-dot" style="font-size: 3rem; color: var(--secondary-color); margin-bottom: 15px;"></i>
-                <h3>Visualisation de la Carte</h3>
-                <p style="color: #7f8c8d; margin-top: 5px;">Chargez un plan XML pour commencer</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="tour-timeline">
-        <div class="section-title">
-            <span><i class="fa-solid fa-stopwatch"></i> Détails de la tournée</span>
-            <!-- Courier info and action buttons -->
-            <div style="display: flex; gap: 8px; margin-left: auto; align-items: center;">
-                <div id="courierInfo" style="display: none; padding: 4px 12px; background: #f8f9fa; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color);">
-                    <i class="fa-solid fa-user"></i> <span id="courierName">-</span>
+    <!-- Vue Livreur (carte + timeline) -->
+    <div id="view-courier" class="main-view">
+        <div class="map-container">
+            <div id="map" style="width: 100%; height: 100%;">
+                <div class="map-placeholder" id="mapPlaceholder" style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                    <i class="fa-solid fa-map-location-dot" style="font-size: 3rem; color: var(--secondary-color); margin-bottom: 15px;"></i>
+                    <h3>Visualisation de la Carte</h3>
+                    <p style="color: #7f8c8d; margin-top: 5px;">Chargez un plan XML pour commencer</p>
                 </div>
-                <button class="btn btn-sm save-btn" onclick="document.getElementById('jsonTourInput').click()" style="background:white; border:1px solid #bdc3c7;">
-                    <i class="fa-solid fa-folder-open" style="margin-right:6px"></i> Restaurer
-                </button>
-                <button class="btn btn-sm save-btn" id="saveTourBtn" style="background:white; border:1px solid #bdc3c7; display:none;">
-                    <i class="fa-solid fa-floppy-disk" style="margin-right:6px"></i> Sauvegarder
-                </button>
             </div>
         </div>
-        <div class="timeline-scroll">
-            <p style="text-align: center; color: #95a5a6; font-size: 0.85rem; padding: 10px;">
-                Aucune tournée chargée. Calculez ou restaurez une tournée.
-            </p>
+
+        <div class="tour-timeline">
+            <div class="section-title">
+                <span><i class="fa-solid fa-stopwatch"></i> Détails de la tournée</span>
+                <div style="display: flex; gap: 8px; margin-left: auto; align-items: center;">
+                    <div id="courierInfo" style="display: none; padding: 4px 12px; background: #f8f9fa; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color);">
+                        <i class="fa-solid fa-user"></i> <span id="courierName">-</span>
+                    </div>
+                    <button class="btn btn-sm save-btn" onclick="document.getElementById('jsonTourInput').click()" style="background:white; border:1px solid #bdc3c7;">
+                        <i class="fa-solid fa-folder-open" style="margin-right:6px"></i> Restaurer
+                    </button>
+                    <button class="btn btn-sm save-btn" id="saveTourBtn" style="background:white; border:1px solid #bdc3c7; display:none;">
+                        <i class="fa-solid fa-floppy-disk" style="margin-right:6px"></i> Sauvegarder
+                    </button>
+                </div>
+            </div>
+            <div class="timeline-scroll">
+                <p style="text-align: center; color: #95a5a6; font-size: 0.85rem; padding: 10px;">
+                    Aucune tournée chargée. Calculez ou restaurez une tournée.
+                </p>
+            </div>
         </div>
     </div>
 </div>

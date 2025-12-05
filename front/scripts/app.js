@@ -6,6 +6,63 @@
 const system = new System();
 const view = new View("08:00", "map");
 
+// État de la vue Livreur (pour restauration après vue Historique)
+let courierViewState = null;
+
+function saveCourierViewState() {
+    const hasTour = !!window.currentDisplayedTour;
+    const hasPlan = !!system.plan;
+
+    courierViewState = {
+        mode: hasTour ? 'tour' : (hasPlan ? 'plan' : 'empty'),
+        tour: hasTour ? window.currentDisplayedTour : null
+    };
+}
+
+function resetTimelineToEmpty() {
+    const timelineScroll = document.querySelector('.timeline-scroll');
+    if (!timelineScroll) return;
+
+    timelineScroll.innerHTML =
+        '<p style="text-align: center; color: #95a5a6; font-size: 0.85rem; padding: 10px;">' +
+        'Aucune tournée chargée. Calculez ou restaurez une tournée.' +
+        '</p>';
+}
+
+function restoreCourierViewState() {
+    if (!courierViewState) {
+        // Pas d’état sauvegardé : on remet juste la timeline basique
+        resetTimelineToEmpty();
+        updateCourierInfo(null);
+        return;
+    }
+
+    if (courierViewState.mode === 'tour' && courierViewState.tour) {
+        const tour = courierViewState.tour;
+        window.currentDisplayedTour = tour;
+
+        if (view.map) {
+            view.displayTour(tour);
+        }
+        updateTimelineFromTour(tour);
+        updateCourierInfo(tour);
+    } else if (courierViewState.mode === 'plan' && system.plan) {
+        // Revenir à la vue "plan + demandes"
+        view.clearMap();
+        view.displayPlan(system.plan.toJSON());
+        resetTimelineToEmpty();
+        updateCourierInfo(null);
+        window.currentDisplayedTour = null;
+    } else {
+        // Rien à afficher
+        view.clearMap();
+        resetTimelineToEmpty();
+        updateCourierInfo(null);
+        window.currentDisplayedTour = null;
+    }
+}
+
+
 // Handle map loading
 async function handleLoadMap() {
     const input = document.getElementById("xmlMapInput");
@@ -92,8 +149,60 @@ async function handleLoadTour() {
     }
 }
 
+async function handleLoadHistory() {
+    const resultsContainer = document.getElementById('historyResults');
+    const errorElement = document.getElementById('historyError');
+    if (!resultsContainer) return;
+
+    resultsContainer.innerHTML = '<p>Chargement de l\'historique...</p>';
+    if (errorElement) errorElement.textContent = '';
+
+    const result = await system.loadSavedToursSummary();
+
+    if (!result.success) {
+        if (errorElement) {
+            errorElement.textContent = result.error || 'Erreur lors du chargement de l\'historique.';
+        } else {
+            alert(result.error || 'Erreur lors du chargement de l\'historique.');
+        }
+        resultsContainer.innerHTML = '';
+        return;
+    }
+
+    // Callback appelé lorsqu'on clique sur une tournée dans la liste
+    const onSelectTour = async (tourSummary) => {
+        const loadResult = await system.loadTourFromServer(tourSummary.tourId || tourSummary.filename);
+        if (!loadResult.success) {
+            alert(loadResult.error || 'Erreur lors du chargement de la tournée.');
+            return;
+        }
+
+        const tour = loadResult.tour;
+        console.log('Tournée chargée via historique:', tour);
+
+        // Même logique que handleLoadTour
+        window.currentDisplayedTour = tour;
+
+        const saveTourBtn = document.getElementById('saveTourBtn');
+        if (saveTourBtn) {
+            saveTourBtn.style.display = 'inline-flex';
+        }
+
+        if (view.map) {
+            view.displayTour(tour);
+        }
+
+        updateTimelineFromTour(tour);
+        updateCourierInfo(tour);
+    };
+
+    view.displayHistoryList(result.tours, resultsContainer, errorElement, onSelectTour);
+}
+
+
+
 // Update timeline UI from tour data
-function updateTimelineFromTour(tour) {
+function updateTimelineFromTour(tour, readOnly = false) {
     const timelineScroll = document.querySelector('.timeline-scroll');
     if (!timelineScroll) return;
 
@@ -144,7 +253,7 @@ function updateTimelineFromTour(tour) {
 
     linkRelatedTourPoints(tour);
 
-    // Add each stop to the timeline (with left/right controls)
+    // Add each stop to the timeline (optionally with left/right controls)
     tour.stops.forEach((stop, index) => {
         const stepDiv = document.createElement('div');
         stepDiv.className = 'step';
@@ -179,8 +288,8 @@ function updateTimelineFromTour(tour) {
         }
         stepDiv.appendChild(iconDiv);
 
-        // Add left/right controls for non-depot stops
-        if (stop.type !== 'ENTREPOT') {
+        // Add left/right controls for non-depot stops (only if not read-only)
+        if (!readOnly && stop.type !== 'ENTREPOT') {
             const controls = document.createElement('div');
             controls.className = 'step-controls';
 
@@ -883,5 +992,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Switch entre Vue Livreur / Vue Historique dans la sidebar
+    const toggleButtons = document.querySelectorAll('.view-toggles .toggle-btn');
+    const sidebarLivreur = document.getElementById('sidebar-livreur');
+    const sidebarHistory = document.getElementById('sidebar-history');
+
+    toggleButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            toggleButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const viewName = btn.dataset.view;
+
+            if (viewName === 'history') {
+                // On sauve l’état actuel de la vue Livreur
+                saveCourierViewState();
+
+                if (sidebarLivreur) sidebarLivreur.style.display = 'none';
+                if (sidebarHistory) sidebarHistory.style.display = 'block';
+                handleLoadHistory(); // charger la liste dans la sidebar
+            } else if (viewName === 'courier') {
+                // Revenir à la vue Livreur telle qu’elle était
+                if (sidebarLivreur) sidebarLivreur.style.display = 'block';
+                if (sidebarHistory) sidebarHistory.style.display = 'none';
+                restoreCourierViewState();
+            } else {
+                // Autres vues (ex: globale) -> sidebar Livreur
+                if (sidebarLivreur) sidebarLivreur.style.display = 'block';
+                if (sidebarHistory) sidebarHistory.style.display = 'none';
+                restoreCourierViewState();
+            }
+        });
+    });
+
+
+    // Bouton interne pour recharger l'historique
+    const historyBtn = document.getElementById('historyBtn');
+    if (historyBtn) {
+        historyBtn.addEventListener('click', handleLoadHistory);
+    }
 });
 

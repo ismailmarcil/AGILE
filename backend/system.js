@@ -295,6 +295,97 @@ class System {
         });
     }
 
+     /**
+     * Charge la liste des tournées sauvegardées depuis le serveur
+     * et retourne un tableau d'objets avec les infos importantes.
+     * Format attendu du nom de fichier :
+     *   id_departureTime_courier_totalDuration_totalDistance.json
+     * ex : T1_08h00_Pierre_5280_5200.json
+     */
+    async loadSavedToursSummary() {
+        try {
+            const res = await fetch('/api/tours/list', { cache: 'no-store' });
+            if (!res.ok) {
+                return { success: false, error: `Erreur HTTP ${res.status}` };
+            }
+
+            const data = await res.json();
+            if (!data.success) {
+                return { success: false, error: data.error || 'Erreur API liste tournées' };
+            }
+
+            const tours = (data.tours || [])
+                .map(item => {
+                    const parsed = this._parseTourFilename(item.filename);
+                    if (!parsed) return null;
+                    return {
+                        ...parsed,
+                        tourId: item.tourId  // ex: "T1_08h00_Pierre_5280_5200"
+                    };
+                })
+                .filter(Boolean);
+
+            return { success: true, tours };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+
+    /**
+     * Parse un nom de fichier :
+     *   id_departureTime_courier_totalDuration_totalDistance.json
+     */
+    _parseTourFilename(filename) {
+        if (!filename) return null;
+
+        const base = filename.replace(/\.json$/i, '');
+        const parts = base.split('_');
+        if (parts.length !== 5) {
+            return null;
+        }
+
+        const [id, departureTimeRaw, courierRaw, totalDurationRaw, totalDistanceRaw] = parts;
+
+        const totalDuration = Number(totalDurationRaw);
+        const totalDistance = Number(totalDistanceRaw);
+
+        return {
+            filename,
+            id,
+            departureTime: departureTimeRaw,
+            courier: courierRaw.replace(/-/g, ' '),
+            totalDuration: isNaN(totalDuration) ? 0 : totalDuration,
+            totalDistance: isNaN(totalDistance) ? 0 : totalDistance
+        };
+    }
+
+    async loadTourFromServer(tourIdOrFilename) {
+        if (!tourIdOrFilename) {
+            return { success: false, error: "Aucun identifiant de tournée fourni." };
+        }
+
+        const tourId = tourIdOrFilename.replace(/\.json$/i, '');
+
+        try {
+            const res = await fetch(`/api/tours/load/${encodeURIComponent(tourId)}`, { cache: 'no-store' });
+            if (!res.ok) {
+                return { success: false, error: `Erreur HTTP ${res.status}` };
+            }
+
+            const data = await res.json();
+            const tour = this.loadTourFromJSON(data);
+
+            if (!tour) {
+                return { success: false, error: "Impossible de reconstruire la tournée à partir du JSON." };
+            }
+
+            this.toursList.push(tour);
+            return { success: true, tour };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
 
 
     //lire un fichier XML de demandes de livraison.
