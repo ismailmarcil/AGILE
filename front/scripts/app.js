@@ -377,6 +377,8 @@ if (clearDemandsBtn) {
 
         if (confirm(`Êtes-vous sûr de vouloir effacer toutes les ${system.demandsList.length} demandes ?`)) {
             system.demandsList = [];
+            system.toursList = [];
+            
             updateDemandsUI();
             console.log("Toutes les demandes ont été effacées");
         }
@@ -497,8 +499,13 @@ async function handleLoadDemands() {
         updateDemandsUI();
 
         if (totalDemandsLoaded > 0) {
+            // Clear input files for next load
+            input.value = '';
             alert(`${totalDemandsLoaded} demandes chargées avec succès depuis ${input.files.length} fichier(s)!\nFichiers: ${fileNames.join(', ')}`);
         }
+    } catch (error) {
+        console.error('Error loading demands:', error);
+        alert('Erreur lors du chargement des demandes: ' + error.message);
     } finally {
         // Restaurer le curseur normal
         document.body.style.cursor = 'default';
