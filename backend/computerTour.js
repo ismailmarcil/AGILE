@@ -21,7 +21,15 @@ class ComputerTour {
      * @returns {Tour|null}
      */
     computeTour(pickupDeliveryPairs) {
-        return null;
+        // 1. Fill internal data structures
+        this.fillTourPointStructures(pickupDeliveryPairs);
+        // 2. Compute the TSP tour
+        const tspTour = this.computeTSPTour();
+        if (!tspTour) {
+            return null;
+        }
+        // 3. Compute the complete tour with all details
+        return this.computeCompleteTour(tspTour);
     }
 
     /**
@@ -38,8 +46,29 @@ class ComputerTour {
      * @returns {Array<TourPoint>|null}
      * @private
      */
+    // Version 0 : Give a random order (respecting the precedence constraints)
+    // Version 1 : Compute all permutations (inefficient for large sets)
+    // Version 2 : Constraints & Branch and Bound
+    // Version 3 : Heuristic approaches for selecting the order of visits,
+    // by selecting the nearest unvisited point at each step.
     computeTSPTour() {
-        return null;
+        return this.computeTSPTourV0();
+    }
+
+    /**
+     * Version 0 : Give a random order (respecting the precedence constraints)
+     * @returns {Array<TourPoint>|null}
+     * @private
+     */
+    computeTSPTourV0(){
+        const finalPath = new Array();
+        finalPath.push(this.start);
+        for (const [pickup, delivery] of this.precedence.entries()) {
+            finalPath.push(pickup);
+            finalPath.push(delivery);
+        }
+        finalPath.push(this.start);
+        return finalPath;
     }
 
     /**

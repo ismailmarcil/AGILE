@@ -568,6 +568,162 @@ class View {
     getStartTime() {
         return this.startTime;
     }
+
+    /**
+     * Display multiple tours on the map with different colors for each courier
+     * Each tour is shown with its own polyline color and numbered markers
+     * @param {Array<Tour>} tours - Array of tours to display
+     */
+    displayTours(tours) {
+        if (!tours || tours.length === 0) {
+            console.warn('No tours to display');
+            return;
+        }
+
+        // Clear the map first
+        this.clearMap();
+
+        // Define 4 high contrast colors for maximum visibility
+        const colors = [
+            '#FF0000', // Red - Bright
+            '#0066FF', // Blue - Bright
+            '#00CC00', // Green - Bright
+            '#FFB300'  // Orange - Bright
+        ];
+
+        console.log(`\n🗺️ Displaying ${tours.length} tours on map with distinct colors`);
+
+        // Display each tour with a different color
+        tours.forEach((tour, tourIndex) => {
+            const color = colors[tourIndex % colors.length];
+            console.log(`   Tour ${tourIndex + 1} (${tour.courier?.name || 'Unknown'}): ${color}`);
+            this.displayTourWithColor(tour, color, tourIndex);
+        });
+
+        console.log(`✅ All tours displayed on map\n`);
+    }
+
+    /**
+     * Display a single tour with a specific color
+     * @param {Tour} tour - Tour to display
+     * @param {string} color - Color for this tour (hex code)
+     * @param {number} tourIndex - Index of the tour for labeling
+     */
+    displayTourWithColor(tour, color = '#3498db', tourIndex = 0) {
+        if (!tour || !tour.legs) {
+            console.warn(`Tour ${tourIndex} is invalid`);
+            return;
+        }
+
+        // Draw the route as polylines for each leg
+        console.log(`   Drawing ${tour.legs.length} legs for tour ${tourIndex + 1}`);
+        
+        tour.legs.forEach((leg, legIndex) => {
+            if (leg.pathNode && leg.pathNode.length > 1) {
+                // Convert nodes to coordinates
+                const latlngs = leg.pathNode.map(node => [node.latitude, node.longitude]);
+                
+                // Draw polyline with the tour's color
+                L.polyline(latlngs, {
+                    color: color,
+                    weight: 3,
+                    opacity: 0.8,
+                    dashArray: '5, 5',
+                    className: `tour-${tourIndex}`
+                }).addTo(this.map);
+            }
+        });
+
+        // Add tour stops with markers
+        this.displayTourStopsWithColor(tour.stops, color, tourIndex);
+    }
+
+    /**
+     * Display tour stops with specific color
+     * Adds markers for each pickup, delivery, and warehouse
+     * @param {Array<TourPoint>} stops - Tour stops
+     * @param {string} color - Color for markers
+     * @param {number} tourIndex - Index of the tour
+     */
+    displayTourStopsWithColor(stops, color = '#3498db', tourIndex = 0) {
+        if (!stops || stops.length === 0) {
+            console.warn(`Tour ${tourIndex} has no stops`);
+            return;
+        }
+
+        stops.forEach((tourPoint, stopIndex) => {
+            if (!tourPoint || !tourPoint.node) {
+                return;
+            }
+
+            const node = tourPoint.node;
+            const isWarehouse = tourPoint.type === 'ENTREPOT';
+            const isPickup = tourPoint.type === 'PICKUP';
+            const isDelivery = tourPoint.type === 'DELIVERY';
+
+            // Determine marker color and emoji based on type
+            let markerColor = color;
+            let emoji = '📍';
+            let label = 'Point';
+
+            if (isWarehouse) {
+                markerColor = '#2C3E50';  // Dark gray for warehouse
+                emoji = '🏠';
+                label = 'Warehouse';
+            } else if (isPickup) {
+                // Lighter shade of tour color for pickup
+                markerColor = color;
+                emoji = '📦';
+                label = 'Pickup';
+            } else if (isDelivery) {
+                // Darker shade of tour color for delivery
+                markerColor = color;
+                emoji = '✓';
+                label = 'Delivery';
+            }
+
+            // Create custom marker with number
+            const icon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="
+                    background-color: ${markerColor}; 
+                    width: 32px; 
+                    height: 32px; 
+                    border-radius: 50%; 
+                    border: 3px solid white;
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center;
+                    font-weight: bold;
+                    color: white;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                    font-size: 14px;
+                ">
+                    ${stopIndex + 1}
+                </div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16],
+                popupAnchor: [0, -16]
+            });
+
+            // Add marker to map
+            const marker = L.marker([node.latitude, node.longitude], { icon })
+                .bindPopup(`
+                    <div style="font-family: system-ui; font-size: 12px;">
+                        <strong>${emoji} ${label}</strong><br>
+                        ID: ${node.id}<br>
+                        Tour: ${tourIndex + 1}<br>
+                        Stop: ${stopIndex + 1}
+                    </div>
+                `)
+                .addTo(this.map);
+
+            if (!this.tourMarkers) {
+                this.tourMarkers = [];
+            }
+            this.tourMarkers.push(marker);
+        });
+    }
 }
 
 // Export for Node.js

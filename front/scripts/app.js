@@ -64,8 +64,12 @@ async function handleLoadTour() {
         const tour = result.tour;
         console.log("Tournée chargée:", tour);
 
-        // Store the displayed tour globally
-        window.currentDisplayedTour = tour;
+        // Gérer le cas où le fichier contient une liste de tournées
+        const tours = Array.isArray(tour) ? tour : [tour];
+
+        // Store all tours globally
+        window.allCalculatedTours = tours;
+        window.currentDisplayedTour = tours[0];
 
         // Show save button
         const saveTourBtn = document.getElementById('saveTourBtn');
@@ -73,18 +77,23 @@ async function handleLoadTour() {
             saveTourBtn.style.display = 'inline-flex';
         }
 
-        // Display the tour on the map
+        // Populate courier selector
+        populateCourierTourSelector(tours);
+
+        // Display the first tour on the map
         if (view.map) {
-            view.displayTour(tour);
+            view.displayTour(tours[0]);
         }
 
         // Update timeline with tour details
-        updateTimelineFromTour(tour);
+        updateTimelineFromTour(tours[0]);
 
-        // Update courier info
-        updateCourierInfo(tour);
-
-        alert(`Tournée ${tour.id} chargée avec succès!\nCoursier: ${tour.courier ? tour.courier.name : 'Non assigné'}\nDépart: ${tour.departureTime}\nArrêts: ${tour.stops.length}\nDistance: ${(tour.totalDistance / 1000).toFixed(2)} km\nDurée: ${Math.round(tour.totalDuration / 60)} min`);
+        let alertMessage = `✅ ${tours.length} tournée(s) chargée(s) avec succès!\n\n`;
+        tours.forEach((t, idx) => {
+            const courierName = t.courier ? t.courier.name : `Coursier ${idx + 1}`;
+            alertMessage += `${courierName}: ${t.stops.length} arrêts, ${(t.totalDistance / 1000).toFixed(2)} km, ${Math.round(t.totalDuration / 60)} min\n`;
+        });
+        alert(alertMessage);
     } finally {
         // Restaurer le curseur normal
         document.body.style.cursor = 'default';
@@ -279,10 +288,31 @@ function updateTimelineFromTour(tour) {
         if (stop.type === 'ENTREPOT') {
             descDiv.textContent = index === 0 ? 'Départ' : 'Arrivée';
         } else {
-            // Try to get a short address description
-            const lat = stop.node?.latitude?.toFixed(3) || '?';
-            const lon = stop.node?.longitude?.toFixed(3) || '?';
-            descDiv.textContent = `${lat}, ${lon}`;
+            // Afficher "Chargement..." pendant la récupération de l'adresse
+            const lat = stop.node?.latitude;
+            const lon = stop.node?.longitude;
+
+            if (lat && lon) {
+                descDiv.textContent = 'Chargement...';
+
+                // Récupérer l'adresse de manière asynchrone
+                if (window.geocodingService) {
+                    window.geocodingService.getShortAddress(lat, lon)
+                        .then(address => {
+                            descDiv.textContent = address;
+                            descDiv.title = address; // Tooltip avec l'adresse complète
+                        })
+                        .catch(() => {
+                            // En cas d'erreur, afficher les coordonnées
+                            descDiv.textContent = `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+                        });
+                } else {
+                    // Fallback si le service n'est pas disponible
+                    descDiv.textContent = `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+                }
+            } else {
+                descDiv.textContent = 'Position inconnue';
+            }
         }
         stepDiv.appendChild(descDiv);
 
@@ -427,13 +457,18 @@ if (addDemandForm) {
 
         // Appel de la fonction back déjà existante dans System
         // addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration)
-        const demand = system.addDemand(
+        const result = system.addDemand(
             pickupAddress,
             deliveryAddress,
             pickupDuration,
             deliveryDuration
         );
+        if (!result.success) {
+            alert(result.error);
+            return;
+        }
 
+        const demand = result.demand;
         // Assign a default name for manually added demands
         if (demand) {
             demand.clientName = `Demande manuelle #${demand.id}`;
@@ -544,7 +579,7 @@ function updateDemandsUI() {
     });
 
     // Update map display if plan is loaded
-    if (system.plan && view.map) {
+    if (system.plan && view.map && system.toursList == []) {
         // Redisplay plan (light segments and nodes)
         const planJSON = system.plan.toJSON();
         view.clearMap();
@@ -621,8 +656,10 @@ function deleteDemand(demandId) {
 
 // Sauvegarde de la tournée
 async function saveTour() {
-    // Vérifie qu'il y a une tournée actuellement affichée
-    if (!window.currentDisplayedTour) {
+    // Vérifie qu'il y a des tournées à sauvegarder
+    const toursToSave = window.allCalculatedTours || (window.currentDisplayedTour ? [window.currentDisplayedTour] : null);
+
+    if (!toursToSave || toursToSave.length === 0) {
         alert('Aucune tournée à sauvegarder. Calculez ou chargez une tournée d\'abord.');
         return;
     }
@@ -633,15 +670,29 @@ async function saveTour() {
     saveTourBtn.disabled = true;
 
     try {
-        const result = await system.saveTourToServer(window.currentDisplayedTour);
-
-        if (result.success) {
-            alert(result.message);
-            console.log('Tournée sauvegardée:', result.tourId);
-            // Optionnel: mark tour as saved (can be used to disable future saves/distinguish edits)
-            window.currentDisplayedTour._savedTourId = result.tourId;
+        // Si plusieurs tournées, sauvegarder toutes
+        if (toursToSave.length > 1) {
+            let savedCount = 0;
+            for (const tour of toursToSave) {
+                const result = await system.saveTourToServer(tour);
+                if (result.success) {
+                    savedCount++;
+                    tour._savedTourId = result.tourId;
+                }
+            }
+            alert(`✅ ${savedCount} tournée(s) sauvegardée(s) avec succès!`);
+            console.log(`${savedCount} tournées sauvegardées`);
         } else {
-            alert('Erreur lors de la sauvegarde: ' + result.error);
+            // Une seule tournée
+            const result = await system.saveTourToServer(toursToSave[0]);
+
+            if (result.success) {
+                alert(result.message);
+                console.log('Tournée sauvegardée:', result.tourId);
+                toursToSave[0]._savedTourId = result.tourId;
+            } else {
+                alert('Erreur lors de la sauvegarde: ' + result.error);
+            }
         }
     } catch (error) {
         alert('Erreur: ' + error.message);
@@ -777,17 +828,26 @@ async function handleCalculateTour() {
     setTimeout(() => {
         try {
             // Appeler la fonction de calcul de tournée du système
-            const tour = system.calculateTour(system.demandsList);
+            const result = system.calculateTour(system.demandsList);
 
-            if (!tour) {
+            if (!result) {
                 alert('❌ Erreur lors du calcul de la tournée. Vérifiez que toutes les demandes sont valides.');
                 return;
             }
 
-            console.log('Tournée calculée:', tour);
+            // Gérer le cas où calculateTour retourne une liste de tournées
+            const tours = Array.isArray(result) ? result : [result];
 
-            // Store the displayed tour globally
-            window.currentDisplayedTour = tour;
+            if (tours.length === 0) {
+                alert('❌ Aucune tournée n\'a pu être calculée.');
+                return;
+            }
+
+            console.log('Tournées calculées:', tours);
+
+            // Store all tours globally
+            window.allCalculatedTours = tours;
+            window.currentDisplayedTour = tours[0]; // Afficher la première par défaut
 
             // Show save button
             const saveTourBtn = document.getElementById('saveTourBtn');
@@ -795,21 +855,46 @@ async function handleCalculateTour() {
                 saveTourBtn.style.display = 'inline-flex';
             }
 
-            // Display the tour on the map
+            // Populate courier selector
+            populateCourierTourSelector(tours);
+
+            // Pré-charger toutes les adresses pour améliorer les performances
+            if (window.geocodingService) {
+                const allCoordinates = [];
+                tours.forEach(tour => {
+                    tour.stops.forEach(stop => {
+                        if (stop.node && stop.node.latitude && stop.node.longitude) {
+                            allCoordinates.push({
+                                latitude: stop.node.latitude,
+                                longitude: stop.node.longitude
+                            });
+                        }
+                    });
+                });
+
+                // Pré-chargement asynchrone (ne bloque pas l'affichage)
+                window.geocodingService.preloadAddresses(allCoordinates)
+                    .then(() => console.log('✅ Adresses préchargées'))
+                    .catch(err => console.warn('⚠️ Erreur préchargement adresses:', err));
+            }
+
+            // Display the first tour on the map
             if (view.map) {
-                view.displayTour(tour);
+                view.displayTour(tours[0]);
             }
 
             // Update timeline with tour details
-            updateTimelineFromTour(tour);
-
-            // Update courier info
-            updateCourierInfo(tour);
+            updateTimelineFromTour(tours[0]);
 
             // Afficher un message de succès
-            const distanceKm = (tour.totalDistance / 1000).toFixed(2);
-            const durationMin = Math.round(tour.totalDuration / 60);
-            alert(`✅ Tournée calculée avec succès!\n\nCoursier: ${tour.courier ? tour.courier.name : 'Non assigné'}\nDépart: ${tour.departureTime}\nArrêts: ${tour.stops.length}\nDistance: ${distanceKm} km\nDurée: ${durationMin} min`);
+            let successMessage = `✅ ${tours.length} tournée(s) calculée(s) avec succès!\n\n`;
+            tours.forEach((tour, index) => {
+                const distanceKm = (tour.totalDistance / 1000).toFixed(2);
+                const durationMin = Math.round(tour.totalDuration / 60);
+                const courierName = tour.courier ? tour.courier.name : `Coursier ${index + 1}`;
+                successMessage += `${courierName}: ${tour.stops.length} arrêts, ${distanceKm} km, ${durationMin} min\n`;
+            });
+            alert(successMessage);
 
         } catch (error) {
             console.error('Erreur lors du calcul de la tournée:', error);
@@ -825,19 +910,56 @@ async function handleCalculateTour() {
     }, 50); // 50ms de délai pour permettre la mise à jour de l'interface
 }
 
-// Update courier info display
-function updateCourierInfo(tour) {
-    const courierInfo = document.getElementById('courierInfo');
-    const courierName = document.getElementById('courierName');
+// Populate courier tour selector with all calculated tours
+function populateCourierTourSelector(tours) {
+    const container = document.getElementById('courierSelectContainer');
+    const select = document.getElementById('courierTourSelect');
 
-    if (!courierInfo || !courierName) return;
+    if (!container || !select) return;
 
-    if (tour && tour.courier) {
-        courierName.textContent = tour.courier.name || tour.courier.id || 'Non assigné';
-        courierInfo.style.display = 'flex';
-    } else {
-        courierInfo.style.display = 'none';
+    // Clear existing options
+    select.innerHTML = '<option value="">Sélectionner une tournée...</option>';
+
+    if (!tours || tours.length === 0) {
+        container.style.display = 'none';
+        return;
     }
+
+    // Add option for each tour
+    tours.forEach((tour, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        const courierName = tour.courier ? tour.courier.name : `Coursier ${index + 1}`;
+        const distanceKm = (tour.totalDistance / 1000).toFixed(2);
+        const durationMin = Math.round(tour.totalDuration / 60);
+        option.textContent = `${courierName} - ${tour.stops.length} arrêts (${distanceKm} km, ${durationMin} min)`;
+        select.appendChild(option);
+    });
+
+    // Select first tour by default
+    select.value = '0';
+
+    // Show the container
+    container.style.display = 'block';
+
+    // Add change event listener
+    select.onchange = function() {
+        const selectedIndex = parseInt(this.value);
+        if (!isNaN(selectedIndex) && window.allCalculatedTours && window.allCalculatedTours[selectedIndex]) {
+            const selectedTour = window.allCalculatedTours[selectedIndex];
+            window.currentDisplayedTour = selectedTour;
+
+            // Display the selected tour
+            if (view.map) {
+                view.displayTour(selectedTour);
+            }
+
+            // Update timeline
+            updateTimelineFromTour(selectedTour);
+
+            console.log('Tournée sélectionnée:', selectedTour);
+        }
+    };
 }
 
 // Helper function to get the number of couriers
