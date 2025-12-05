@@ -364,14 +364,14 @@
             }
 
             try {
-                // Assign selected couriers to system
-                system.couriers = selectedCouriers.map(idx => generatedCouriers[idx]);
-                system.nbCouriers = system.couriers.length;
+                // Get selected couriers with proper structure (id and name)
+                const selectedCourierObjects = selectedCouriers.map(idx => generatedCouriers[idx]);
 
-                console.log(`Computing tours with ${system.couriers.length} couriers and ${system.demandsList.length} demands`);
+                console.log(`Computing tours with ${selectedCourierObjects.length} couriers and ${system.demandsList.length} demands`);
+                console.log('Couriers:', selectedCourierObjects.map(c => ({ id: c.id, name: c.name })));
 
-                // Compute tours using K-means distribution
-                const tours = system.computeTours(system.demandsList);
+                // Compute tours using K-means distribution, passing couriers directly
+                const tours = system.computeTours(selectedCourierObjects);
 
                 if (!tours || tours.length === 0) {
                     alert('❌ Aucun tour généré');

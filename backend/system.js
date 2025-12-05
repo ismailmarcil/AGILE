@@ -666,12 +666,12 @@ class System {
      * list couriers
      */
     computeTours(couriers) {
-        if (!this.plan || !this.plan.nodes || demands.length === 0) {
+        if (!this.plan || !this.plan.nodes || this.demandsList.length === 0) {
             console.error("Cannot compute tours: plan or demands are missing");
             return [];
         }
 
-        if (!this.couriers || this.couriers.length === 0) {
+        if (!couriers || couriers.length === 0) {
             console.error("Cannot compute tours: no couriers available");
             return [];
         }
@@ -686,7 +686,7 @@ class System {
         // Step 2: Build optimal tour for each courier's demand group
         const tours = [];
         for (let i = 0; i < Math.min(demandGroups.length, nomCouriers); i++) {
-            const courier = this.couriers[i];
+            const courier = couriers[i];
             const courierDemands = demandGroups[i];
 
             if (courierDemands.length === 0) {
@@ -1126,9 +1126,8 @@ class System {
 
         // Calculate total distance and duration using Tour's methods
         tour.calculateTotalDistance();
-        tour.calculateTotalDuration();
 
-        tour.totalDistance = totalDistance;
+        const totalDistance = tour.totalDistance;
 
         // Validation: Verify all demands were completed
         console.log(`\n✅ Tour Summary for ${courier.name}:`);
