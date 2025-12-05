@@ -44,10 +44,11 @@ class ComputerTour {
 
     /**
      * Computes the complete tour with all details
+     * @param {Array<TourPoint>} tourPointsArray - Ordered array of tour points
      * @returns {Tour|null}
      * @private
      */
-    computeCompleteTour() {
+    computeCompleteTour(tourPointsArray) {
         return null;
     }
 }
