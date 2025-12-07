@@ -295,6 +295,97 @@ class System {
         });
     }
 
+     /**
+     * Charge la liste des tournées sauvegardées depuis le serveur
+     * et retourne un tableau d'objets avec les infos importantes.
+     * Format attendu du nom de fichier :
+     *   id_departureTime_courier_totalDuration_totalDistance.json
+     * ex : T1_08h00_Pierre_5280_5200.json
+     */
+    async loadSavedToursSummary() {
+        try {
+            const res = await fetch('/api/tours/list', { cache: 'no-store' });
+            if (!res.ok) {
+                return { success: false, error: `Erreur HTTP ${res.status}` };
+            }
+
+            const data = await res.json();
+            if (!data.success) {
+                return { success: false, error: data.error || 'Erreur API liste tournées' };
+            }
+
+            const tours = (data.tours || [])
+                .map(item => {
+                    const parsed = this._parseTourFilename(item.filename);
+                    if (!parsed) return null;
+                    return {
+                        ...parsed,
+                        tourId: item.tourId  // ex: "T1_08h00_Pierre_5280_5200"
+                    };
+                })
+                .filter(Boolean);
+
+            return { success: true, tours };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+
+    /**
+     * Parse un nom de fichier :
+     *   id_departureTime_courier_totalDuration_totalDistance.json
+     */
+    _parseTourFilename(filename) {
+        if (!filename) return null;
+
+        const base = filename.replace(/\.json$/i, '');
+        const parts = base.split('_');
+        if (parts.length !== 5) {
+            return null;
+        }
+
+        const [id, departureTimeRaw, courierRaw, totalDurationRaw, totalDistanceRaw] = parts;
+
+        const totalDuration = Number(totalDurationRaw);
+        const totalDistance = Number(totalDistanceRaw);
+
+        return {
+            filename,
+            id,
+            departureTime: departureTimeRaw,
+            courier: courierRaw.replace(/-/g, ' '),
+            totalDuration: isNaN(totalDuration) ? 0 : totalDuration,
+            totalDistance: isNaN(totalDistance) ? 0 : totalDistance
+        };
+    }
+
+    async loadTourFromServer(tourIdOrFilename) {
+        if (!tourIdOrFilename) {
+            return { success: false, error: "Aucun identifiant de tournée fourni." };
+        }
+
+        const tourId = tourIdOrFilename.replace(/\.json$/i, '');
+
+        try {
+            const res = await fetch(`/api/tours/load/${encodeURIComponent(tourId)}`, { cache: 'no-store' });
+            if (!res.ok) {
+                return { success: false, error: `Erreur HTTP ${res.status}` };
+            }
+
+            const data = await res.json();
+            const tour = this.loadTourFromJSON(data);
+
+            if (!tour) {
+                return { success: false, error: "Impossible de reconstruire la tournée à partir du JSON." };
+            }
+
+            this.toursList.push(tour);
+            return { success: true, tour };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
 
 
     //lire un fichier XML de demandes de livraison.
@@ -378,34 +469,65 @@ class System {
             // Ne pas vider la liste pour conserver les demandes ajoutées manuellement
             // this.demandsList = [];
 
-            // Parser chaque livraison
             let demandsLoaded = 0;
+            let invalidCount = 0;
+
             for (let livraison of livraisons) {
                 const pickupAddress = livraison.getAttribute("adresseEnlevement");
                 const deliveryAddress = livraison.getAttribute("adresseLivraison");
                 const pickupDuration = parseInt(livraison.getAttribute("dureeEnlevement"));
                 const deliveryDuration = parseInt(livraison.getAttribute("dureeLivraison"));
 
-                if (pickupAddress && deliveryAddress && !isNaN(pickupDuration) && !isNaN(deliveryDuration)) {
-                    const demande = new Demand(
-                        pickupAddress,
-                        deliveryAddress,
-                        pickupDuration,
-                        deliveryDuration,
-                        this.nextDemandId++
-                    );
-                    this.demandsList.push(demande);
-                    demandsLoaded++;
+                // Vérification basique des champs
+                if (!pickupAddress || !deliveryAddress || isNaN(pickupDuration) || isNaN(deliveryDuration)) {
+                    invalidCount++;
+                    continue;
                 }
+
+                // Si un plan est chargé, vérifier que les nœuds existent
+                if (this.plan && typeof this.plan.getNodeById === "function") {
+                    const pickupNode = this.plan.getNodeById(pickupAddress);
+                    const deliveryNode = this.plan.getNodeById(deliveryAddress);
+
+                    if (!pickupNode || !deliveryNode) {
+                        console.warn(
+                            "Demande invalide (noeud introuvable) :",
+                            { pickupAddress, deliveryAddress }
+                        );
+                        invalidCount++;
+                        continue;
+                    }
+                }
+
+                // Demande valide → on l'ajoute
+                const demande = new Demand(
+                    pickupAddress,
+                    deliveryAddress,
+                    pickupDuration,
+                    deliveryDuration,
+                    this.nextDemandId++
+                );
+                this.demandsList.push(demande);
+                demandsLoaded++;
             }
 
-            console.log(`${demandsLoaded} demandes chargées avec succès!`);
-            return {
-                success: true,
+            console.log(`${demandsLoaded} demandes valides chargées. ${invalidCount} demandes invalides ignorées.`);
+
+            const result = {
+                success: demandsLoaded > 0,
                 demands: this.demandsList,
                 warehouse: { address: warehouseAddress, departureTime: departureTime },
-                count: demandsLoaded
+                count: demandsLoaded,
+                invalidCount: invalidCount
             };
+
+            if (invalidCount > 0 && demandsLoaded > 0) {
+                result.warning = `${invalidCount} demandes ne sont pas valides et ont été ignorées.`;
+            } else if (demandsLoaded === 0) {
+                result.error = "Toutes les demandes du fichier sont invalides.";
+            }
+
+            return result;
         }
 
         // Cas 2: Node.js - filePath (string)
@@ -418,42 +540,51 @@ class System {
             const fs = require("fs");
             const xml2js = require("xml2js");
 
-            //contenu du fichier en string
             xmlContent = await fs.promises.readFile(filePathOrInput, "utf-8");
 
-            //Parser en objet JSon
             const json = await xml2js.parseStringPromise(xmlContent);
 
-            //Récupérer la racine demandeDeLivraisons du json (ce code ne marche que pour les VF des XML)
             const root = json.demandeDeLivraisons;
             if (!root || !root.livraison) {
                 console.log("Aucune balise <livraison> trouvée dans le XML.");
                 return { success: false, error: "Aucune balise <livraison> trouvée dans le XML." };
             }
-            //liste des livraisons du Json
-            // livraisons c'est une liste dont chaque élément est une <livraison> du XML
-            //chaque élément est un objet ayant un champ $(contient les attributs de la balise).
 
             const livraisons = root.livraison;
             console.log("Nombre de livraisons :", livraisons.length);
 
-            // Ne pas vider la liste pour conserver les demandes ajoutées manuellement
-            // this.demandsList = [];
+            let demandsLoaded = 0;
+            let invalidCount = 0;
 
-            //On parcours chaque livraison
             for (const livraisonNode of livraisons) {
-                const attrs = livraisonNode.$ || {};  //pour chaque livraisonNode on recup soit le champ $ (avec les attributs) soit un objet vide
-                //récupérer les attributs
+                const attrs = livraisonNode.$ || {};
                 const pickupAddress = attrs.adresseEnlevement;
                 const deliveryAddress = attrs.adresseLivraison;
-                const pickupDurationStr = attrs.dureeEnlevement;
-                const deliveryDurationStr = attrs.dureeLivraison;
-                //convertir les durées en nombres
-                const pickupDuration = Number(pickupDurationStr);
-                const deliveryDuration = Number(deliveryDurationStr);
+                const pickupDuration = Number(attrs.dureeEnlevement);
+                const deliveryDuration = Number(attrs.dureeLivraison);
 
-                //Créer un objet Demande et l'ajouter à la liste des demandes.
-                const demande = new Demand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration, this.nextDemandId++);
+                if (!pickupAddress || !deliveryAddress || isNaN(pickupDuration) || isNaN(deliveryDuration)) {
+                    invalidCount++;
+                    continue;
+                }
+
+                // Validation optionnelle via plan si disponible dans les tests Node
+                if (this.plan && typeof this.plan.getNodeById === "function") {
+                    const pickupNode = this.plan.getNodeById(pickupAddress);
+                    const deliveryNode = this.plan.getNodeById(deliveryAddress);
+                    if (!pickupNode || !deliveryNode) {
+                        invalidCount++;
+                        continue;
+                    }
+                }
+
+                const demande = new Demand(
+                    pickupAddress,
+                    deliveryAddress,
+                    pickupDuration,
+                    deliveryDuration,
+                    this.nextDemandId++
+                );
                 this.demandsList.push(demande);
             };
 
@@ -464,6 +595,7 @@ class System {
             return { success: false, error: error.message };
         }
     }
+
 
     addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
         //Vérifie si un plan est chargé
@@ -478,7 +610,7 @@ class System {
         }
         const demande = new Demand(pickupNode, deliveryNode, pickupDuration, deliveryDuration, this.nextDemandId++);
         this.demandsList.push(demande);
-        return { success: true, demand: demande };
+        return demande;
     }
 
     removeDemandById(id) {
@@ -488,6 +620,16 @@ class System {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Calculate travel time from distance
+     * @param {number} distance - Distance in meters
+     * @returns {number} Travel time in seconds (assuming 15 km/h average speed)
+     */
+    calculateTravelTime(distance) {
+        const speedMPerS = 15000 / 3600; // 15 km/h = 4.17 m/s
+        return Math.round(distance / speedMPerS);
     }
 
     calculateTour(demands) {
@@ -513,7 +655,8 @@ class System {
 
         // First leg: warehouse to first pickup
         let { path, distance, segments } = this.plan.findShortestPath(this.plan.warehouse.id, demands[0].pickupAddress);
-        let leg = new Leg(this.plan.warehouse, path[path.length - 1], path, segments, distance, distance);
+        let travelTime = this.calculateTravelTime(distance);
+        let leg = new Leg(this.plan.warehouse, path[path.length - 1], path, segments, distance, travelTime);
         tour.addLeg(leg);
         tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", demands[0]));
 
@@ -521,28 +664,36 @@ class System {
             let demand = demands[i];
             let nextDemand = demands[i + 1];
             let { path, distance, segments } = this.plan.findShortestPath(demand.pickupAddress, demand.deliveryAddress);
-            let leg = new Leg(path[0], path[path.length - 1], path, segments, distance, distance);
+            let travelTime = this.calculateTravelTime(distance);
+            let leg = new Leg(path[0], path[path.length - 1], path, segments, distance, travelTime);
             tour.addLeg(leg);
             tour.addStop(new TourPoint(path[0], demand.pickupDuration, "PICKUP", demand));
             tour.addStop(new TourPoint(path[path.length - 1], demand.deliveryDuration, "DELIVERY", demand));
 
             let { path: nextPath, distance: nextDistance, segments: nextSegments } = this.plan.findShortestPath(demand.deliveryAddress, nextDemand.pickupAddress);
-            let nextLeg = new Leg(nextPath[0], nextPath[nextPath.length - 1], nextPath, nextSegments, nextDistance, nextDistance);
+            let nextTravelTime = this.calculateTravelTime(nextDistance);
+            let nextLeg = new Leg(nextPath[0], nextPath[nextPath.length - 1], nextPath, nextSegments, nextDistance, nextTravelTime);
             tour.addLeg(nextLeg);
         }
 
         // Last demand pickup and delivery
         let lastDemand = demands[demands.length - 1];
         let { path: lastPath, distance: lastDistance, segments: lastSegments } = this.plan.findShortestPath(lastDemand.pickupAddress, lastDemand.deliveryAddress);
-        let lastLeg = new Leg(lastPath[0], lastPath[lastPath.length - 1], lastPath, lastSegments, lastDistance, lastDistance);
+        let lastTravelTime = this.calculateTravelTime(lastDistance);
+        let lastLeg = new Leg(lastPath[0], lastPath[lastPath.length - 1], lastPath, lastSegments, lastDistance, lastTravelTime);
         tour.addLeg(lastLeg);
         tour.addStop(new TourPoint(lastPath[0], lastDemand.pickupDuration, "PICKUP", lastDemand));
         tour.addStop(new TourPoint(lastPath[lastPath.length - 1], lastDemand.deliveryDuration, "DELIVERY", lastDemand));
         // Retour à l'entrepôt
         let { path: returnPath, distance: returnDistance, segments: returnSegments } = this.plan.findShortestPath(lastDemand.deliveryAddress, this.plan.warehouse.id);
-        let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnSegments, returnDistance, returnDistance);
+        let returnTravelTime = this.calculateTravelTime(returnDistance);
+        let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnSegments, returnDistance, returnTravelTime);
         tour.addLeg(returnLeg);
         tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", null));
+
+        // Calculate total distance and duration
+        tour.calculateTotalDistance();
+        tour.calculateTotalDuration();
 
         this.toursList.push(tour);
         return tour;
@@ -582,10 +733,10 @@ class System {
 
         // Use K-means clustering to group demands by geographic proximity
         const clusters = this.kmeansClustering(this.demandsList, numCouriers);
-        
+
         // Extract demand groups from clusters
         const demandGroups = clusters.map(cluster => cluster.demands);
-        
+
         console.log(`Distribution complete: ${demandGroups.length} groups created`);
         demandGroups.forEach((group, idx) => {
             console.log(`  Courier ${idx + 1}: ${group.length} demands`);
@@ -603,28 +754,30 @@ class System {
      * - Minimizes total arrival time at warehouse
      * @param {Array<Demand>} demands - All demands to fulfill
      * @returns {Array<Tour>} List of computed tours
+     * list couriers
      */
-    computeTours(demands) {
-        if (!this.plan || !this.plan.nodes || demands.length === 0) {
+    computeTours(couriers) {
+        if (!this.plan || !this.plan.nodes || this.demandsList.length === 0) {
             console.error("Cannot compute tours: plan or demands are missing");
             return [];
         }
 
-        if (!this.couriers || this.couriers.length === 0) {
+        if (!couriers || couriers.length === 0) {
             console.error("Cannot compute tours: no couriers available");
             return [];
         }
 
-
+        const nomCouriers = couriers.length;
+        
         const distanceMatrix = this.distanceMatrix;
 
         // Step 1: Distribute demands among couriers using K-means
-        const demandGroups = this.distributeDemands(this.nbCouriers);
+        const demandGroups = this.distributeDemands(nomCouriers);
 
         // Step 2: Build optimal tour for each courier's demand group
         const tours = [];
-        for (let i = 0; i < Math.min(demandGroups.length, this.nbCouriers); i++) {
-            const courier = this.couriers[i];
+        for (let i = 0; i < Math.min(demandGroups.length, nomCouriers); i++) {
+            const courier = couriers[i];
             const courierDemands = demandGroups[i];
 
             if (courierDemands.length === 0) {
@@ -803,7 +956,7 @@ class System {
         // Filter empty clusters
         clusters = clusters.filter(c => c.demands.length > 0);
         console.log(`K-means complete: ${clusters.length} non-empty clusters`);
-        
+
         // Validation: Verify each cluster has complete demands
         for (let i = 0; i < clusters.length; i++) {
             let pickupCount = 0, deliveryCount = 0;
@@ -919,12 +1072,12 @@ class System {
      * Ensures pickup is visited before corresponding delivery
      * Uses real graph distances via Dijkstra algorithm
      * Creates Leg objects for each segment of the path
-     * 
+     *
      * CONSTRAINTS ENFORCED:
      * - Pickup ALWAYS visited before corresponding delivery
      * - Each demand kept atomically (pickup + delivery together)
      * - Tour starts and ends at warehouse
-     * 
+     *
      * @param {Courier} courier - The courier
      * @param {Array<Demand>} demands - Demands to fulfill (must be complete pickup+delivery pairs)
      * @param {Map} distanceMatrix - Pre-computed distance matrix from loadPlan
@@ -1006,7 +1159,8 @@ class System {
             if (pathNodes.length > 0) {
                 const originNode = pathNodes[0];
                 const destNode = pathNodes[pathNodes.length - 1];
-                const leg = new Leg(originNode, destNode, pathNodes, bestDistance, bestDistance);
+                const travelTime = this.calculateTravelTime(bestDistance);
+                const leg = new Leg(originNode, destNode, pathNodes, [], bestDistance, travelTime);
                 tour.addLeg(leg);
             }
 
@@ -1036,7 +1190,8 @@ class System {
         if (returnPath.path.length > 0) {
             const returnPathNodes = returnPath.path.map(nodeId => this.plan.nodes.get(nodeId)).filter(n => n !== undefined);
             if (returnPathNodes.length > 0) {
-                const returnLeg = new Leg(returnPathNodes[0], warehouse, returnPathNodes, returnPath.distance, returnPath.distance);
+                const returnTravelTime = this.calculateTravelTime(returnPath.distance);
+                const returnLeg = new Leg(returnPathNodes[0], warehouse, returnPathNodes, [], returnPath.distance, returnTravelTime);
                 tour.addLeg(returnLeg);
             }
 
@@ -1060,16 +1215,10 @@ class System {
             });
         }
 
-        // Calculate tour metrics by summing edge distances
-        let totalDistance = 0;
-        for (let i = 0; i < sequence.length - 1; i++) {
-            const p1 = sequence[i];
-            const p2 = sequence[i + 1];
-            const dist = this.getDistance(distanceMatrix, p1.id, p2.id) || 0;
-            totalDistance += dist;
-        }
+        // Calculate total distance and duration using Tour's methods
+        tour.calculateTotalDistance();
 
-        tour.totalDistance = totalDistance;
+        const totalDistance = tour.totalDistance;
 
         // Validation: Verify all demands were completed
         console.log(`\n✅ Tour Summary for ${courier.name}:`);
@@ -1078,7 +1227,7 @@ class System {
         console.log(`   Deliveries completed: ${deliveriesVisited.size}/${demands.length}`);
         console.log(`   Total distance: ${totalDistance.toFixed(2)}`);
         console.log(`   Route: Warehouse → [${pickupsVisited.size} pickups + ${deliveriesVisited.size} deliveries] → Warehouse`);
-        
+
         // Warn if not all demands completed
         if (pickupsVisited.size !== demands.length || deliveriesVisited.size !== demands.length) {
             console.warn(`⚠️  WARNING: Not all demands completed!`);
@@ -1087,6 +1236,29 @@ class System {
         }
 
         return tour;
+    }
+
+    /**
+     * Get K-means clusters for the current demands
+     * @param {number} k - Number of clusters (couriers)
+     * @returns {Array} Array of clusters with demands and centroids
+     */
+    getKMeansClusters(k) {
+        if (!this.demandsList || this.demandsList.length === 0) {
+            console.warn('No demands loaded');
+            return [];
+        }
+
+        if (k < 1 || k > this.demandsList.length) {
+            console.warn(`Invalid k: ${k}. Must be between 1 and ${this.demandsList.length}`);
+            return [];
+        }
+
+        console.log(`\n📊 Computing K-means clusters for ${this.demandsList.length} demands with ${k} couriers`);
+        const clusters = this.kmeansClustering(this.demandsList, k);
+        console.log(`✅ K-means clustering complete: ${clusters.length} clusters\n`);
+        
+        return clusters;
     }
 
     /**
