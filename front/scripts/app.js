@@ -1387,7 +1387,7 @@ function changeCourierCount(delta) {
 }
 
 // Handle tour calculation
-async function handleCalculateTour() {
+async function handleComputeTour() {
     // Vérifier que le plan est chargé
     if (!system.plan) {
         alert('⚠️ Veuillez d\'abord charger un plan XML.');
@@ -1414,36 +1414,61 @@ async function handleCalculateTour() {
     // avant de lancer le calcul synchrone qui bloque l'UI
     setTimeout(() => {
         try {
-            // Ensure there's at least one courier in system (some flows add couriers when loading XML)
-            if (!system.listCouriers || system.listCouriers.length === 0) {
+            // Récupérer le nombre de coursiers demandé
+            const courierCountInput = document.getElementById('courierCountInput');
+            const requestedCourierCount = courierCountInput ? parseInt(courierCountInput.value) || 1 : 1;
+
+            console.log(`Calcul de tournées pour ${requestedCourierCount} coursier(s)`);
+
+            // S'assurer qu'on a suffisamment de coursiers dans la liste
+            if (!system.listCouriers) {
+                system.listCouriers = [];
+            }
+
+            // Créer ou compléter la liste de coursiers jusqu'au nombre demandé
+            while (system.listCouriers.length < requestedCourierCount) {
+                const courierIndex = system.listCouriers.length + 1;
                 try {
-                    // Respect system's Courier class signature
-                    const defaultCourier = new Courier(1, 'Default');
-                    system.listCouriers = [defaultCourier];
-                    console.log('Ajout d\'un coursier par défaut pour le calcul:', defaultCourier);
+                    const courier = new Courier(courierIndex, `Coursier ${courierIndex}`);
+                    system.listCouriers.push(courier);
+                    console.log(`Ajout du coursier ${courierIndex} pour le calcul`);
                 } catch (e) {
                     // Fallback plain object
-                    system.listCouriers = [{ id: 1, name: 'Default' }];
-                    console.warn('Impossible d\'instancier Courier, fallback au plain object', e);
+                    system.listCouriers.push({ id: courierIndex, name: `Coursier ${courierIndex}` });
+                    console.warn(`Impossible d\'instancier Courier ${courierIndex}, fallback au plain object`, e);
                 }
             }
 
-            // Vérifier que l'entrepôt est défini (sinon system.calculateTour retournera null)
+            // Limiter la liste au nombre demandé
+            const couriersToUse = system.listCouriers.slice(0, requestedCourierCount);
+
+            // Vérifier que l'entrepôt est défini
             if (!system.plan.warehouse) {
                 alert('⚠️ Aucun entrepôt défini dans le plan. Chargez un fichier de demandes (XML) qui contient la balise <entrepot> ou définissez l\'entrepôt dans le plan.');
                 return;
             }
 
-            // Appeler la fonction de calcul de tournée du système
-            const result = system.calculateTour(system.demandsList);
+            // Appeler computeTours avec la liste de coursiers
+            const result = system.computeTours(couriersToUse);
 
             if (!result) {
-                alert('❌ Erreur lors du calcul de la tournée. Vérifiez que toutes les demandes sont valides.');
+                alert('❌ Erreur lors du calcul des tournées. Vérifiez que toutes les demandes sont valides.');
                 return;
             }
 
-            // Gérer le cas où calculateTour retourne une liste de tournées
-            const tours = Array.isArray(result) ? result : [result];
+            // Gérer le code de retour
+            if (result.code === 2) {
+                alert('⚠️ Nombre de coursiers insuffisant pour traiter toutes les demandes.');
+                return;
+            }
+
+            if (result.code === 1) {
+                alert('❌ Erreur lors du calcul des tournées.');
+                return;
+            }
+
+            // Succès (code === 0)
+            const tours = result.tours || [];
 
             if (tours.length === 0) {
                 alert('❌ Aucune tournée n\'a pu être calculée.');
@@ -1569,13 +1594,8 @@ function populateCourierTourSelector(tours) {
     };
 }
 
-// Helper function to get the number of couriers
-// TODO: Cette fonction sera utilisée lors du calcul des tournées multiples
-// Exemple: const tours = system.calculateTours(system.demandsList, getCouriersCount());
-function getCouriersCount() {
-    const couriersCountInput = document.getElementById('couriersCount');
-    return parseInt(couriersCountInput?.value) || 1;
-}
+// Note: Le nombre de coursiers est maintenant géré directement dans handleComputeTour()
+// qui appelle system.computeTours(couriers) avec la liste de coursiers appropriée
 
 // Setup event listeners when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
@@ -1608,35 +1628,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ajouter le listener pour le bouton de calcul de tournée
     const calculateBtn = document.querySelector('.sidebar .btn.btn-primary');
     if (calculateBtn) {
-        calculateBtn.addEventListener('click', handleCalculateTour);
+        calculateBtn.addEventListener('click', handleComputeTour);
     }
 
-    // Gestion du nombre de coursiers
-    const couriersCountInput = document.getElementById('couriersCount');
-    const decreaseCouriersBtn = document.getElementById('decreaseCouriersBtn');
-    const increaseCouriersBtn = document.getElementById('increaseCouriersBtn');
-
-    if (decreaseCouriersBtn && couriersCountInput) {
-        decreaseCouriersBtn.addEventListener('click', () => {
-            let count = parseInt(couriersCountInput.value) || 1;
-            if (count > 1) {
-                count--;
-                couriersCountInput.value = count;
-                console.log('Nombre de coursiers:', count);
-            }
-        });
-    }
-
-    if (increaseCouriersBtn && couriersCountInput) {
-        increaseCouriersBtn.addEventListener('click', () => {
-            let count = parseInt(couriersCountInput.value) || 1;
-            if (count < 10) { // Limite maximale de 10 coursiers
-                count++;
-                couriersCountInput.value = count;
-                console.log('Nombre de coursiers:', count);
-            }
-        });
-    }
 
     // Switch entre Vue Livreur / Vue Historique dans la sidebar
     const toggleButtons = document.querySelectorAll('.view-toggles .toggle-btn');
