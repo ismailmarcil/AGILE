@@ -78,7 +78,7 @@
                 const ct = new ComputerTour(plan);
                 const courier = new Courier('C1', 'Demo Courier');
 
-                const warehouse = new TourPoint(plan.warehouse, 0, TypePoint.ENTREPOT, null);
+                const warehouse = new TourPoint(plan.warehouse, 0, TypePoint.WAREHOUSE, null);
                 const pickup = new TourPoint(plan.nodes.get('B'), 300, TypePoint.PICKUP, { id: 'D1' });
                 const delivery = new TourPoint(plan.nodes.get('C'), 300, TypePoint.DELIVERY, { id: 'D1' });
                 pickup.relatedTourPoint = delivery;

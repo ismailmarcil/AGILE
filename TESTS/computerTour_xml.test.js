@@ -83,7 +83,7 @@ describe('ComputerTour - Integration Test with moyenPlan.xml', () => {
         const warehouseNode = plan.nodes.get('4150019167');
         assert.isTrue(warehouseNode !== null && warehouseNode !== undefined, 'Warehouse node should exist');
         
-        const warehouseTourPoint = new TourPoint(warehouseNode, 0, TypePoint.ENTREPOT, null);
+        const warehouseTourPoint = new TourPoint(warehouseNode, 0, TypePoint.WAREHOUSE, null);
         console.log(`Warehouse created at node: ${warehouseNode.id}`);
         
         // 3. Créer des couples de tourpoints (pickup et delivery) depuis demandeMoyen5.xml
@@ -141,7 +141,7 @@ describe('ComputerTour - Integration Test with moyenPlan.xml', () => {
         
         // Warehouse
         const warehouseNode = plan.nodes.get('4150019167');
-        const warehouseTourPoint = new TourPoint(warehouseNode, 0, TypePoint.ENTREPOT, null);
+        const warehouseTourPoint = new TourPoint(warehouseNode, 0, TypePoint.WAREHOUSE, null);
         
         // Une seule paire pickup-delivery: 25610684 -> 21717915
         const pickup = new TourPoint(plan.nodes.get('25610684'), 180, TypePoint.PICKUP, null);
@@ -171,7 +171,7 @@ describe('ComputerTour - Integration Test with moyenPlan.xml', () => {
         const plan = await loadPlanFromXML(xmlPath);
         
         const warehouseNode = plan.nodes.get('4150019167');
-        const warehouseTourPoint = new TourPoint(warehouseNode, 0, TypePoint.ENTREPOT, null);
+        const warehouseTourPoint = new TourPoint(warehouseNode, 0, TypePoint.WAREHOUSE, null);
         
         // Trois paires depuis demandeMoyen5.xml
         const pickupDeliveryPairs = [

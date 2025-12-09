@@ -42,7 +42,7 @@ describe('ComputerTour - Basic Initialization', () => {
         plan.segments = [];
         plan.warehouse = nodeW;
 
-        const warehouseTourPoint = new TourPoint(nodeW, 0, TypePoint.ENTREPOT, null);
+        const warehouseTourPoint = new TourPoint(nodeW, 0, TypePoint.WAREHOUSE, null);
         const computerTour = new ComputerTour(plan, warehouseTourPoint);
 
         assert.isTrue(computerTour.plan === plan, "Should store plan reference");
@@ -76,7 +76,7 @@ describe('ComputerTour - fillTourPointStructures', () => {
         plan.segments = [segWA, segAW, segAB, segBA, segWB, segBW];
         plan.warehouse = nodeW;
 
-        const warehouseTourPoint = new TourPoint(nodeW, 0, TypePoint.ENTREPOT, null);
+        const warehouseTourPoint = new TourPoint(nodeW, 0, TypePoint.WAREHOUSE, null);
         const demand = new Demand("A", "B", 60, 120);
         const pickupPoint = new TourPoint(nodeA, 60, TypePoint.PICKUP, demand);
         const deliveryPoint = new TourPoint(nodeB, 120, TypePoint.DELIVERY, demand);
@@ -120,7 +120,7 @@ describe('ComputerTour - fillTourPointStructures', () => {
         plan.segments = segments;
         plan.warehouse = nodeW;
 
-        const warehouseTourPoint = new TourPoint(nodeW, 0, TypePoint.ENTREPOT, null);
+        const warehouseTourPoint = new TourPoint(nodeW, 0, TypePoint.WAREHOUSE, null);
 
         const demand1 = new Demand("A", "B", 60, 120);
         const pickup1 = new TourPoint(nodeA, 60, TypePoint.PICKUP, demand1);
@@ -152,7 +152,7 @@ describe('ComputerTour - fillTourPointStructures', () => {
         plan.segments = []; // No segments - disconnected graph
         plan.warehouse = nodeW;
 
-        const warehouseTourPoint = new TourPoint(nodeW, 0, TypePoint.ENTREPOT, null);
+        const warehouseTourPoint = new TourPoint(nodeW, 0, TypePoint.WAREHOUSE, null);
         const demand = new Demand("A", "B", 60, 120);
         const pickupPoint = new TourPoint(nodeA, 60, TypePoint.PICKUP, demand);
         const deliveryPoint = new TourPoint(nodeB, 120, TypePoint.DELIVERY, demand);
@@ -189,7 +189,7 @@ describe('ComputerTour - computeTSPTourV1 (Branch & Bound)', () => {
         ];
         plan.warehouse = nodeW;
 
-        const warehouseTourPoint = new TourPoint(nodeW, 0, TypePoint.ENTREPOT, null);
+        const warehouseTourPoint = new TourPoint(nodeW, 0, TypePoint.WAREHOUSE, null);
         const demand = new Demand("A", "B", 60, 120);
         const pickupPoint = new TourPoint(nodeA, 60, TypePoint.PICKUP, demand);
         const deliveryPoint = new TourPoint(nodeB, 120, TypePoint.DELIVERY, demand);
@@ -239,7 +239,7 @@ describe('ComputerTour - computeTSPTourV1 (Branch & Bound)', () => {
         plan.segments = segments;
         plan.warehouse = nodeW;
 
-        const warehouseTourPoint = new TourPoint(nodeW, 0, TypePoint.ENTREPOT, null);
+        const warehouseTourPoint = new TourPoint(nodeW, 0, TypePoint.WAREHOUSE, null);
 
         const demand1 = new Demand("A", "B", 60, 120);
         const pickup1 = new TourPoint(nodeA, 60, TypePoint.PICKUP, demand1);
@@ -292,7 +292,7 @@ describe('ComputerTour - computeTSPTourV1 (Branch & Bound)', () => {
         }
         plan.segments = segments;
 
-        const warehouseTourPoint = new TourPoint(nodes[0], 0, TypePoint.ENTREPOT, null);
+        const warehouseTourPoint = new TourPoint(nodes[0], 0, TypePoint.WAREHOUSE, null);
 
         const pairs = [];
         for (let i = 1; i <= 3; i++) {
@@ -319,7 +319,7 @@ describe('ComputerTour.computeCompleteTour', () => {
         const computerTour = new ComputerTour(plan);
         const courier = new Courier('C1', 'Alice');
 
-        const warehouse = new TourPoint(nodes.n1, 0, TypePoint.ENTREPOT, null);
+        const warehouse = new TourPoint(nodes.n1, 0, TypePoint.WAREHOUSE, null);
         const pickup = new TourPoint(nodes.n2, 300, TypePoint.PICKUP, { id: 'D1' });
         const delivery = new TourPoint(nodes.n3, 300, TypePoint.DELIVERY, { id: 'D1' });
         pickup.relatedTourPoint = delivery;
@@ -350,7 +350,7 @@ describe('ComputerTour.computeCompleteTour', () => {
         const computerTour = new ComputerTour(plan);
         const courier = new Courier('C2', 'Bob');
 
-        const depot = new TourPoint(nodeA, 0, TypePoint.ENTREPOT, null);
+        const depot = new TourPoint(nodeA, 0, TypePoint.WAREHOUSE, null);
         const pickup = new TourPoint(nodeB, 100, TypePoint.PICKUP, null);
 
         const tour = computerTour.computeCompleteTour([depot, pickup], courier);

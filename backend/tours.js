@@ -120,12 +120,12 @@ class Tour {
         }
 
         // Start warehouse immobile
-        if (oldIndex === 0 && point.type === "ENTREPOT") {
+        if (oldIndex === 0 && point.type === "WAREHOUSE") {
             return { valid: false, reason: "DEPOT_START" };
         }
 
         // Final warehouse immobile
-        if (oldIndex === stops.length - 1 && point.type === "ENTREPOT") {
+        if (oldIndex === stops.length - 1 && point.type === "WAREHOUSE") {
             return { valid: false, reason: "DEPOT_END_MOVE" };
         }
 
@@ -135,10 +135,10 @@ class Tour {
         newStops.splice(newIndex, 0, moved);
 
         // Warehouse always at the ends
-        if (newStops[0].type !== "ENTREPOT") {
+        if (newStops[0].type !== "WAREHOUSE") {
             return { valid: false, reason: "DEPOT_START_MUST_REMAIN" };
         }
-        if (newStops[newStops.length - 1].type !== "ENTREPOT") {
+        if (newStops[newStops.length - 1].type !== "WAREHOUSE") {
             return { valid: false, reason: "DEPOT_END_MUST_REMAIN" };
         }
 

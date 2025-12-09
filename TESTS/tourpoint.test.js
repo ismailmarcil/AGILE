@@ -38,17 +38,17 @@ describe('TourPoint Class - Constructor and Basic Properties', () => {
 
     it('should create a warehouse point without demand', () => {
         const node = new Node('000', 45.75, 4.85, []);
-        const tourPoint = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
+        const tourPoint = new TourPoint(node, 0, TypePoint.WAREHOUSE, null);
 
         assert.strictEqual(tourPoint.node.id, '000');
-        assert.strictEqual(tourPoint.type, TypePoint.ENTREPOT);
+        assert.strictEqual(tourPoint.type, TypePoint.WAREHOUSE);
         assert.strictEqual(tourPoint.serviceDuration, 0);
         assert.strictEqual(tourPoint.demand, null);
     });
 
     it('should use default demand of null', () => {
         const node = new Node('123', 45.75, 4.85, []);
-        const tourPoint = new TourPoint(node, 0, TypePoint.ENTREPOT);
+        const tourPoint = new TourPoint(node, 0, TypePoint.WAREHOUSE);
 
         assert.strictEqual(tourPoint.demand, null);
     });
@@ -78,8 +78,8 @@ describe('TourPoint Class - TypePoint Enum', () => {
         assert.strictEqual(TypePoint.DELIVERY, 'DELIVERY');
     });
 
-    it('should have ENTREPOT type defined', () => {
-        assert.strictEqual(TypePoint.ENTREPOT, 'ENTREPOT');
+    it('should have WAREHOUSE type defined', () => {
+        assert.strictEqual(TypePoint.WAREHOUSE, 'WAREHOUSE');
     });
 
     it('should create tour point with each type', () => {
@@ -91,8 +91,8 @@ describe('TourPoint Class - TypePoint Enum', () => {
         const delivery = new TourPoint(node, 240, TypePoint.DELIVERY, null);
         assert.strictEqual(delivery.type, 'DELIVERY');
 
-        const warehouse = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
-        assert.strictEqual(warehouse.type, 'ENTREPOT');
+        const warehouse = new TourPoint(node, 0, TypePoint.WAREHOUSE, null);
+        assert.strictEqual(warehouse.type, 'WAREHOUSE');
     });
 });
 
@@ -138,7 +138,7 @@ describe('TourPoint Class - toJSON Method', () => {
 
     it('should handle null demand in JSON', () => {
         const node = new Node('123', 45.75, 4.85, []);
-        const tourPoint = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
+        const tourPoint = new TourPoint(node, 0, TypePoint.WAREHOUSE, null);
 
         const json = tourPoint.toJSON();
         assert.strictEqual(json.demand, null);
@@ -175,8 +175,8 @@ describe('TourPoint Class - toString Method', () => {
         const delivery = new TourPoint(node, 240, TypePoint.DELIVERY, null);
         assert.isTrue(delivery.toString().includes('DELIVERY'));
 
-        const warehouse = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
-        assert.isTrue(warehouse.toString().includes('ENTREPOT'));
+        const warehouse = new TourPoint(node, 0, TypePoint.WAREHOUSE, null);
+        assert.isTrue(warehouse.toString().includes('WAREHOUSE'));
     });
 
     it('should include service duration with seconds unit', () => {

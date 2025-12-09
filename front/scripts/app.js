@@ -498,7 +498,7 @@ function updateTimelineFromTour(tour, readOnly = false) {
         const iconDiv = document.createElement('div');
         iconDiv.className = 'step-icon';
 
-        if (stop.type === 'ENTREPOT') {
+        if (stop.type === 'WAREHOUSE') {
             iconDiv.style.background = 'var(--secondary-color)';
             iconDiv.style.color = 'white';
             iconDiv.innerHTML = '<i class="fa-solid fa-warehouse"></i>';
@@ -516,7 +516,7 @@ function updateTimelineFromTour(tour, readOnly = false) {
         stepDiv.appendChild(iconDiv);
 
         // Add left/right controls for non-depot stops (only if not read-only)
-        if (!readOnly && stop.type !== 'ENTREPOT') {
+        if (!readOnly && stop.type !== 'WAREHOUSE') {
             const controls = document.createElement('div');
             controls.className = 'step-controls';
 
@@ -586,7 +586,7 @@ function updateTimelineFromTour(tour, readOnly = false) {
         // Add description
         const descDiv = document.createElement('div');
         descDiv.className = 'step-desc';
-        if (stop.type === 'ENTREPOT') {
+        if (stop.type === 'WAREHOUSE') {
             descDiv.textContent = index === 0 ? 'Départ' : 'Arrivée';
         } else {
             // Afficher "Chargement..." pendant la récupération de l'adresse
