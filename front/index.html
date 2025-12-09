@@ -86,7 +86,7 @@
     <div id="sidebar-history" style="display:none; padding:20px; overflow-y:auto;">
         <h3 style="margin-bottom:10px;">Historique des tournées</h3>
         <button id="historyBtn" class="btn btn-sm btn-primary" style="width:auto; margin-bottom:10px;">
-            Charger l'historique
+            Recharger l'historique
         </button>
         <div id="historyError" style="color:#b00020; margin-bottom:8px;"></div>
         <div id="historyResults"></div>
@@ -119,12 +119,15 @@
             <div class="section-title">
                 <span><i class="fa-solid fa-stopwatch"></i> Détails de la tournée</span>
                 <div style="display: flex; gap: 8px; margin-left: auto; align-items: center;">
+                    <!-- Sélecteur de tournées par coursier (affiché quand plusieurs tournées calculées) -->
+                    <div id="courierSelectContainer" style="display: none;">
+                        <select id="courierTourSelect" style="padding: 6px 12px; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); background: #f8f9fa; cursor: pointer;">
+                            <option value="">Sélectionner une tournée...</option>
+                        </select>
+                    </div>
                     <div id="courierInfo" style="display: none; padding: 4px 12px; background: #f8f9fa; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color);">
                         <i class="fa-solid fa-user"></i> <span id="courierName">-</span>
                     </div>
-                    <button class="btn btn-sm save-btn" onclick="document.getElementById('jsonTourInput').click()" style="background:white; border:1px solid #bdc3c7;">
-                        <i class="fa-solid fa-folder-open" style="margin-right:6px"></i> Restaurer
-                    </button>
                     <button class="btn btn-sm save-btn" id="saveTourBtn" style="background:white; border:1px solid #bdc3c7; display:none;">
                         <i class="fa-solid fa-floppy-disk" style="margin-right:6px"></i> Sauvegarder
                     </button>
