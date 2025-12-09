@@ -303,6 +303,62 @@ body.loading select {
     color: #7f8c8d;
 }
 
+.history-controls {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.history-status {
+    font-size: 0.82rem;
+    color: #7f8c8d;
+    margin-bottom: 6px;
+}
+
+.history-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.history-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #34495e;
+}
+
+.history-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.history-left {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex: 1;
+}
+
+.history-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.history-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 #sidebar-livreur,
 #sidebar-history {
     display: flex;

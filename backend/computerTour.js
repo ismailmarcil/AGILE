@@ -1,6 +1,10 @@
 /**
  * Class responsible for computing optimal delivery tours
  */
+
+// Import dependencies for Node.js
+const Leg = (typeof require !== 'undefined') ? require('./leg') : null;
+
 class ComputerTour {
     /**
      * Constructor for the ComputerTour class
@@ -115,7 +119,7 @@ class ComputerTour {
      * @returns {Array<TourPoint>|null}
      * @private
      */
-    computeTSPTourV0(){
+    computeTSPTourV0() {
         const finalPath = new Array();
         finalPath.push(this.start);
         for (const [delivery, pickup] of this.precedence.entries()) {
@@ -124,6 +128,154 @@ class ComputerTour {
         }
         finalPath.push(this.start);
         return finalPath;
+    }
+
+    computeTSPTourV1() {
+        let bestTour = null;
+        let bestDistance = Infinity;
+
+        // Convert tourPoints Set to Array with indices
+        const tourPointsArray = [this.start, ...Array.from(this.tourPoints)];
+
+        const enumerate = (currentPath, visited, currentDuration) => {
+            const lastPoint = currentPath[currentPath.length - 1];
+
+            // If all points visited, check if we can return to warehouse
+            if (visited.size === tourPointsArray.length) {
+                const returnKey = this.getKey(lastPoint, this.start);
+                const returnTime = this.tourPointGraphTimes.get(returnKey);
+                const totalDuration = currentDuration + returnTime;
+
+                if (totalDuration < bestDistance) {
+                    bestDistance = totalDuration;
+                    bestTour = [...currentPath, this.start];
+                }
+                return;
+            }
+
+            // Try each unvisited point
+            for (let i = 1; i < tourPointsArray.length; i++) {
+                const nextPoint = tourPointsArray[i];
+
+                // Skip if already visited
+                if (visited.has(nextPoint)) continue;
+
+                // Check precedence: can't deliver before pickup
+                if (this.precedence.has(nextPoint)) {
+                    const requiredPickup = this.precedence.get(nextPoint);
+                    if (!visited.has(requiredPickup)) continue;
+                }
+
+                const key = this.getKey(lastPoint, nextPoint);
+                const travelTime = this.tourPointGraphTimes.get(key);
+                const newDuration = currentDuration + travelTime;
+
+                // Prune if already worse than best
+                if (newDuration >= bestDistance) continue;
+
+                // Branch: explore this path
+                visited.add(nextPoint);
+                currentPath.push(nextPoint);
+
+                enumerate(currentPath, visited, newDuration);
+
+                // Backtrack
+                currentPath.pop();
+                visited.delete(nextPoint);
+            }
+        };
+
+        // Start enumeration from warehouse
+        const initialVisited = new Set([this.start]);
+        enumerate([this.start], initialVisited, 0);
+
+        return bestTour;
+    }
+
+    /**
+     * Version 1 : Compute all permutations (inefficient for large sets)
+     * @returns {Array<TourPoint>|null}
+     * @private
+     */
+    computeTSPTourV2_Jade(){
+        const allPoints = Array.from(this.tourPoints);
+        
+        let bestTour = null;
+        let bestCost = Infinity;
+        
+        /**
+         * Recursive function to generate permutations with early pruning
+         * @param {Array<TourPoint>} currentPath - Current path being built (starts with warehouse)
+         * @param {Set<TourPoint>} remaining - Remaining tour points to visit
+         * @param {Set<TourPoint>} pickedUp - Set of pickups that have been visited
+         * @param {number} currentCost - Current accumulated travel time
+         */
+        const buildTour = (currentPath, remaining, pickedUp, currentCost) => {
+            // Pruning: if current cost already exceeds best, stop exploring this branch
+            if (currentCost >= bestCost) {
+                return;
+            }
+            
+            // Base case: all points visited, return to warehouse
+            if (remaining.size === 0) {
+                const lastPoint = currentPath[currentPath.length - 1];
+                const returnKey = this.getKey(lastPoint, this.start);
+                const returnTime = this.tourPointGraphTimes.get(returnKey);
+                
+                if (returnTime === undefined) {
+                    return; // No path back to warehouse
+                }
+                
+                const totalCost = currentCost + returnTime;
+                if (totalCost < bestCost) {
+                    bestCost = totalCost;
+                    bestTour = [...currentPath, this.start];
+                }
+                return;
+            }
+            
+            // Try each remaining point
+            for (const nextPoint of remaining) {
+                // Check precedence constraint: if it's a delivery, its pickup must be done
+                if (this.precedence.has(nextPoint)) {
+                    const requiredPickup = this.precedence.get(nextPoint);
+                    if (!pickedUp.has(requiredPickup)) {
+                        continue; // Skip this delivery, pickup not done yet
+                    }
+                }
+                
+                // Get travel time from current position to next point
+                const currentPoint = currentPath[currentPath.length - 1];
+                const edgeKey = this.getKey(currentPoint, nextPoint);
+                const travelTime = this.tourPointGraphTimes.get(edgeKey);
+                
+                if (travelTime === undefined) {
+                    continue; // No path to this point
+                }
+                
+                // Calculate new cost (travel time only)
+                const newCost = currentCost + travelTime;
+                
+                // Prepare next state
+                const newPath = [...currentPath, nextPoint];
+                const newRemaining = new Set(remaining);
+                newRemaining.delete(nextPoint);
+                const newPickedUp = new Set(pickedUp);
+                
+                // If this is a pickup (using type property), mark it as picked up
+                if (nextPoint.type === "PICKUP") {
+                    newPickedUp.add(nextPoint);
+                }
+                
+                // Recurse
+                buildTour(newPath, newRemaining, newPickedUp, newCost);
+            }
+        };
+        
+        // Start the search from the warehouse
+        buildTour([this.start], new Set(allPoints), new Set(), 0);
+        
+        return bestTour;
     }
 
     /**
@@ -144,7 +296,7 @@ class ComputerTour {
         }
 
         const TourClass = (typeof Tour !== 'undefined') ? Tour : require('./tours');
-        const LegClass = (typeof Leg !== 'undefined') ? Leg : require('./leg');
+        const LegClass = Leg || require('./leg');
 
         const DEFAULT_DEPARTURE = "08:00";
         const tour = new TourClass(null, DEFAULT_DEPARTURE, courier || null);
