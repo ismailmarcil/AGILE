@@ -118,7 +118,7 @@ class ComputerTour {
      * @returns {Array<TourPoint>|null}
      * @private
      */
-    computeTSPTourV0(){
+    computeTSPTourV0() {
         const finalPath = new Array();
         finalPath.push(this.start);
         for (const [delivery, pickup] of this.precedence.entries()) {
@@ -127,6 +127,68 @@ class ComputerTour {
         }
         finalPath.push(this.start);
         return finalPath;
+    }
+
+    computeTSPTourV1() {
+        let bestTour = null;
+        let bestDistance = Infinity;
+
+        // Convert tourPoints Set to Array with indices
+        const tourPointsArray = [this.start, ...Array.from(this.tourPoints)];
+
+        const enumerate = (currentPath, visited, currentDuration) => {
+            const lastPoint = currentPath[currentPath.length - 1];
+
+            // If all points visited, check if we can return to warehouse
+            if (visited.size === tourPointsArray.length) {
+                const returnKey = this.getKey(lastPoint, this.start);
+                const returnTime = this.tourPointGraphTimes.get(returnKey);
+                const totalDuration = currentDuration + returnTime;
+
+                if (totalDuration < bestDistance) {
+                    bestDistance = totalDuration;
+                    bestTour = [...currentPath, this.start];
+                }
+                return;
+            }
+
+            // Try each unvisited point
+            for (let i = 1; i < tourPointsArray.length; i++) {
+                const nextPoint = tourPointsArray[i];
+
+                // Skip if already visited
+                if (visited.has(nextPoint)) continue;
+
+                // Check precedence: can't deliver before pickup
+                if (this.precedence.has(nextPoint)) {
+                    const requiredPickup = this.precedence.get(nextPoint);
+                    if (!visited.has(requiredPickup)) continue;
+                }
+
+                const key = this.getKey(lastPoint, nextPoint);
+                const travelTime = this.tourPointGraphTimes.get(key);
+                const newDuration = currentDuration + travelTime;
+
+                // Prune if already worse than best
+                if (newDuration >= bestDistance) continue;
+
+                // Branch: explore this path
+                visited.add(nextPoint);
+                currentPath.push(nextPoint);
+
+                enumerate(currentPath, visited, newDuration);
+
+                // Backtrack
+                currentPath.pop();
+                visited.delete(nextPoint);
+            }
+        };
+
+        // Start enumeration from warehouse
+        const initialVisited = new Set([this.start]);
+        enumerate([this.start], initialVisited, 0);
+
+        return bestTour;
     }
 
     /**
