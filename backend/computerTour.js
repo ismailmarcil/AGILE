@@ -2,8 +2,6 @@
  * Class responsible for computing optimal delivery tours
  */
 
-// Import dependencies for Node.js
-const Leg = (typeof require !== 'undefined') ? require('./leg') : null;
 
 class ComputerTour {
     /**
