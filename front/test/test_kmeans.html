@@ -526,8 +526,17 @@
                 console.log(`Computing tours with ${selectedCourierObjects.length} couriers and ${system.demandsList.length} demands`);
                 console.log('Couriers:', selectedCourierObjects.map(c => ({ id: c.id, name: c.name })));
 
+                // Start timing
+                const startTime = performance.now();
+                console.log('⏱️ Starting tour computation...');
+
                 // Compute tours using K-means distribution, passing couriers directly
                 const result = system.computeTours(selectedCourierObjects);
+
+                // End timing
+                const endTime = performance.now();
+                const computationTime = endTime - startTime;
+                console.log(`⏱️ Tour computation completed in ${computationTime.toFixed(2)}ms`);
 
                 // Handle different result codes
                 if (result.code === 0) {
@@ -556,7 +565,7 @@
                     }
 
                     // Display results
-                    displayResults(tours);
+                    displayResults(tours, computationTime);
                     document.getElementById('btnClearTours').disabled = false;
 
                 } else if (result.code === 1) {
@@ -605,7 +614,7 @@
         });
 
         // Display Results
-        function displayResults(tours) {
+        function displayResults(tours, computationTime = null) {
             if (!tours || tours.length === 0) {
                 console.warn('No tours to display');
                 return;
@@ -686,6 +695,11 @@
                         <span>Durée moyenne/coursier:</span>
                         <span class="metric-value">${avgDurationHours} heures</span>
                     </div>
+                    ${computationTime ? `
+                    <div class="metric" style="border-top: 1px solid #27ae60; margin-top: 8px; padding-top: 8px;">
+                        <span>⏱️ Temps de calcul:</span>
+                        <span class="metric-value">${computationTime < 1000 ? computationTime.toFixed(2) + ' ms' : (computationTime/1000).toFixed(2) + ' s'}</span>
+                    </div>` : ''}
                 </div>
             `;
 
@@ -696,6 +710,7 @@
                 <div class="info-box success">
                     ✅ Tours calculées avec succès via K-means + ComputerTour!<br>
                     <strong>${tours.length} tours</strong> pour <strong>${system.demandsList.length} demandes</strong><br>
+                    ${computationTime ? `⏱️ <strong>Temps de calcul:</strong> ${computationTime < 1000 ? computationTime.toFixed(2) + ' ms' : (computationTime/1000).toFixed(2) + ' s'}<br>` : ''}
                     <small>Tous les tours respectent la limite de 8 heures</small>
                 </div>
             `;
