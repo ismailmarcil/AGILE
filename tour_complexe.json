@@ -10,7 +10,8 @@
       "node": { "id": "1", "latitude": 45.75406, "longitude": 4.857418 },
       "serviceDuration": 0,
       "type": "ENTREPOT",
-      "demand": null
+      "demand": null,
+      "relatedTourPoint": null
     },
     {
       "node": { "id": "2", "latitude": 45.75343, "longitude": 4.8574653 },
@@ -22,7 +23,8 @@
         "deliveryAddress": "3",
         "pickupDuration": 240,
         "deliveryDuration": 180
-      }
+      },
+      "relatedTourPoint": "3"
     },
     {
       "node": { "id": "3", "latitude": 45.75425, "longitude": 4.8591485 },
@@ -34,7 +36,8 @@
         "deliveryAddress": "3",
         "pickupDuration": 240,
         "deliveryDuration": 180
-      }
+      },
+      "relatedTourPoint": "2"
     },
     {
       "node": { "id": "4", "latitude": 45.753757, "longitude": 4.8601513 },
@@ -46,7 +49,8 @@
         "deliveryAddress": "5",
         "pickupDuration": 300,
         "deliveryDuration": 300
-      }
+      },
+      "relatedTourPoint": "5"
     },
     {
       "node": { "id": "5", "latitude": 45.754536, "longitude": 4.866525 },
@@ -58,19 +62,21 @@
         "deliveryAddress": "5",
         "pickupDuration": 300,
         "deliveryDuration": 300
-      }
+      },
+      "relatedTourPoint": "4"
     },
     {
       "node": { "id": "1", "latitude": 45.75406, "longitude": 4.857418 },
       "serviceDuration": 0,
       "type": "ENTREPOT",
-      "demand": null
+      "demand": null,
+      "relatedTourPoint": null
     }
   ],
   "legs": [
     {
-      "from": null,
-      "to": null,
+      "from": { "id": "1", "latitude": 45.75406, "longitude": 4.857418 },
+      "to": { "id": "2", "latitude": 45.75343, "longitude": 4.8574653 },
       "path": [
         { "id": "1", "latitude": 45.75406, "longitude": 4.857418 },
         { "id": "2", "latitude": 45.75343, "longitude": 4.8574653 }
@@ -79,8 +85,8 @@
       "travelTime": 420
     },
     {
-      "from": null,
-      "to": null,
+      "from": { "id": "2", "latitude": 45.75343, "longitude": 4.8574653 },
+      "to": { "id": "3", "latitude": 45.75425, "longitude": 4.8591485 },
       "path": [
         { "id": "2", "latitude": 45.75343, "longitude": 4.8574653 },
         { "id": "3", "latitude": 45.75425, "longitude": 4.8591485 }
@@ -89,8 +95,8 @@
       "travelTime": 360
     },
     {
-      "from": null,
-      "to": null,
+      "from": { "id": "3", "latitude": 45.75425, "longitude": 4.8591485 },
+      "to": { "id": "4", "latitude": 45.753757, "longitude": 4.8601513 },
       "path": [
         { "id": "3", "latitude": 45.75425, "longitude": 4.8591485 },
         { "id": "4", "latitude": 45.753757, "longitude": 4.8601513 }
@@ -99,8 +105,8 @@
       "travelTime": 240
     },
     {
-      "from": null,
-      "to": null,
+      "from": { "id": "4", "latitude": 45.753757, "longitude": 4.8601513 },
+      "to": { "id": "5", "latitude": 45.754536, "longitude": 4.866525 },
       "path": [
         { "id": "4", "latitude": 45.753757, "longitude": 4.8601513 },
         { "id": "5", "latitude": 45.754536, "longitude": 4.866525 }
@@ -109,8 +115,8 @@
       "travelTime": 900
     },
     {
-      "from": null,
-      "to": null,
+      "from": { "id": "5", "latitude": 45.754536, "longitude": 4.866525 },
+      "to": { "id": "1", "latitude": 45.75406, "longitude": 4.857418 },
       "path": [
         { "id": "5", "latitude": 45.754536, "longitude": 4.866525 },
         { "id": "1", "latitude": 45.75406, "longitude": 4.857418 }

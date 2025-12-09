@@ -45,6 +45,7 @@ runTestSuite('./courier.test.js', 'Courier Class Tests');
 runTestSuite('./plan.test.js', 'Plan Class Tests');
 runTestSuite('./tour.test.js', 'Tour Class Tests');
 runTestSuite('./tours_move.test.js', 'Tour Move Tests');
+runTestSuite('./computerTour.test.js', 'ComputerTour computeCompleteTour Tests');
 
 // Print overall summary
 console.log('\n\n╔═══════════════════════════════════════════════════════════╗');

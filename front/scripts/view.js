@@ -650,6 +650,71 @@ class View {
         }
     }
 
+    /**
+     * Affiche la liste des tournées sauvegardées dans une liste jolie.
+     * @param {Array} tours - [{ filename, id, departureTime, courier, totalDuration, totalDistance }]
+     * @param {HTMLElement} container - élément où afficher la liste
+     * @param {HTMLElement} errorElement - élément pour les messages d'erreur (optionnel)
+     */
+    displayHistoryList(tours, container, errorElement = null, onSelect = null) {
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (!Array.isArray(tours) || tours.length === 0) {
+            container.innerHTML = '<p style="color:#95a5a6;">Aucune tournée trouvée.</p>';
+            return;
+        }
+
+        const list = document.createElement('div');
+        list.className = 'history-list';
+
+        tours.forEach(t => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'history-item';
+            item.dataset.tourId = t.tourId || '';
+            item.dataset.filename = t.filename || '';
+
+            const title = document.createElement('div');
+            title.className = 'history-title';
+            title.textContent = t.id || t.filename || '';
+
+            const meta = document.createElement('div');
+            meta.className = 'history-meta';
+            const time = t.departureTime || '';
+            const courier = t.courier || '';
+            meta.textContent = [time, courier].filter(Boolean).join(' · ');
+
+            item.appendChild(title);
+            item.appendChild(meta);
+
+            if (onSelect) {
+                item.addEventListener('click', () => onSelect(t));
+            }
+
+            list.appendChild(item);
+        });
+
+        container.appendChild(list);
+
+        if (errorElement) {
+            errorElement.textContent = '';
+        }
+    }
+
+
+    _escapeHtml(s) {
+        if (!s) return '';
+        return s.replace(/[&<>"']/g, c => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;'
+        }[c] || c));
+    }
+
+
     // Existing methods
     addPickupDeliveryPoint(tourPoint, startTime, endTime) {
         this.listPickupDeliveryPoints.push({ tourPoint, startTime, endTime });
@@ -829,6 +894,179 @@ class View {
             }
             this.tourMarkers.push(marker);
         });
+    }
+
+    /**
+     * Display K-means clustering with centroids and demand points
+     * Circles (●) = Demand points (pickup/delivery)
+     * Stars (★) = Centroids
+     * @param {Array} clusters - Array of clusters {demands: [], centroid: {lat, lon}}
+     */
+    displayKMeansClustering(clusters) {
+        if (!clusters || clusters.length === 0) {
+            console.warn('No clusters to display');
+            return;
+        }
+
+        // Clear the map first
+        this.clearMap();
+
+        // 4 high contrast colors for clusters
+        const colors = [
+            '#FF0000', // Red
+            '#0066FF', // Blue
+            '#00CC00', // Green
+            '#FFB300'  // Orange
+        ];
+
+        console.log(`\n🎯 Displaying K-means clustering: ${clusters.length} clusters`);
+        console.log(`● = Cluster points (Pickup/Delivery)`);
+        console.log(`★ = Centroides\n`);
+
+        // Helper function to get node ID from demand address
+        const getNodeId = (addressObj) => {
+            if (!addressObj) return null;
+            // If it's already a string/number (node ID), return it
+            if (typeof addressObj === 'string' || typeof addressObj === 'number') {
+                return addressObj;
+            }
+            // If it's an object with id property (Node object), return the id
+            if (addressObj.id) {
+                return addressObj.id;
+            }
+            return null;
+        };
+
+        // Display each cluster
+        clusters.forEach((cluster, clusterIndex) => {
+            const color = colors[clusterIndex % colors.length];
+            const centroid = cluster.centroid;
+
+            if (!centroid) {
+                console.warn(`Cluster ${clusterIndex} has no centroid`);
+                return;
+            }
+
+            let pointCount = 0;
+
+            // 1. Display demand points in this cluster as circles (●)
+            if (cluster.demands && cluster.demands.length > 0) {
+                cluster.demands.forEach((demand, demandIndex) => {
+                    // Pickup point
+                    if (demand.pickupAddress) {
+                        const pickupNodeId = getNodeId(demand.pickupAddress);
+                        const pickupNode = pickupNodeId ? this.nodeMap?.get(pickupNodeId) : null;
+                        
+                        if (pickupNode && pickupNode.latitude && pickupNode.longitude) {
+                            // Circle icon for cluster point
+                            const circleIcon = L.divIcon({
+                                html: `<div style="background-color: ${color}; width: 16px; height: 16px; 
+                                        border-radius: 50%; border: 2px solid white; display: flex; 
+                                        align-items: center; justify-content: center; color: white; 
+                                        font-size: 8px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+                                        </div>`,
+                                className: 'cluster-point-marker',
+                                iconSize: [20, 20],
+                                iconAnchor: [10, 10]
+                            });
+
+                            const pickupAddress = pickupNode.address || `Node ${pickupNodeId}`;
+                            L.marker([pickupNode.latitude, pickupNode.longitude], { icon: circleIcon })
+                                .bindPopup(`<strong>● 📦 Pickup</strong><br>Cluster ${clusterIndex + 1}<br>
+                                           Demand: ${demand.id}<br>
+                                           Node: ${pickupNodeId}<br>
+                                           ${pickupAddress}`)
+                                .addTo(this.map);
+                            
+                            pointCount++;
+                        } else {
+                            console.warn(`Pickup node not found for demand ${demand.id}, nodeId: ${pickupNodeId}`);
+                        }
+                    }
+
+                    // Delivery point
+                    if (demand.deliveryAddress) {
+                        const deliveryNodeId = getNodeId(demand.deliveryAddress);
+                        const deliveryNode = deliveryNodeId ? this.nodeMap?.get(deliveryNodeId) : null;
+                        
+                        if (deliveryNode && deliveryNode.latitude && deliveryNode.longitude) {
+                            // Circle icon for cluster point
+                            const circleIcon = L.divIcon({
+                                html: `<div style="background-color: ${color}; width: 16px; height: 16px; 
+                                        border-radius: 50%; border: 2px solid white; display: flex; 
+                                        align-items: center; justify-content: center; color: white; 
+                                        font-size: 8px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+                                        </div>`,
+                                className: 'cluster-point-marker',
+                                iconSize: [20, 20],
+                                iconAnchor: [10, 10]
+                            });
+
+                            const deliveryAddress = deliveryNode.address || `Node ${deliveryNodeId}`;
+                            L.marker([deliveryNode.latitude, deliveryNode.longitude], { icon: circleIcon })
+                                .bindPopup(`<strong>● ✓ Delivery</strong><br>Cluster ${clusterIndex + 1}<br>
+                                           Demand: ${demand.id}<br>
+                                           Node: ${deliveryNodeId}<br>
+                                           ${deliveryAddress}`)
+                                .addTo(this.map);
+                            
+                            pointCount++;
+                        } else {
+                            console.warn(`Delivery node not found for demand ${demand.id}, nodeId: ${deliveryNodeId}`);
+                        }
+                    }
+                });
+            }
+
+            // 2. Display centroid as star (★)
+            const centroidIcon = L.divIcon({
+                html: `<div style="background-color: ${color}; width: 40px; height: 40px; 
+                        border-radius: 50%; border: 3px solid white; display: flex; 
+                        align-items: center; justify-content: center; color: white; 
+                        font-size: 22px; font-weight: bold; box-shadow: 0 3px 8px rgba(0,0,0,0.6);">
+                        ★</div>`,
+                className: 'centroid-marker',
+                iconSize: [46, 46],
+                iconAnchor: [23, 23]
+            });
+
+            L.marker([centroid.lat, centroid.lon], { icon: centroidIcon })
+                .bindPopup(`<strong>★ Centroid ${clusterIndex + 1}</strong><br>
+                           <strong>Color:</strong> ${color}<br>
+                           <strong>Demandas:</strong> ${cluster.demands?.length || 0}<br>
+                           <strong>Puntos:</strong> ${pointCount}<br>
+                           <strong>Lat:</strong> ${centroid.lat.toFixed(4)}<br>
+                           <strong>Lon:</strong> ${centroid.lon.toFixed(4)}`)
+                .openPopup()
+                .addTo(this.map);
+
+            console.log(`   Cluster ${clusterIndex + 1} ${color} ┃ Demandas: ${cluster.demands?.length} ┃ Puntos: ${pointCount} ┃ Centroid: (${centroid.lat.toFixed(4)}, ${centroid.lon.toFixed(4)})`);
+        });
+
+        console.log(`\n✅ K-means clustering displayed`);
+        console.log(`   ● = ${clusters.reduce((sum, c) => sum + (c.demands?.length ? c.demands.length * 2 : 0), 0)} puntos de demanda (P+D por demanda)`);
+        console.log(`   ★ = ${clusters.length} centroides\n`);
+
+        // Fit map to all markers
+        if (this.map) {
+            setTimeout(() => {
+                try {
+                    this.map.fitBounds(this.map.getBounds());
+                } catch (e) {
+                    console.warn('Could not fit map bounds:', e);
+                }
+            }, 100);
+        }
+    }
+
+    /**
+     * Clear K-means clustering visualization
+     */
+    clearKMeansClustering() {
+        // Remove all cluster markers
+        const clusterMarkers = document.querySelectorAll('.cluster-marker, .centroid-marker');
+        clusterMarkers.forEach(marker => marker.remove());
+        console.log('🗑️ K-means clustering cleared');
     }
 }
 
