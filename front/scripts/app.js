@@ -698,7 +698,19 @@ function openAddDemandModal() {
     }
 
     // Réinitialiser l'état
-    resetNodeSelection();
+    if (currentEditedDemandId === null) {
+        resetNodeSelection();
+
+        if (addDemandForm) {
+            addDemandForm.reset();
+        }
+
+        const pickupDisplay   = document.getElementById('pickupAddressDisplay');
+        const deliveryDisplay = document.getElementById('deliveryAddressDisplay');
+
+        if (pickupDisplay)   pickupDisplay.value   = '';
+        if (deliveryDisplay) deliveryDisplay.value = '';
+    }
     addDemandSidebar.style.display = "flex";
 }
 
@@ -1001,7 +1013,7 @@ if (addDemandForm) {
         }
 
         // Message de succès avec les détails
-        console.log(isEdit ? '✏️ Demande modifiée avec succès:' : '✅ Demande ajoutée avec succès:', demand);
+        console.log(isEdit ? 'Demande modifiée avec succès:' : 'Demande ajoutée avec succès:', demand);
 
         if (!isEdit) {
             alert(`✅ Demande ajoutée avec succès!\n\nEnlèvement: Point ${pickupAddress}\nLivraison: Point ${deliveryAddress}\nDurées: ${pickupDuration}s / ${deliveryDuration}s`);
@@ -1200,34 +1212,107 @@ function editDemand(demandId) {
         return;
     }
 
-    currentEditedDemandId = demande.id; // on passe en MODE EDITION
+    // On passe en mode EDITION
+    currentEditedDemandId = demande.id;
 
-    // Récupérer les inputs du formulaire
+    // Ouvrir la sidebar sans reset (grâce à la modif d'openAddDemandModal)
+    openAddDemandModal();
+
+    // Récupérer les éléments du formulaire
     const pickupAddressInput    = document.getElementById("pickupAddressInput");
     const deliveryAddressInput  = document.getElementById("deliveryAddressInput");
+    const pickupAddressDisplay  = document.getElementById("pickupAddressDisplay");
+    const deliveryAddressDisplay= document.getElementById("deliveryAddressDisplay");
     const pickupDurationInput   = document.getElementById("pickupDurationInput");
     const deliveryDurationInput = document.getElementById("deliveryDurationInput");
 
-    if (!pickupAddressInput || !deliveryAddressInput || !pickupDurationInput || !deliveryDurationInput) {
+    if (!pickupAddressInput || !deliveryAddressInput ||
+        !pickupDurationInput || !deliveryDurationInput) {
         alert("Formulaire de demande introuvable.");
         return;
     }
 
-    // Pré-remplir les champs avec les valeurs de la demande
-    pickupAddressInput.value    = demande.pickupAddress;
-    deliveryAddressInput.value  = demande.deliveryAddress;
+    // --- 1) Durées (ça fonctionnait déjà chez toi) ---
     pickupDurationInput.value   = demande.pickupDuration;
     deliveryDurationInput.value = demande.deliveryDuration;
 
-    // (optionnel) changer le titre et le texte du bouton
-    const title = document.querySelector("#addDemandModal h3");
-    if (title) title.textContent = `Modifier la demande #${demande.id}`;
-    const submitBtn = addDemandForm?.querySelector("button[type='submit']");
-    if (submitBtn) submitBtn.textContent = "Enregistrer";
+    // --- 2) Récupérer les IDs de noeud ---
+    const pickupId   = demande.pickupAddress?.id   ?? demande.pickupAddress;
+    const deliveryId = demande.deliveryAddress?.id ?? demande.deliveryAddress;
 
-    // Ouvrir la modale
-    openAddDemandModal();
+    // --- 3) Récupérer les noeuds dans le plan (pour afficher les coords jolies) ---
+    let pickupNode = null;
+    let deliveryNode = null;
+    if (system.plan && typeof system.plan.getNodeById === "function") {
+        if (pickupId)   pickupNode   = system.plan.getNodeById(pickupId);
+        if (deliveryId) deliveryNode = system.plan.getNodeById(deliveryId);
+    }
+
+    // --- 4) Remplir les champs cachés ---
+    if (pickupId)   pickupAddressInput.value   = pickupId;
+    if (deliveryId) deliveryAddressInput.value = deliveryId;
+
+    // --- 5) Remplir les champs affichés (à droite des boutons) ---
+    if (pickupAddressDisplay) {
+        if (pickupNode) {
+            pickupAddressDisplay.value =
+                `Point ${pickupId} (${pickupNode.latitude.toFixed(4)}, ${pickupNode.longitude.toFixed(4)})`;
+        } else if (pickupId) {
+            pickupAddressDisplay.value = `Point ${pickupId}`;
+        } else {
+            pickupAddressDisplay.value = "Aucun point sélectionné";
+        }
+    }
+
+    if (deliveryAddressDisplay) {
+        if (deliveryNode) {
+            deliveryAddressDisplay.value =
+                `Point ${deliveryId} (${deliveryNode.latitude.toFixed(4)}, ${deliveryNode.longitude.toFixed(4)})`;
+        } else if (deliveryId) {
+            deliveryAddressDisplay.value = `Point ${deliveryId}`;
+        } else {
+            deliveryAddressDisplay.value = "Aucun point sélectionné";
+        }
+    }
+
+    // --- 6) Mettre à jour le style des boutons comme si la carte avait été cliquée ---
+    const selectPickupBtn   = document.getElementById('selectPickupBtn');
+    const selectDeliveryBtn = document.getElementById('selectDeliveryBtn');
+
+    if (selectPickupBtn) {
+        if (pickupId) {
+            selectPickupBtn.style.background = '#4caf50';
+            selectPickupBtn.innerHTML = '<i class="fa-solid fa-check"></i> Point sélectionné';
+        } else {
+            selectPickupBtn.style.background = '';
+            selectPickupBtn.innerHTML = '<i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte';
+        }
+    }
+
+    if (selectDeliveryBtn) {
+        if (deliveryId) {
+            selectDeliveryBtn.style.background = '#2196f3';
+            selectDeliveryBtn.innerHTML = '<i class="fa-solid fa-check"></i> Point sélectionné';
+        } else {
+            selectDeliveryBtn.style.background = '';
+            selectDeliveryBtn.innerHTML = '<i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte';
+        }
+    }
+
+    // --- 7) Mettre à jour le titre + bouton de la sidebar ---
+    const title = document.querySelector("#addDemandSidebar h3");
+    if (title) title.textContent = `Modifier la demande #${demande.id}`;
+
+    const submitBtn = document.getElementById("addDemandSubmitBtn");
+    if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Enregistrer';
+    }
+
+    // (optionnel) mettre à jour l'état interne de sélection si tu veux des marqueurs sur la carte
+    nodeSelectionState.pickupNode   = pickupNode || null;
+    nodeSelectionState.deliveryNode = deliveryNode || null;
 }
+
 
 
 // Delete demand function
