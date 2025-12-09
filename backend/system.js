@@ -1048,6 +1048,92 @@ class System {
     }
 
     /**
+     * Recalculate legs of an existing tour after manual reordering of stops.
+     * Uses Dijkstra on the current plan to rebuild each leg so the polyline
+     * follows the real graph instead of straight lines.
+     * @param {Tour} tour
+     */
+    recalculateTourLegs(tour) {
+        if (!tour || !Array.isArray(tour.stops) || tour.stops.length < 2) {
+            console.warn("System.recalculateTourLegs: invalid tour or not enough stops");
+            return;
+        }
+        if (!this.plan || !this.plan.nodes || !(this.plan.nodes instanceof Map)) {
+            console.warn("System.recalculateTourLegs: plan or nodes map not initialized");
+            return;
+        }
+        if (!this.distanceMatrix) {
+            console.warn("System.recalculateTourLegs: distanceMatrix not initialized");
+            return;
+        }
+
+        const newLegs = [];
+        let hadError = false;
+
+        for (let i = 0; i < tour.stops.length - 1; i++) {
+            const fromStop = tour.stops[i];
+            const toStop = tour.stops[i + 1];
+
+            const fromNode = fromStop && fromStop.node;
+            const toNode = toStop && toStop.node;
+
+            if (!fromNode || !toNode || !fromNode.id || !toNode.id) {
+                console.warn("System.recalculateTourLegs: missing node for stops", i, i + 1);
+                hadError = true;
+                break;
+            }
+
+            const result = this.dijkstra(fromNode.id, toNode.id);
+            if (!result || !Array.isArray(result.path) || result.path.length < 2 || result.distance === Infinity) {
+                console.warn(`System.recalculateTourLegs: no path found between ${fromNode.id} and ${toNode.id}`);
+                hadError = true;
+                break;
+            }
+
+            const pathNodes = result.path
+                .map(id => this.plan.nodes.get(id))
+                .filter(n => n);
+
+            if (pathNodes.length < 2) {
+                console.warn("System.recalculateTourLegs: insufficient path nodes between stops", i, i + 1);
+                hadError = true;
+                break;
+            }
+
+            // Compute distance in meters by summing segment lengths along the path
+            let distance = 0;
+            for (let j = 0; j < pathNodes.length - 1; j++) {
+                const origin = pathNodes[j];
+                const dest = pathNodes[j + 1];
+                if (!origin || !origin.segments) continue;
+                const seg = origin.segments.find(s => s.destination && s.destination.id === dest.id);
+                if (seg && typeof seg.length === "number") {
+                    distance += seg.length;
+                }
+            }
+
+            const travelTime = this.calculateTravelTime(distance);
+            const leg = new Leg(pathNodes[0], pathNodes[pathNodes.length - 1], pathNodes, [], distance, travelTime);
+            newLegs.push(leg);
+        }
+
+        // If any leg failed to be rebuilt, keep existing legs to avoid corrupting the tour
+        if (hadError || newLegs.length !== tour.stops.length - 1) {
+            console.warn("System.recalculateTourLegs: keeping existing legs due to errors");
+            return;
+        }
+
+        tour.legs = newLegs;
+
+        if (typeof tour.calculateTotalDistance === "function") {
+            tour.calculateTotalDistance();
+        }
+        if (typeof tour.calculateTotalDuration === "function") {
+            tour.calculateTotalDuration();
+        }
+    }
+
+    /**
      * K-means clustering algorithm to group demands by geographic proximity
      * IMPORTANT: Respects that each demand is atomic - pickup and delivery stay together
      * @param {Array<Demand>} demands - Demands to cluster (must be complete with pickup+delivery)
