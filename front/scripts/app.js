@@ -370,32 +370,197 @@ function updateTimelineFromTour(tour) {
 // Handle demands loading
 
 // Récupération des éléments du DOM
-const addDemandModal = document.getElementById("addDemandModal");
+const addDemandSidebar = document.getElementById("addDemandSidebar");
 const addDemandForm = document.getElementById("addDemandForm");
 const addDemandBtn = document.getElementById("addDemandBtn");
 const addDemandCancelBtn = document.getElementById("addDemandCancelBtn");
 const addDemandCloseBtn = document.getElementById("addDemandCloseBtn");
 const clearDemandsBtn = document.getElementById("clearDemandsBtn");
 
-
+// État de sélection des points
+let nodeSelectionState = {
+    mode: null, // 'pickup' ou 'delivery'
+    pickupNode: null,
+    deliveryNode: null,
+    pickupMarker: null,
+    deliveryMarker: null
+};
 
 function openAddDemandModal() {
-    if (!addDemandModal) return;
-    addDemandModal.style.display = "flex";
+    if (!addDemandSidebar) return;
+
+    // Vérifier qu'un plan est chargé
+    if (!system.plan) {
+        alert('⚠️ Veuillez d\'abord charger un plan XML pour pouvoir ajouter des demandes.');
+        return;
+    }
+
+    // Réinitialiser l'état
+    resetNodeSelection();
+    addDemandSidebar.style.display = "flex";
 }
 
 function closeAddDemandModal() {
-    if (!addDemandModal) return;
-    addDemandModal.style.display = "none";
+    if (!addDemandSidebar) return;
+    addDemandSidebar.style.display = "none";
+
+    // Nettoyer les marqueurs de sélection
+    if (nodeSelectionState.pickupMarker) {
+        view.map.removeLayer(nodeSelectionState.pickupMarker);
+    }
+    if (nodeSelectionState.deliveryMarker) {
+        view.map.removeLayer(nodeSelectionState.deliveryMarker);
+    }
+
+    // Réinitialiser le mode de sélection
+    nodeSelectionState.mode = null;
+    view.setNodeSelectionMode(false);
+
     if (addDemandForm) {
         addDemandForm.reset();
+        document.getElementById('pickupAddressDisplay').value = '';
+        document.getElementById('deliveryAddressDisplay').value = '';
+    }
+
+    resetNodeSelection();
+}
+
+function resetNodeSelection() {
+    nodeSelectionState = {
+        mode: null,
+        pickupNode: null,
+        deliveryNode: null,
+        pickupMarker: null,
+        deliveryMarker: null
+    };
+
+    // Réinitialiser les champs
+    const pickupInput = document.getElementById('pickupAddressInput');
+    const deliveryInput = document.getElementById('deliveryAddressInput');
+    const pickupDisplay = document.getElementById('pickupAddressDisplay');
+    const deliveryDisplay = document.getElementById('deliveryAddressDisplay');
+
+    if (pickupInput) pickupInput.value = '';
+    if (deliveryInput) deliveryInput.value = '';
+    if (pickupDisplay) pickupDisplay.value = '';
+    if (deliveryDisplay) deliveryDisplay.value = '';
+
+    // Réinitialiser les styles des boutons
+    const selectPickupBtn = document.getElementById('selectPickupBtn');
+    const selectDeliveryBtn = document.getElementById('selectDeliveryBtn');
+
+    if (selectPickupBtn) {
+        selectPickupBtn.style.background = '';
+        selectPickupBtn.innerHTML = '<i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte';
+    }
+    if (selectDeliveryBtn) {
+        selectDeliveryBtn.style.background = '';
+        selectDeliveryBtn.innerHTML = '<i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte';
     }
 }
+
+// Fonction appelée quand un nœud est sélectionné sur la carte
+window.onNodeSelected = function(node) {
+    if (!nodeSelectionState.mode) return;
+
+    if (nodeSelectionState.mode === 'pickup') {
+        nodeSelectionState.pickupNode = node;
+
+        // Mettre à jour les champs
+        document.getElementById('pickupAddressInput').value = node.id;
+        document.getElementById('pickupAddressDisplay').value = `Point ${node.id} (${node.latitude.toFixed(4)}, ${node.longitude.toFixed(4)})`;
+
+        // Mettre à jour le bouton
+        const btn = document.getElementById('selectPickupBtn');
+        btn.style.background = '#4caf50';
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Point sélectionné';
+
+        // Ajouter un marqueur vert sur la carte
+        if (nodeSelectionState.pickupMarker) {
+            view.map.removeLayer(nodeSelectionState.pickupMarker);
+        }
+
+        nodeSelectionState.pickupMarker = L.circleMarker([node.latitude, node.longitude], {
+            radius: 12,
+            fillColor: '#4caf50',
+            color: '#fff',
+            weight: 3,
+            fillOpacity: 0.8
+        }).addTo(view.map);
+
+        nodeSelectionState.pickupMarker.bindPopup(`<b>Point d'enlèvement</b><br>ID: ${node.id}`).openPopup();
+
+    } else if (nodeSelectionState.mode === 'delivery') {
+        nodeSelectionState.deliveryNode = node;
+
+        // Mettre à jour les champs
+        document.getElementById('deliveryAddressInput').value = node.id;
+        document.getElementById('deliveryAddressDisplay').value = `Point ${node.id} (${node.latitude.toFixed(4)}, ${node.longitude.toFixed(4)})`;
+
+        // Mettre à jour le bouton
+        const btn = document.getElementById('selectDeliveryBtn');
+        btn.style.background = '#2196f3';
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Point sélectionné';
+
+        // Ajouter un marqueur bleu sur la carte
+        if (nodeSelectionState.deliveryMarker) {
+            view.map.removeLayer(nodeSelectionState.deliveryMarker);
+        }
+
+        nodeSelectionState.deliveryMarker = L.circleMarker([node.latitude, node.longitude], {
+            radius: 12,
+            fillColor: '#2196f3',
+            color: '#fff',
+            weight: 3,
+            fillOpacity: 0.8
+        }).addTo(view.map);
+
+        nodeSelectionState.deliveryMarker.bindPopup(`<b>Point de livraison</b><br>ID: ${node.id}`).openPopup();
+    }
+
+    // Désactiver le mode de sélection
+    nodeSelectionState.mode = null;
+    view.setNodeSelectionMode(false);
+};
 
 // Ouverture via le bouton +
 if (addDemandBtn) {
     addDemandBtn.addEventListener("click", openAddDemandModal);
 }
+
+// Boutons de sélection sur la carte
+document.addEventListener('DOMContentLoaded', () => {
+    const selectPickupBtn = document.getElementById('selectPickupBtn');
+    const selectDeliveryBtn = document.getElementById('selectDeliveryBtn');
+
+    if (selectPickupBtn) {
+        selectPickupBtn.addEventListener('click', () => {
+            nodeSelectionState.mode = 'pickup';
+            view.setNodeSelectionMode(true, 'pickup');
+
+            // Mettre en surbrillance le bouton actif
+            selectPickupBtn.style.background = '#ffa726';
+            selectPickupBtn.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> Cliquez sur la carte...';
+
+            selectDeliveryBtn.style.background = '';
+            selectDeliveryBtn.innerHTML = '<i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte';
+        });
+    }
+
+    if (selectDeliveryBtn) {
+        selectDeliveryBtn.addEventListener('click', () => {
+            nodeSelectionState.mode = 'delivery';
+            view.setNodeSelectionMode(true, 'delivery');
+
+            // Mettre en surbrillance le bouton actif
+            selectDeliveryBtn.style.background = '#ffa726';
+            selectDeliveryBtn.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> Cliquez sur la carte...';
+
+            selectPickupBtn.style.background = '';
+            selectPickupBtn.innerHTML = '<i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte';
+        });
+    }
+});
 
 // Effacer toutes les demandes via le bouton Clear
 if (clearDemandsBtn) {
@@ -423,14 +588,7 @@ if (addDemandCloseBtn) {
     addDemandCloseBtn.addEventListener("click", closeAddDemandModal);
 }
 
-// Fermeture si on clique sur le fond gris
-if (addDemandModal) {
-    addDemandModal.addEventListener("click", (e) => {
-        if (e.target === addDemandModal) {
-            closeAddDemandModal();
-        }
-    });
-}
+// La sidebar ne se ferme que via les boutons Annuler ou X (pas de clic sur overlay)
 
 // Soumission du formulaire
 if (addDemandForm) {
@@ -448,23 +606,54 @@ if (addDemandForm) {
         const pickupDuration = Number(pickupDurationInput.value);
         const deliveryDuration = Number(deliveryDurationInput.value);
 
-        if (!pickupAddress || !deliveryAddress || isNaN(pickupDuration) || isNaN(deliveryDuration)) {
-            alert("Merci de remplir tous les champs correctement.");
+        // Validation améliorée avec messages spécifiques
+        if (!pickupAddress) {
+            alert("⚠️ Veuillez sélectionner un point d'enlèvement sur la carte.");
             return;
         }
 
+        if (!deliveryAddress) {
+            alert("⚠️ Veuillez sélectionner un point de livraison sur la carte.");
+            return;
+        }
 
+        if (pickupAddress === deliveryAddress) {
+            alert("⚠️ Le point d'enlèvement et le point de livraison doivent être différents.");
+            return;
+        }
+
+        if (isNaN(pickupDuration) || pickupDuration < 0) {
+            alert("⚠️ La durée d'enlèvement doit être un nombre positif.");
+            return;
+        }
+
+        if (isNaN(deliveryDuration) || deliveryDuration < 0) {
+            alert("⚠️ La durée de livraison doit être un nombre positif.");
+            return;
+        }
 
         // Appel de la fonction back déjà existante dans System
-        // addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration)
-        const result = system.addDemand(
-            pickupAddress,
-            deliveryAddress,
-            pickupDuration,
-            deliveryDuration
-        );
+        let result;
+        try {
+            result = system.addDemand(
+                pickupAddress,
+                deliveryAddress,
+                pickupDuration,
+                deliveryDuration
+            );
+        } catch (err) {
+            console.error('addDemand threw:', err);
+            alert('❌ Erreur lors de l\'ajout de la demande: ' + (err && err.message ? err.message : String(err)));
+            return;
+        }
+
+        if (!result) {
+            alert('❌ Erreur inconnue lors de l\'ajout de la demande.');
+            return;
+        }
+
         if (!result.success) {
-            alert(result.error);
+            alert("❌ " + (result.error || 'Erreur inconnue lors de l\'ajout de la demande.'));
             return;
         }
 
@@ -473,6 +662,10 @@ if (addDemandForm) {
         if (demand) {
             demand.clientName = `Demande manuelle #${demand.id}`;
         }
+
+        // Message de succès avec les détails
+        console.log('✅ Demande ajoutée avec succès:', demand);
+        alert(`✅ Demande ajoutée avec succès!\n\nEnlèvement: Point ${pickupAddress}\nLivraison: Point ${deliveryAddress}\nDurées: ${pickupDuration}s / ${deliveryDuration}s`);
 
         // Rafraîchir l'UI avec la nouvelle demande
         updateDemandsUI();
@@ -549,9 +742,25 @@ async function handleLoadDemands() {
 }
 
 // Helper function to format node address for display
-function formatNodeAddress(nodeId) {
+function formatNodeAddress(nodeIdOrObject) {
     if (!system.plan) {
-        return `Node #${nodeId}`;
+        return `Node #${nodeIdOrObject}`;
+    }
+
+    // Si c'est déjà un objet Node avec latitude/longitude
+    if (nodeIdOrObject && typeof nodeIdOrObject === 'object' && nodeIdOrObject.latitude && nodeIdOrObject.longitude) {
+        const lat = nodeIdOrObject.latitude.toFixed(4);
+        const lon = nodeIdOrObject.longitude.toFixed(4);
+        return `(${lat}, ${lon})`;
+    }
+
+    // Sinon, c'est un ID (string ou number)
+    let nodeId = nodeIdOrObject;
+
+    // Si l'ID est une string, extraire uniquement le nombre
+    if (typeof nodeId === 'string') {
+        // Enlever "Node " au début si présent
+        nodeId = nodeId.replace(/^Node\s*/i, '').trim();
     }
 
     const node = system.plan.getNodeById(nodeId);
@@ -579,7 +788,7 @@ function updateDemandsUI() {
     });
 
     // Update map display if plan is loaded
-    if (system.plan && view.map && system.toursList == []) {
+    if (system.plan && view.map && system.toursList.length === 0) {
         // Redisplay plan (light segments and nodes)
         const planJSON = system.plan.toJSON();
         view.clearMap();
@@ -827,6 +1036,26 @@ async function handleCalculateTour() {
     // avant de lancer le calcul synchrone qui bloque l'UI
     setTimeout(() => {
         try {
+            // Ensure there's at least one courier in system (some flows add couriers when loading XML)
+            if (!system.listCouriers || system.listCouriers.length === 0) {
+                try {
+                    // Respect system's Courier class signature
+                    const defaultCourier = new Courier(1, 'Default');
+                    system.listCouriers = [defaultCourier];
+                    console.log('Ajout d\'un coursier par défaut pour le calcul:', defaultCourier);
+                } catch (e) {
+                    // Fallback plain object
+                    system.listCouriers = [{ id: 1, name: 'Default' }];
+                    console.warn('Impossible d\'instancier Courier, fallback au plain object', e);
+                }
+            }
+
+            // Vérifier que l'entrepôt est défini (sinon system.calculateTour retournera null)
+            if (!system.plan.warehouse) {
+                alert('⚠️ Aucun entrepôt défini dans le plan. Chargez un fichier de demandes (XML) qui contient la balise <entrepot> ou définissez l\'entrepôt dans le plan.');
+                return;
+            }
+
             // Appeler la fonction de calcul de tournée du système
             const result = system.calculateTour(system.demandsList);
 
@@ -1032,4 +1261,3 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 });
-

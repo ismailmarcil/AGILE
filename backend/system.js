@@ -476,9 +476,11 @@ class System {
         if (!pickupNode || !deliveryNode) {
             return { success: false, error: `Le noeud indiqué n'existe pas sur la map` };
         }
-        const demande = new Demand(pickupNode, deliveryNode, pickupDuration, deliveryDuration, this.nextDemandId++);
+        // Créer la demande avec les IDs (comme loadDemandsFromXML), pas les objets Node
+        // Cela permet à calculateTour d'utiliser correctement findShortestPath avec les IDs
+        const demande = new Demand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration, this.nextDemandId++);
         this.demandsList.push(demande);
-        return demande;
+        return { success: true, demand: demande };
     }
 
     removeDemandById(id) {
