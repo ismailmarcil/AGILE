@@ -10,6 +10,7 @@ if (typeof require !== 'undefined') {
     global.TourPoint = tourpointModule.TourPoint;
     global.TypePoint = tourpointModule.TypePoint;
     global.Courier = require("./courier");
+    global.ComputerTour = require("./computerTour")
 }
 
 // In browser, Demand, Tour, Leg, TourPoint, and Courier will be available from the global scope after their scripts load
@@ -799,15 +800,15 @@ class System {
     }
 
     /**
-     * Compute optimal tours for couriers using K-means distribution + Nearest Neighbor TSP
+     * Compute optimal tours for couriers using K-means distribution + ComputerTour TSP
      * Each tour:
      * - Starts from warehouse at 8:00
      * - Visits all pickups and deliveries for that courier's demands
      * - Returns to warehouse
-     * - Minimizes total arrival time at warehouse
-     * @param {Array<Demand>} demands - All demands to fulfill
-     * @returns {Array<Tour>} List of computed tours
-     * list couriers
+     * - Minimizes total arrival time at warehouse using ComputerTour class
+     * @param {Array<Courier>} couriers - List of couriers to assign tours
+     * @returns {{code: int, tours : Array<Tour>}} List of computed tours
+     * // code: 0 = succès, 1 = échec, 2 = nb_coursiers insuffisant
      */
     computeTours(couriers) {
         if (!this.plan || !this.plan.nodes || this.demandsList.length === 0) {
@@ -821,13 +822,19 @@ class System {
         }
 
         const nomCouriers = couriers.length;
-        
-        const distanceMatrix = this.distanceMatrix;
 
         // Step 1: Distribute demands among couriers using K-means
         const demandGroups = this.distributeDemands(nomCouriers);
 
-        // Step 2: Build optimal tour for each courier's demand group
+        // Step 2: Create warehouse TourPoint for ComputerTour
+        const warehouse = this.plan.warehouse;
+        if (!warehouse) {
+            console.error("Cannot compute tours: no warehouse defined");
+            return [];
+        }
+        const warehouseTourPoint = new TourPoint(warehouse, 0, TypePoint.WAREHOUSE, null);
+
+        // Step 3: Build optimal tour for each courier's demand group using ComputerTour
         const tours = [];
         for (let i = 0; i < Math.min(demandGroups.length, nomCouriers); i++) {
             const courier = couriers[i];
@@ -838,17 +845,92 @@ class System {
                 continue;
             }
 
-            console.log(`\nBuilding tour for ${courier.name} (${courierDemands.length} demands)...`);
-            const tour = this.buildTourForCourier(courier, courierDemands, distanceMatrix);
+            console.log(`\nComputing tour for ${courier.name} (${courierDemands.length} demands) using ComputerTour...`);
+            
+            // Convert demands to pickup/delivery TourPoint pairs
+            const pickupDeliveryPairs = this.createTourPointPairs(courierDemands);
+            
+            if (pickupDeliveryPairs.length === 0) {
+                console.warn(`⚠️  No valid pickup/delivery pairs for courier ${courier.name}`);
+                continue;
+            }
+
+            // Create ComputerTour instance
+            const computerTour = new ComputerTour(this.plan, warehouseTourPoint);
+            
+            // Compute the optimal tour
+            const tour = computerTour.computeTour(pickupDeliveryPairs, courier);
 
             if (tour) {
                 tours.push(tour);
                 this.toursList.push(tour);
-                console.log(`✅ Tour completed: ${tour.stops.length} stops, ${(tour.totalDistance/1000).toFixed(2)} km`);
+                console.log(`✅ Tour completed: ${tour.stops?.length || 0} stops, ${(tour.totalDistance/1000).toFixed(2)} km`);
+            } else {
+                console.error(`❌ Failed to compute tour for courier ${courier.name}`);
             }
         }
+        // Nombre de couriers insuffisant (code = 2) :
+        //return {code: 2, tours: ?};
 
-        return tours;
+        // Erreur autre (code = 1) :
+        //  return {code: 1, tours: ?};
+
+        // Succés (code = 0) :
+        return {code: 0, tours: tours};
+    }
+
+    /**
+     * Create TourPoint pairs (pickup, delivery) from demands
+     * @param {Array<Demand>} demands - Array of demands
+     * @returns {Array<[TourPoint, TourPoint]>} Array of pickup/delivery TourPoint pairs
+     */
+    createTourPointPairs(demands) {
+        const pairs = [];
+        
+        for (const demand of demands) {
+            try {
+                // Get pickup and delivery nodes
+                const pickupNodeId = demand.pickupAddress?.id || demand.pickupAddress;
+                const deliveryNodeId = demand.deliveryAddress?.id || demand.deliveryAddress;
+                
+                const pickupNode = this.plan.nodes.get(pickupNodeId);
+                const deliveryNode = this.plan.nodes.get(deliveryNodeId);
+                
+                if (!pickupNode) {
+                    console.error(`Pickup node not found: ${pickupNodeId} for demand ${demand.id}`);
+                    continue;
+                }
+                
+                if (!deliveryNode) {
+                    console.error(`Delivery node not found: ${deliveryNodeId} for demand ${demand.id}`);
+                    continue;
+                }
+                
+                // Create TourPoint objects
+                const pickupTourPoint = new TourPoint(
+                    pickupNode, 
+                    demand.pickupDuration || 300, // 5 minutes default
+                    TypePoint.PICKUP, 
+                    demand
+                );
+                
+                const deliveryTourPoint = new TourPoint(
+                    deliveryNode, 
+                    demand.deliveryDuration || 300, // 5 minutes default
+                    TypePoint.DELIVERY, 
+                    demand
+                );
+                
+                pairs.push([pickupTourPoint, deliveryTourPoint]);
+                console.log(`  ✓ Created TourPoint pair for demand ${demand.id}: ${pickupNodeId} → ${deliveryNodeId}`);
+                
+            } catch (error) {
+                console.error(`Error creating TourPoint pair for demand ${demand.id}:`, error);
+            }
+        }
+        
+        console.log(`Created ${pairs.length} pickup/delivery pairs from ${demands.length} demands`);
+        return pairs;
     }
 
     /**

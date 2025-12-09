@@ -119,6 +119,12 @@
             <div class="section-title">
                 <span><i class="fa-solid fa-stopwatch"></i> Détails de la tournée</span>
                 <div style="display: flex; gap: 8px; margin-left: auto; align-items: center;">
+                    <!-- Sélecteur de tournées par coursier (affiché quand plusieurs tournées calculées) -->
+                    <div id="courierSelectContainer" style="display: none;">
+                        <select id="courierTourSelect" style="padding: 6px 12px; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); background: #f8f9fa; cursor: pointer;">
+                            <option value="">Sélectionner une tournée...</option>
+                        </select>
+                    </div>
                     <div id="courierInfo" style="display: none; padding: 4px 12px; background: #f8f9fa; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color);">
                         <i class="fa-solid fa-user"></i> <span id="courierName">-</span>
                     </div>
