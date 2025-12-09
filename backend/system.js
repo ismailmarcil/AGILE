@@ -756,7 +756,8 @@ class System {
      * - Returns to warehouse
      * - Minimizes total arrival time at warehouse using ComputerTour class
      * @param {Array<Courier>} couriers - List of couriers to assign tours
-     * @returns {Array<Tour>} List of computed tours
+     * @returns {{code: int, tours : Array<Tour>}} List of computed tours
+     * // code: 0 = succès, 1 = échec, 2 = nb_coursiers insuffisant
      */
     computeTours(couriers) {
         if (!this.plan || !this.plan.nodes || this.demandsList.length === 0) {
@@ -817,8 +818,14 @@ class System {
                 console.error(`❌ Failed to compute tour for courier ${courier.name}`);
             }
         }
+        // Nombre de couriers insuffisant (code = 2) :
+        //return {code: 2, tours: ?};
 
-        return tours;
+        // Erreur autre (code = 1) :
+        //  return {code: 1, tours: ?};
+
+        // Succés (code = 0) :
+        return {code: 0, tours: tours};
     }
 
     /**
