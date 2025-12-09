@@ -667,6 +667,33 @@ class System {
         return { success: true, demand: demande };
     }
 
+    upDateDemand(idDemand,pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
+        //Vérifie si un plan est chargé
+        if (!this.plan) {
+            return { success: false, error: "Aucun plan chargé. Impossible d'ajouter une demande." };
+        }
+        //Vérifier que la demande existe et la récupérer grace à son id
+        const demandeIndex = this.demandsList.findIndex(d => d.id === idDemand);
+        if (demandeIndex === -1) {
+            return { success: false, error: `La demande avec l'id ${idDemand} n'existe pas.` };
+        }
+        const demande = this.demandsList[demandeIndex];
+
+        //Verfier que les noeuds existent dans le plan
+        const pickupNode = this.plan.getNodeById(pickupAddress);
+        const deliveryNode = this.plan.getNodeById(deliveryAddress);
+        if (!pickupNode || !deliveryNode) {
+            return { success: false, error: `Le noeud indiqué n'existe pas sur la map` };
+        }
+        //MAJ les attributs de la demande
+        demande.pickupAddress = pickupAddress;
+        demande.deliveryAddress = deliveryAddress;
+        demande.pickupDuration = Number(pickupDuration);
+        demande.deliveryDuration = Number(deliveryDuration);
+
+        return { success: true, demand: demande };
+    }
+
     removeDemandById(id) {
         const index = this.demandsList.findIndex(d => d.id === id);
         if (index !== -1) {
