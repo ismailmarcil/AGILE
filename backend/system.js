@@ -667,7 +667,7 @@ class System {
         return { success: true, demand: demande };
     }
 
-    upDateDemand(idDemand,pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
+    updateDemand(idDemand,pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
         //Vérifie si un plan est chargé
         if (!this.plan) {
             return { success: false, error: "Aucun plan chargé. Impossible d'ajouter une demande." };
