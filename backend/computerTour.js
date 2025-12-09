@@ -1,7 +1,8 @@
 /**
  * Class responsible for computing optimal delivery tours
  */
-
+const Leg = (typeof require !== 'undefined') ? require('./leg') : null;
+const Tour = (typeof require !== 'undefined') ? require('./tours') : null;
 
 class ComputerTour {
     /**
@@ -593,67 +594,6 @@ class ComputerTour {
         buildTour([this.start], new Set(allPoints), new Set(), 0);
 
         return bestTour;
-    }
-
-    /**
-     * Version 1 : Flexible order with precedence validation
-     * Allows visiting all pickups first, then deliveries (respecting precedences)
-     * @returns {Array<TourPoint>|null}
-     * @private
-     */
-    computeTSPTourV1() {
-        const finalPath = [];
-        finalPath.push(this.start);
-
-        // Get all pickups and deliveries
-        const allPickups = [];
-        const allDeliveries = [];
-
-        for (const [delivery, pickup] of this.precedence.entries()) {
-            allPickups.push(pickup);
-            allDeliveries.push(delivery);
-        }
-
-        // Strategy: Visit all pickups first, then deliveries in valid order
-        const visited = new Set();
-        const visitedPickups = new Set();
-
-        // Phase 1: Visit all pickups
-        for (const pickup of allPickups) {
-            finalPath.push(pickup);
-            visited.add(pickup);
-            visitedPickups.add(pickup);
-        }
-
-        // Phase 2: Visit deliveries, ensuring their pickup was already visited
-        const remainingDeliveries = [...allDeliveries];
-
-        while (remainingDeliveries.length > 0) {
-            let foundValid = false;
-
-            for (let i = 0; i < remainingDeliveries.length; i++) {
-                const delivery = remainingDeliveries[i];
-                const requiredPickup = this.precedence.get(delivery);
-
-                // Can visit this delivery if its pickup was already visited
-                if (visitedPickups.has(requiredPickup)) {
-                    finalPath.push(delivery);
-                    visited.add(delivery);
-                    remainingDeliveries.splice(i, 1);
-                    foundValid = true;
-                    break;
-                }
-            }
-
-            // If no valid delivery found, there's a precedence issue
-            if (!foundValid) {
-                console.error("ComputerTour.computeTSPTourV1: Precedence constraint violation");
-                return null;
-            }
-        }
-
-        finalPath.push(this.start);
-        return finalPath;
     }
 
     /**
