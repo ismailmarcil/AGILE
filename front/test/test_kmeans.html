@@ -120,6 +120,17 @@
             <div id="mapContainer"></div>
         </div>
 
+        <!-- Section 3.5: Load Saved Tour -->
+        <div class="section">
+            <h2>📁 Charger un Tour Sauvegardé</h2>
+            <div class="controls">
+                <input id="tourFileInput" type="file" accept=".json" />
+                <button id="btnLoadTour" disabled>Charger Tour JSON</button>
+                <button id="btnClearLoadedTour" class="danger" disabled>Effacer Tour Chargé</button>
+            </div>
+            <div id="tourLoadInfo"><em>📄 Aucun tour chargé</em></div>
+        </div>
+
         <!-- Section 4: Courier Configuration -->
         <div class="section">
             <h2>👥 Configurer les Coursiers</h2>
@@ -194,17 +205,30 @@
             try {
                 const result = await system.loadPlan(input);
                 if (result.success) {
+                    // Debug: Check what we got
+                    console.log('Plan loaded:', result.plan);
+                    console.log('System plan:', system.plan);
+                    console.log('Plan nodes type:', Array.isArray(result.plan.nodes));
+                    
                     document.getElementById('planPreview').innerHTML = `
                         <div class="step"><strong>✅ Plan chargé</strong></div>
-                        <div class="step">Nœuds: ${result.plan.nodes.length}</div>
+                        <div class="step">Nœuds: ${Array.isArray(result.plan.nodes) ? result.plan.nodes.length : 'Map with ' + (result.plan.nodes?.size || 0) + ' entries'}</div>
                         <div class="step">Segments: ${result.plan.segments.length}</div>
                     `;
                     document.getElementById('btnLoadDemands').disabled = false;
-                    view.displayPlan(result.plan);
+                    document.getElementById('btnLoadTour').disabled = false; // Enable tour loading
+                    
+                    // Ensure we pass the correct format to view
+                    if (result.plan && result.plan.nodes && result.plan.segments) {
+                        view.displayPlan(result.plan);
+                    } else {
+                        console.error('Invalid plan structure:', result.plan);
+                    }
                 } else {
                     alert('Erreur: ' + result.error);
                 }
             } catch (error) {
+                console.error('Error details:', error);
                 alert('Erreur lors du chargement: ' + error.message);
             }
         });
@@ -247,6 +271,134 @@
             document.getElementById('btnClearDemands').disabled = true;
             document.getElementById('btnComputeTours').disabled = true;
         });
+
+        // Load Tour from JSON
+        document.getElementById('btnLoadTour').addEventListener('click', async () => {
+            const input = document.getElementById('tourFileInput');
+            if (!input.files[0]) {
+                alert('Sélectionnez un fichier JSON de tour');
+                return;
+            }
+
+            if (!system.plan) {
+                alert('Veuillez d\'abord charger un plan');
+                return;
+            }
+
+            try {
+                const result = await system.loadTourFromFile(input);
+                if (result.success) {
+                    const tour = result.tour;
+                    
+                    // Clear any existing displayed tours
+                    view.clearMap?.();
+                    
+                    // Display the loaded tour
+                    if (view.displayTour) {
+                        view.displayTour(tour);
+                    }
+                    
+                    document.getElementById('tourLoadInfo').innerHTML = `
+                        <div class="step"><strong>✅ Tour chargé</strong></div>
+                        <div class="step">ID: ${tour.id || 'N/A'}</div>
+                        <div class="step">Coursier: ${tour.courier?.name || 'N/A'}</div>
+                        <div class="step">Arrêts: ${tour.stops?.length || 0}</div>
+                        <div class="step">Distance: ${(tour.totalDistance/1000).toFixed(2)} km</div>
+                        <div class="step">Durée: ${Math.round(tour.totalDuration/60)} min</div>
+                        <div class="step">Départ: ${tour.departureTime}</div>
+                    `;
+                    
+                    document.getElementById('btnClearLoadedTour').disabled = false;
+                    
+                    // Display single tour results
+                    displaySingleTourResults(tour);
+                    
+                } else {
+                    alert('Erreur lors du chargement du tour: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error loading tour:', error);
+                alert('Erreur lors du chargement: ' + error.message);
+            }
+        });
+
+        // Clear Loaded Tour
+        document.getElementById('btnClearLoadedTour').addEventListener('click', () => {
+            // Remove the loaded tour from the list
+            if (system.toursList.length > 0) {
+                system.toursList.pop(); // Remove last loaded tour
+            }
+            
+            document.getElementById('tourLoadInfo').innerHTML = '<em>📄 Aucun tour chargé</em>';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('btnClearLoadedTour').disabled = true;
+            
+            // Clear map and redisplay plan if available
+            view.clearMap?.();
+            if (system.plan) {
+                view.displayPlan(system.plan);
+            }
+        });
+
+        // Display single tour results
+        function displaySingleTourResults(tour) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            const distKm = (tour.totalDistance / 1000).toFixed(2);
+            const durationMin = Math.round(tour.totalDuration / 60);
+            const durationHours = (tour.totalDuration / 3600).toFixed(1);
+            
+            const html = `
+                <div class="results-grid">
+                    <div class="result-card">
+                        <h4 style="display: flex; align-items: center; gap: 10px;">
+                            <span style="display: inline-block; width: 20px; height: 20px; background-color: #FF0000; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></span>
+                            📍 ${tour.courier?.name || 'Tour chargé'}
+                        </h4>
+                        <div class="metric">
+                            <span>ID:</span>
+                            <span class="metric-value">${tour.id || 'N/A'}</span>
+                        </div>
+                        <div class="metric">
+                            <span>Arrêts:</span>
+                            <span class="metric-value">${tour.stops?.length || 0}</span>
+                        </div>
+                        <div class="metric">
+                            <span>Distance:</span>
+                            <span class="metric-value">${distKm} km</span>
+                        </div>
+                        <div class="metric">
+                            <span>Durée:</span>
+                            <span class="metric-value">${durationMin} min (${durationHours}h)</span>
+                        </div>
+                        <div class="metric">
+                            <span>Départ:</span>
+                            <span class="metric-value">${tour.departureTime}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="result-card" style="background: #e8f4fd; border: 2px solid #3498db;">
+                        <h4>📄 TOUR CHARGÉ DEPUIS JSON</h4>
+                        <div class="metric">
+                            <span>Type:</span>
+                            <span class="metric-value">Fichier JSON</span>
+                        </div>
+                        <div class="metric">
+                            <span>Status:</span>
+                            <span class="metric-value">Chargé avec succès</span>
+                        </div>
+                        <div class="metric">
+                            <span>Limite 8h:</span>
+                            <span class="metric-value">${durationHours <= 8 ? '✅ Respectée' : '⚠️ Dépassée'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            resultsContainer.innerHTML = html;
+            resultsSection.style.display = 'block';
+        }
 
         // Generate Couriers
         document.getElementById('btnGenerateCouriers').addEventListener('click', () => {

@@ -869,7 +869,9 @@ class System {
                 const tourDurationSeconds = tour.totalDuration || 0;
 
                 if (tourDurationSeconds > maxDurationSeconds) {
-                    return {code: 2, tours: []};
+                    tours.push(tour);
+                        this.toursList.push(tour);
+                    return {code: 2, tours: tours};
                 }
                 
                 tours.push(tour);
