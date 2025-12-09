@@ -550,8 +550,12 @@ function updateTimelineFromTour(tour, readOnly = false) {
                     updateTimelineFromTour(tour);
                     return;
                 }
-                // rebuild simple legs if possible
-                rebuildTourLegs(tour);
+                // Recalculate legs so the path follows the real graph
+                if (typeof system !== 'undefined' && typeof system.recalculateTourLegs === 'function') {
+                    system.recalculateTourLegs(tour);
+                } else {
+                    rebuildTourLegs(tour);
+                }
                 // refresh UI and map
                 updateTimelineFromTour(tour);
                 if (view && view.displayTour) view.displayTour(tour);
@@ -567,7 +571,11 @@ function updateTimelineFromTour(tour, readOnly = false) {
                     updateTimelineFromTour(tour);
                     return;
                 }
-                rebuildTourLegs(tour);
+                if (typeof system !== 'undefined' && typeof system.recalculateTourLegs === 'function') {
+                    system.recalculateTourLegs(tour);
+                } else {
+                    rebuildTourLegs(tour);
+                }
                 updateTimelineFromTour(tour);
                 if (view && view.displayTour) view.displayTour(tour);
             });
