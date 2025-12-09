@@ -208,6 +208,198 @@ async function handleLoadHistory() {
     view.displayHistoryList(result.tours, resultsContainer, errorElement, onSelectTour);
 }
 
+// Nouvelle version: chargement + sélection multiple + affichage simultané
+async function handleLoadHistoryMulti() {
+    const resultsContainer = document.getElementById('historyResults');
+    const errorElement = document.getElementById('historyError');
+    if (!resultsContainer) return;
+
+    resultsContainer.innerHTML = '<p>Chargement de l\'historique...</p>';
+    if (errorElement) errorElement.textContent = '';
+
+    const result = await system.loadSavedToursSummary();
+
+    if (!result.success) {
+        if (errorElement) {
+            errorElement.textContent = result.error || 'Erreur lors du chargement de l\'historique.';
+        } else {
+            alert(result.error || 'Erreur lors du chargement de l\'historique.');
+        }
+        resultsContainer.innerHTML = '';
+        return;
+    }
+
+    const selectedTours = new Map();
+    const palette = ['#e74c3c', '#3498db', '#27ae60', '#f39c12', '#9b59b6', '#16a085'];
+
+    const setStatus = (msg) => { statusEl.textContent = msg || ''; };
+
+    const loadTourFromSummary = async (tourSummary) => {
+        const loadResult = await system.loadTourFromServer(tourSummary.tourId || tourSummary.filename);
+        if (!loadResult.success) {
+            throw new Error(loadResult.error || 'Erreur lors du chargement de la tournée.');
+        }
+        const loaded = loadResult.tour;
+        return Array.isArray(loaded) ? loaded : [loaded];
+    };
+
+    const renderLegend = (tours) => {
+        legendEl.innerHTML = '';
+        tours.forEach((t, idx) => {
+            const color = palette[idx % palette.length];
+            const item = document.createElement('div');
+            item.className = 'history-legend-item';
+            item.innerHTML = `<span class="history-legend-dot" style="background:${color}"></span>${t.courier?.name || t.courier?.id || 'Coursier ?'} (${t.id || 'tour'})`;
+            legendEl.appendChild(item);
+        });
+    };
+
+    const handleShowSelection = async () => {
+        if (selectedTours.size === 0) {
+            alert('Sélectionnez au moins une tournée à afficher.');
+            return;
+        }
+        setStatus('Chargement des tournées sélectionnées...');
+        try {
+            const tours = [];
+            for (const summary of selectedTours.values()) {
+                const arr = await loadTourFromSummary(summary);
+                tours.push(...arr);
+            }
+            if (view.map && typeof view.displayToursMulti === 'function') {
+                view.displayToursMulti(tours);
+                renderLegend(tours);
+            }
+            const first = tours[0];
+            window.currentDisplayedTour = first;
+            if (typeof updateTimelineFromTour === 'function') {
+                updateTimelineFromTour(first, true);
+            }
+            if (typeof updateCourierInfo === 'function') {
+                updateCourierInfo(first);
+            }
+            setStatus(`${tours.length} tournée(s) affichée(s) simultanément.`);
+        } catch (e) {
+            console.error(e);
+            alert(e.message || 'Erreur lors du chargement des tournées sélectionnées.');
+            setStatus('');
+        }
+    };
+
+    const handleShowAll = () => {
+        listContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.checked = true;
+            selectedTours.set(cb.value, cb._summary);
+        });
+        handleShowSelection();
+    };
+
+    const handleClearSelection = () => {
+        listContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        selectedTours.clear();
+        setStatus('Aucune tournée sélectionnée.');
+        legendEl.innerHTML = '';
+    };
+
+    // Build UI
+    resultsContainer.innerHTML = '';
+    const controls = document.createElement('div');
+    controls.className = 'history-controls';
+    controls.innerHTML = `
+        <button type="button" class="btn btn-sm" id="historyShowSelected">Afficher la sélection</button>
+        <button type="button" class="btn btn-sm" id="historyShowAll">Afficher tout</button>
+        <button type="button" class="btn btn-sm" id="historyClear">Vider la sélection</button>
+    `;
+    const statusEl = document.createElement('div');
+    statusEl.className = 'history-status';
+    const legendEl = document.createElement('div');
+    legendEl.className = 'history-legend';
+    const listContainer = document.createElement('div');
+    listContainer.className = 'history-list';
+
+    resultsContainer.appendChild(controls);
+    resultsContainer.appendChild(statusEl);
+    resultsContainer.appendChild(legendEl);
+    resultsContainer.appendChild(listContainer);
+
+    // Populate list with checkboxes + single view button
+    result.tours.forEach((t, idx) => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+
+        const left = document.createElement('div');
+        left.className = 'history-left';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = t.tourId || t.filename || `tour-${idx}`;
+        checkbox._summary = t;
+        checkbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                selectedTours.set(checkbox.value, t);
+            } else {
+                selectedTours.delete(checkbox.value);
+            }
+            setStatus(`${selectedTours.size} tournée(s) sélectionnée(s).`);
+        });
+
+        const info = document.createElement('div');
+        info.className = 'history-info';
+        const title = document.createElement('div');
+        title.className = 'history-title';
+        title.textContent = t.id || t.filename || '';
+        const meta = document.createElement('div');
+        meta.className = 'history-meta';
+        meta.textContent = [
+            t.departureTime || '',
+            t.courier || '',
+            t.totalDistance ? `${(t.totalDistance / 1000).toFixed(1)} km` : ''
+        ].filter(Boolean).join(' • ');
+        info.appendChild(title);
+        info.appendChild(meta);
+
+        left.appendChild(checkbox);
+        left.appendChild(info);
+
+        const actions = document.createElement('div');
+        actions.className = 'history-actions';
+        const viewBtn = document.createElement('button');
+        viewBtn.type = 'button';
+        viewBtn.className = 'btn btn-sm';
+        viewBtn.textContent = 'Afficher';
+        viewBtn.addEventListener('click', async () => {
+            setStatus('Chargement de la tournée...');
+            try {
+                const arr = await loadTourFromSummary(t);
+                const tour = arr[0];
+                window.currentDisplayedTour = tour;
+                if (view.map) view.displayTour(tour);
+                if (typeof updateTimelineFromTour === 'function') {
+                    updateTimelineFromTour(tour, true);
+                }
+                if (typeof updateCourierInfo === 'function') {
+                    updateCourierInfo(tour);
+                }
+                setStatus(`Tournée affichée : ${tour.id || ''}`);
+                legendEl.innerHTML = '';
+            } catch (e) {
+                console.error(e);
+                alert(e.message || 'Erreur lors du chargement de la tournée.');
+                setStatus('');
+            }
+        });
+        actions.appendChild(viewBtn);
+
+        item.appendChild(left);
+        item.appendChild(actions);
+        listContainer.appendChild(item);
+    });
+
+    // Wire controls
+    controls.querySelector('#historyShowSelected').addEventListener('click', handleShowSelection);
+    controls.querySelector('#historyShowAll').addEventListener('click', handleShowAll);
+    controls.querySelector('#historyClear').addEventListener('click', handleClearSelection);
+}
 
 
 // Update timeline UI from tour data
@@ -1390,7 +1582,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (sidebarLivreur) sidebarLivreur.style.display = 'none';
                 if (sidebarHistory) sidebarHistory.style.display = 'block';
-                handleLoadHistory(); // charger la liste dans la sidebar
+                handleLoadHistoryMulti(); // charger la liste dans la sidebar
             } else if (viewName === 'courier') {
                 // Revenir à la vue Livreur telle qu’elle était
                 if (sidebarLivreur) sidebarLivreur.style.display = 'block';
@@ -1409,6 +1601,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bouton interne pour recharger l'historique
     const historyBtn = document.getElementById('historyBtn');
     if (historyBtn) {
-        historyBtn.addEventListener('click', handleLoadHistory);
+        historyBtn.addEventListener('click', handleLoadHistoryMulti);
     }
 });

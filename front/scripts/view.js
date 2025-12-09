@@ -902,6 +902,39 @@ class View {
      * Stars (★) = Centroids
      * @param {Array} clusters - Array of clusters {demands: [], centroid: {lat, lon}}
      */
+    displayToursMulti(tours) {
+        if (!tours || tours.length === 0) {
+            console.warn('No tours to display');
+            return;
+        }
+
+        const bounds = [];
+        tours.forEach(t => {
+            (t.legs || []).forEach(l => {
+                (l.pathNode || []).forEach(n => {
+                    if (n && n.latitude !== undefined && n.longitude !== undefined) {
+                        bounds.push([n.latitude, n.longitude]);
+                    }
+                });
+            });
+            (t.stops || []).forEach(s => {
+                if (s && s.node && s.node.latitude !== undefined && s.node.longitude !== undefined) {
+                    bounds.push([s.node.latitude, s.node.longitude]);
+                }
+            });
+        });
+
+        this.displayTours(tours);
+
+        if (bounds.length > 0 && this.map) {
+            try {
+                this.map.fitBounds(bounds, { padding: [50, 50] });
+            } catch (e) {
+                console.warn('Could not fit bounds for multi tours', e);
+            }
+        }
+    }
+
     displayKMeansClustering(clusters) {
         if (!clusters || clusters.length === 0) {
             console.warn('No clusters to display');
