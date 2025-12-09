@@ -860,7 +860,7 @@ class System {
             console.error("Cannot compute tours: no warehouse defined");
             return {code: 1, tours: []};
         }
-        const warehouseTourPoint = new TourPoint(warehouse, 0, TypePoint.WAREHOUSE, null);
+        const warehouseTourPoint = new TourPoint(warehouse, 0, TypePoint.ENTREPOT, null);
 
         // Step 3: Build optimal tour for each courier's demand group using ComputerTour
         const tours = [];
