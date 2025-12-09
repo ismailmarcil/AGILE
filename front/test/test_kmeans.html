@@ -375,39 +375,90 @@
                 console.log('Couriers:', selectedCourierObjects.map(c => ({ id: c.id, name: c.name })));
 
                 // Compute tours using K-means distribution, passing couriers directly
-                const tours = system.computeTours(selectedCourierObjects);
+                const result = system.computeTours(selectedCourierObjects);
 
-                if (!tours || tours.length === 0) {
-                    alert('❌ Aucun tour généré');
-                    return;
-                }
+                // Handle different result codes
+                if (result.code === 0) {
+                    // Success
+                    const tours = result.tours;
+                    console.log('✅ Tours computed successfully:', tours);
 
-                console.log('✅ Tours computed:', tours);
-
-                // Display all tours on map with distinct colors
-                console.log(`🗺️ Affichage de ${tours.length} tours avec couleurs distinctes...`);
-                if (view.displayTours && typeof view.displayTours === 'function') {
-                    view.displayTours(tours);
-                } else {
-                    console.error('❌ view.displayTours not available');
-                    if (tours.length > 0 && view.displayTour) {
-                        view.displayTour(tours[0]);
+                    if (tours.length === 0) {
+                        document.getElementById('computeInfo').innerHTML = `
+                            <div class="info-box warning">
+                                ⚠️ Aucun tour généré (tous les coursiers sans demandes)
+                            </div>
+                        `;
+                        return;
                     }
+
+                    // Display all tours on map with distinct colors
+                    console.log(`🗺️ Affichage de ${tours.length} tours avec couleurs distinctes...`);
+                    if (view.displayTours && typeof view.displayTours === 'function') {
+                        view.displayTours(tours);
+                    } else {
+                        console.error('❌ view.displayTours not available');
+                        if (tours.length > 0 && view.displayTour) {
+                            view.displayTour(tours[0]);
+                        }
+                    }
+
+                    // Display results
+                    displayResults(tours);
+                    document.getElementById('btnClearTours').disabled = false;
+
+                } else if (result.code === 1) {
+                    // Error in computation
+                    console.error('❌ Error computing tours (code 1)');
+                    document.getElementById('computeInfo').innerHTML = `
+                        <div class="info-box warning">
+                            ❌ Erreur lors du calcul des tours<br>
+                            Vérifiez que le plan et les demandes sont correctement chargés.
+                        </div>
+                    `;
+                    alert('❌ Erreur lors du calcul des tours. Vérifiez les logs de la console.');
+
+                } else if (result.code === 2) {
+                    // Tour exceeds 8 hour limit
+                    console.warn('⚠️ Tour exceeds 8 hour limit (code 2)');
+                    document.getElementById('computeInfo').innerHTML = `
+                        <div class="info-box warning">
+                            ⚠️ Tour rejeté: Durée supérieure à 8 heures<br>
+                            Essayez avec plus de coursiers pour réduire la charge de travail.
+                            <br><strong>Suggestion:</strong> Augmentez le nombre de coursiers sélectionnés.
+                        </div>
+                    `;
+                    alert('⚠️ Tour rejeté: La durée dépasse 8 heures. Essayez avec plus de coursiers.');
+
+                } else {
+                    // Unknown code
+                    console.error('❌ Unknown result code:', result.code);
+                    document.getElementById('computeInfo').innerHTML = `
+                        <div class="info-box warning">
+                            ❌ Code de résultat inconnu: ${result.code}
+                        </div>
+                    `;
+                    alert(`❌ Code de résultat inconnu: ${result.code}`);
                 }
-
-                // Display results
-                displayResults(tours);
-
-                document.getElementById('btnClearTours').disabled = false;
 
             } catch (error) {
                 console.error('Error computing tours:', error);
+                document.getElementById('computeInfo').innerHTML = `
+                    <div class="info-box warning">
+                        ❌ Exception lors du calcul: ${error.message}
+                    </div>
+                `;
                 alert('Erreur lors du calcul: ' + error.message);
             }
         });
 
         // Display Results
         function displayResults(tours) {
+            if (!tours || tours.length === 0) {
+                console.warn('No tours to display');
+                return;
+            }
+
             const resultsSection = document.getElementById('resultsSection');
             const resultsContainer = document.getElementById('resultsContainer');
             
@@ -420,13 +471,16 @@
             ];
             
             let totalDistance = 0;
+            let totalDuration = 0;
             let html = '';
 
             tours.forEach((tour, idx) => {
                 const distKm = (tour.totalDistance / 1000).toFixed(2);
                 const durationMin = Math.round(tour.totalDuration / 60);
+                const durationHours = (tour.totalDuration / 3600).toFixed(1);
                 const color = colors[idx % colors.length];
                 totalDistance += tour.totalDistance;
+                totalDuration += tour.totalDuration;
 
                 html += `
                     <div class="result-card">
@@ -444,7 +498,7 @@
                         </div>
                         <div class="metric">
                             <span>Durée:</span>
-                            <span class="metric-value">${durationMin} min</span>
+                            <span class="metric-value">${durationMin} min (${durationHours}h)</span>
                         </div>
                         <div class="metric">
                             <span>Départ:</span>
@@ -453,6 +507,9 @@
                     </div>
                 `;
             });
+
+            const avgDistanceKm = tours.length > 0 ? (totalDistance / 1000 / tours.length).toFixed(2) : '0';
+            const avgDurationHours = tours.length > 0 ? (totalDuration / 3600 / tours.length).toFixed(1) : '0';
 
             html += `
                 <div class="result-card" style="background: #e8f8f5; border: 2px solid #27ae60;">
@@ -466,8 +523,16 @@
                         <span class="metric-value">${(totalDistance / 1000).toFixed(2)} km</span>
                     </div>
                     <div class="metric">
+                        <span>Durée totale:</span>
+                        <span class="metric-value">${(totalDuration / 3600).toFixed(1)} heures</span>
+                    </div>
+                    <div class="metric">
                         <span>Distance moyenne/coursier:</span>
-                        <span class="metric-value">${(totalDistance / 1000 / tours.length).toFixed(2)} km</span>
+                        <span class="metric-value">${avgDistanceKm} km</span>
+                    </div>
+                    <div class="metric">
+                        <span>Durée moyenne/coursier:</span>
+                        <span class="metric-value">${avgDurationHours} heures</span>
                     </div>
                 </div>
             `;
@@ -477,8 +542,9 @@
 
             document.getElementById('computeInfo').innerHTML = `
                 <div class="info-box success">
-                    ✅ Tours calculées avec succès via K-means!<br>
-                    <strong>${tours.length} tours</strong> pour <strong>${system.demandsList.length} demandes</strong>
+                    ✅ Tours calculées avec succès via K-means + ComputerTour!<br>
+                    <strong>${tours.length} tours</strong> pour <strong>${system.demandsList.length} demandes</strong><br>
+                    <small>Tous les tours respectent la limite de 8 heures</small>
                 </div>
             `;
         }
