@@ -682,9 +682,25 @@ class View {
 
             const meta = document.createElement('div');
             meta.className = 'history-meta';
+
             const time = t.departureTime || '';
             const courier = t.courier || '';
-            meta.textContent = [time, courier].filter(Boolean).join(' · ');
+
+            const durationMin = (typeof t.totalDuration === 'number')
+                ? Math.round(t.totalDuration / 60)    // secondes -> minutes
+                : null;
+
+            const distanceKm = (typeof t.totalDistance === 'number')
+                ? (t.totalDistance / 1000).toFixed(2) // mètres -> km
+                : null;
+
+            const metaParts = [];
+            if (time) metaParts.push(time);
+            if (courier) metaParts.push(courier);
+            if (durationMin !== null) metaParts.push(`${durationMin} min`);
+            if (distanceKm !== null) metaParts.push(`${distanceKm} km`);
+
+            meta.textContent = metaParts.join(' · ');
 
             item.appendChild(title);
             item.appendChild(meta);
