@@ -669,6 +669,7 @@ function updateTimelineFromTour(tour, readOnly = false) {
 }
 
 // Handle demands loading
+let currentEditedDemandId = null; // null => on crée, nombre => on édite
 
 // Récupération des éléments du DOM
 const addDemandSidebar = document.getElementById("addDemandSidebar");
@@ -724,6 +725,14 @@ function closeAddDemandModal() {
     }
 
     resetNodeSelection();
+    // On repasse en mode création par défaut
+    currentEditedDemandId = null;
+
+    const title = document.querySelector("#addDemandModal h3");
+    if (title) title.textContent = "Ajouter une demande";
+
+    const submitBtn = addDemandForm?.querySelector("button[type='submit']");
+    if (submitBtn) submitBtn.textContent = "Ajouter";
 }
 
 function resetNodeSelection() {
@@ -826,7 +835,15 @@ window.onNodeSelected = function(node) {
 
 // Ouverture via le bouton +
 if (addDemandBtn) {
-    addDemandBtn.addEventListener("click", openAddDemandModal);
+    addDemandBtn.addEventListener("click", () => {
+        currentEditedDemandId = null; // on est en mode AJOUT
+        // remettre un titre propre
+        const title = document.querySelector("#addDemandModal h3");
+        if (title) title.textContent = "Ajouter une demande";
+        const submitBtn = addDemandForm?.querySelector("button[type='submit']");
+        if (submitBtn) submitBtn.textContent = "Ajouter";
+        openAddDemandModal();
+    });
 }
 
 // Boutons de sélection sur la carte
@@ -892,6 +909,7 @@ if (addDemandCloseBtn) {
 // La sidebar ne se ferme que via les boutons Annuler ou X (pas de clic sur overlay)
 
 // Soumission du formulaire
+// Soumission du formulaire
 if (addDemandForm) {
     addDemandForm.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -933,48 +951,72 @@ if (addDemandForm) {
             return;
         }
 
-        // Appel de la fonction back déjà existante dans System
         let result;
+        const isEdit = currentEditedDemandId !== null;
+
         try {
-            result = system.addDemand(
-                pickupAddress,
-                deliveryAddress,
-                pickupDuration,
-                deliveryDuration
-            );
+            if (!isEdit) {
+                // 🌱 MODE CRÉATION
+                result = system.addDemand(
+                    pickupAddress,
+                    deliveryAddress,
+                    pickupDuration,
+                    deliveryDuration
+                );
+            } else {
+                // ✏️ MODE MODIFICATION
+                result = system.updateDemand(
+                    currentEditedDemandId,
+                    pickupAddress,
+                    deliveryAddress,
+                    pickupDuration,
+                    deliveryDuration
+                );
+            }
         } catch (err) {
-            console.error('addDemand threw:', err);
-            alert('❌ Erreur lors de l\'ajout de la demande: ' + (err && err.message ? err.message : String(err)));
+            console.error(isEdit ? 'updateDemand threw:' : 'addDemand threw:', err);
+            alert('❌ Erreur lors de la ' + (isEdit ? 'modification' : 'création') + ' de la demande: ' + (err && err.message ? err.message : String(err)));
             return;
         }
 
         if (!result) {
-            alert('❌ Erreur inconnue lors de l\'ajout de la demande.');
+            alert('❌ Erreur inconnue lors de la ' + (isEdit ? 'modification' : 'création') + ' de la demande.');
             return;
         }
 
         if (!result.success) {
-            alert("❌ " + (result.error || 'Erreur inconnue lors de l\'ajout de la demande.'));
+            alert("❌ " + (result.error || 'Erreur inconnue lors de la ' + (isEdit ? 'modification' : 'création') + ' de la demande.'));
             return;
         }
 
         const demand = result.demand;
-        // Assign a default name for manually added demands
-        if (demand) {
-            demand.clientName = `Demande manuelle #${demand.id}`;
+
+        // Nom par défaut pour les demandes manuelles (seulement si pas déjà de clientName)
+        if (demand && !demand.clientName) {
+            if (!isEdit) {
+                demand.clientName = `Demande manuelle #${demand.id}`;
+            } else {
+                demand.clientName = demand.clientName || `Demande #${demand.id}`;
+            }
         }
 
         // Message de succès avec les détails
-        console.log('✅ Demande ajoutée avec succès:', demand);
-        alert(`✅ Demande ajoutée avec succès!\n\nEnlèvement: Point ${pickupAddress}\nLivraison: Point ${deliveryAddress}\nDurées: ${pickupDuration}s / ${deliveryDuration}s`);
+        console.log(isEdit ? '✏️ Demande modifiée avec succès:' : '✅ Demande ajoutée avec succès:', demand);
 
-        // Rafraîchir l'UI avec la nouvelle demande
+        if (!isEdit) {
+            alert(`✅ Demande ajoutée avec succès!\n\nEnlèvement: Point ${pickupAddress}\nLivraison: Point ${deliveryAddress}\nDurées: ${pickupDuration}s / ${deliveryDuration}s`);
+        } else {
+            alert(`✏️ Demande #${demand.id} modifiée avec succès.`);
+        }
+
+        // Rafraîchir l'UI avec la liste à jour
         updateDemandsUI();
 
         // Fermer la modale
         closeAddDemandModal();
     });
 }
+
 
 async function handleLoadDemands() {
     const input = document.getElementById("xmlDeliveriesInput");
@@ -1152,9 +1194,41 @@ function updateDemandsUI() {
 
 // Edit demand function (placeholder)
 function editDemand(demandId) {
-    console.log('Edit demand:', demandId);
-    alert('Fonctionnalité de modification à implémenter');
+    const demande = system.demandsList.find(d => d.id === demandId);
+    if (!demande) {
+        alert(`Demande ${demandId} introuvable.`);
+        return;
+    }
+
+    currentEditedDemandId = demande.id; // on passe en MODE EDITION
+
+    // Récupérer les inputs du formulaire
+    const pickupAddressInput    = document.getElementById("pickupAddressInput");
+    const deliveryAddressInput  = document.getElementById("deliveryAddressInput");
+    const pickupDurationInput   = document.getElementById("pickupDurationInput");
+    const deliveryDurationInput = document.getElementById("deliveryDurationInput");
+
+    if (!pickupAddressInput || !deliveryAddressInput || !pickupDurationInput || !deliveryDurationInput) {
+        alert("Formulaire de demande introuvable.");
+        return;
+    }
+
+    // Pré-remplir les champs avec les valeurs de la demande
+    pickupAddressInput.value    = demande.pickupAddress;
+    deliveryAddressInput.value  = demande.deliveryAddress;
+    pickupDurationInput.value   = demande.pickupDuration;
+    deliveryDurationInput.value = demande.deliveryDuration;
+
+    // (optionnel) changer le titre et le texte du bouton
+    const title = document.querySelector("#addDemandModal h3");
+    if (title) title.textContent = `Modifier la demande #${demande.id}`;
+    const submitBtn = addDemandForm?.querySelector("button[type='submit']");
+    if (submitBtn) submitBtn.textContent = "Enregistrer";
+
+    // Ouvrir la modale
+    openAddDemandModal();
 }
+
 
 // Delete demand function
 function deleteDemand(demandId) {
