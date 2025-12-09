@@ -37,13 +37,19 @@
             </div>
 
             <div class="control-group">
-                <div class="section-title"><i class="fa-solid fa-users"></i> Coursiers</div>
-
-                <!-- Courier count widget: - [count] + -->
-                <div style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">
-                    <button id="courierMinusBtn" class="btn btn-sm" type="button" title="Réduire le nombre de coursiers">-</button>
-                    <input id="courierCountInput" type="text" value="1" readonly style="width:48px; text-align:center; border:1px solid #ccc; border-radius:4px; padding:6px;">
-                    <button id="courierPlusBtn" class="btn btn-sm" type="button" title="Augmenter le nombre de coursiers">+</button>
+                <div class="section-title" style="justify-content: space-between;">
+                    <span>
+                        <i class="fa-solid fa-users"></i> Coursiers
+                        <span id="selectedCouriersCount" style="display: inline-block; background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-left: 8px; font-weight: 600;">0</span>
+                    </span>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn-icon" id="selectAllCouriersBtn" title="Tout sélectionner">
+                            <i class="fa-solid fa-check-double"></i>
+                        </button>
+                        <button class="btn-icon" id="deselectAllCouriersBtn" title="Tout désélectionner">
+                            <i class="fa-solid fa-square"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
@@ -51,9 +57,11 @@
                     <button id="createCourierBtn" class="btn btn-sm" type="button">Créer</button>
                 </div>
 
-                <select id="couriersSelect" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #bdc3c7;">
-                    <option value="">Aucun coursier</option>
-                </select>
+                <div id="couriersList" style="max-height: 200px; overflow-y: auto; border: 1px solid #bdc3c7; border-radius: 4px; padding: 8px; background: #f8f9fa;">
+                    <p style="text-align: center; color: #95a5a6; font-size: 0.85rem; padding: 10px;">
+                        Aucun coursier disponible
+                    </p>
+                </div>
             </div>
 
             <div class="control-group" style="border:none;" id="demandsContainer">

@@ -1375,38 +1375,61 @@ async function saveTour() {
     }
 }
 
-// Fetch list of couriers from server and populate select
+// Fetch list of couriers from server and populate list with checkboxes
 async function fetchCouriers() {
     try {
         const resp = await fetch('/api/couriers');
         const data = await resp.json();
         if (!data.success) return;
 
-        const select = document.getElementById('couriersSelect');
-        if (!select) return;
+        const listContainer = document.getElementById('couriersList');
+        if (!listContainer) return;
 
-        // Clear options
-        select.innerHTML = '';
+        // Clear list
+        listContainer.innerHTML = '';
 
         const couriers = data.couriers || [];
         system.listCouriers = [];
 
         if (couriers.length === 0) {
-            const opt = document.createElement('option');
-            opt.value = '';
-            opt.textContent = 'Aucun coursier';
-            select.appendChild(opt);
+            listContainer.innerHTML = `
+                <p style="text-align: center; color: #95a5a6; font-size: 0.85rem; padding: 10px;">
+                    Aucun coursier disponible
+                </p>
+            `;
             return;
         }
 
         couriers.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.id;
-            opt.textContent = `${c.name} (${c.id})`;
-            select.appendChild(opt);
+            const item = document.createElement('div');
+            item.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 6px; background: white; border-radius: 4px; margin-bottom: 4px; cursor: pointer;';
+            item.classList.add('courier-list-item');
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `courier-cb-${c.id}`;
+            checkbox.value = c.id;
+            checkbox.dataset.courierName = c.name;
+            checkbox.style.cursor = 'pointer';
+
+            // Add listener to update count
+            checkbox.addEventListener('change', updateSelectedCouriersCount);
+
+            const label = document.createElement('label');
+            label.htmlFor = `courier-cb-${c.id}`;
+            label.textContent = `${c.name} (${c.id})`;
+            label.style.cssText = 'flex: 1; cursor: pointer; user-select: none;';
+
+            item.appendChild(checkbox);
+            item.appendChild(label);
+            listContainer.appendChild(item);
+
             // Add to system list
             try { system.listCouriers.push(new Courier(c.id, c.name)); } catch (e) { system.listCouriers.push(c); }
         });
+
+        // Initialize count display
+        updateSelectedCouriersCount();
     } catch (error) {
         console.error('Erreur fetchCouriers:', error);
     }
@@ -1433,10 +1456,12 @@ async function createCourier() {
         if (data.success) {
             input.value = '';
             await fetchCouriers();
-            // select the newly created courier
-            const sel = document.getElementById('couriersSelect');
-            if (sel && data.courier && data.courier.id) {
-                sel.value = data.courier.id;
+            // Automatically check the newly created courier
+            if (data.courier && data.courier.id) {
+                const checkbox = document.getElementById(`courier-cb-${data.courier.id}`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
             }
             alert('Coursier créé: ' + data.courier.name);
         } else {
@@ -1450,25 +1475,46 @@ async function createCourier() {
     }
 }
 
-// Courier count widget helpers
-function setCourierCountDisplay(count) {
-    const input = document.getElementById('courierCountInput');
-    if (!input) return;
-    input.value = String(count);
+// Update the selected couriers count badge
+function updateSelectedCouriersCount() {
+    const checkboxes = document.querySelectorAll('#couriersList input[type="checkbox"]:checked');
+    const count = checkboxes.length;
+    const badge = document.getElementById('selectedCouriersCount');
+    if (badge) {
+        badge.textContent = count;
+        // Change color based on selection
+        if (count === 0) {
+            badge.style.background = '#95a5a6';
+        } else {
+            badge.style.background = '#3498db';
+        }
+    }
 }
 
-function changeCourierCount(delta) {
-    const input = document.getElementById('courierCountInput');
-    if (!input) return;
-    const old = Number(input.value) || 1;
-    let next = old + delta;
-    if (next < 1) next = 1;
-    if (next > 99) next = 99;
-    setCourierCountDisplay(next);
-    // Keep system in sync
-    if (typeof system !== 'undefined') {
-        system.nbCouriers = next;
-    }
+// Get selected couriers from the checkbox list
+function getSelectedCouriers() {
+    const checkboxes = document.querySelectorAll('#couriersList input[type="checkbox"]:checked');
+    const selected = [];
+
+    checkboxes.forEach(cb => {
+        const courierId = cb.value;
+        const courierName = cb.dataset.courierName;
+
+        // Find courier in system.listCouriers
+        const courier = system.listCouriers.find(c => String(c.id) === String(courierId));
+        if (courier) {
+            selected.push(courier);
+        } else {
+            // Fallback if not found
+            try {
+                selected.push(new Courier(courierId, courierName));
+            } catch (e) {
+                selected.push({ id: courierId, name: courierName });
+            }
+        }
+    });
+
+    return selected;
 }
 
 // Handle tour calculation
@@ -1482,6 +1528,14 @@ async function handleComputeTour() {
     // Vérifier qu'il y a des demandes
     if (!system.demandsList || system.demandsList.length === 0) {
         alert('⚠️ Veuillez d\'abord charger ou ajouter des demandes.');
+        return;
+    }
+
+    // Récupérer les coursiers sélectionnés
+    const selectedCouriers = getSelectedCouriers();
+
+    if (selectedCouriers.length === 0) {
+        alert('⚠️ Veuillez sélectionner au moins un coursier pour le calcul de la tournée.');
         return;
     }
 
@@ -1499,33 +1553,8 @@ async function handleComputeTour() {
     // avant de lancer le calcul synchrone qui bloque l'UI
     setTimeout(() => {
         try {
-            // Récupérer le nombre de coursiers demandé
-            const courierCountInput = document.getElementById('courierCountInput');
-            const requestedCourierCount = courierCountInput ? parseInt(courierCountInput.value) || 1 : 1;
-
-            console.log(`Calcul de tournées pour ${requestedCourierCount} coursier(s)`);
-
-            // S'assurer qu'on a suffisamment de coursiers dans la liste
-            if (!system.listCouriers) {
-                system.listCouriers = [];
-            }
-
-            // Créer ou compléter la liste de coursiers jusqu'au nombre demandé
-            while (system.listCouriers.length < requestedCourierCount) {
-                const courierIndex = system.listCouriers.length + 1;
-                try {
-                    const courier = new Courier(courierIndex, `Coursier ${courierIndex}`);
-                    system.listCouriers.push(courier);
-                    console.log(`Ajout du coursier ${courierIndex} pour le calcul`);
-                } catch (e) {
-                    // Fallback plain object
-                    system.listCouriers.push({ id: courierIndex, name: `Coursier ${courierIndex}` });
-                    console.warn(`Impossible d\'instancier Courier ${courierIndex}, fallback au plain object`, e);
-                }
-            }
-
-            // Limiter la liste au nombre demandé
-            const couriersToUse = system.listCouriers.slice(0, requestedCourierCount);
+            console.log(`Calcul de tournées pour ${selectedCouriers.length} coursier(s) sélectionné(s)`);
+            console.log('Coursiers sélectionnés:', selectedCouriers.map(c => c.name || c.id));
 
             // Vérifier que l'entrepôt est défini
             if (!system.plan.warehouse) {
@@ -1533,8 +1562,8 @@ async function handleComputeTour() {
                 return;
             }
 
-            // Appeler computeTours avec la liste de coursiers
-            const result = system.computeTours(couriersToUse);
+            // Appeler computeTours avec la liste de coursiers sélectionnés
+            const result = system.computeTours(selectedCouriers);
 
             if (!result) {
                 alert('❌ Erreur lors du calcul des tournées. Vérifiez que toutes les demandes sont valides.');
@@ -1692,23 +1721,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Wire courier creation UI
     const createCourierBtn = document.getElementById('createCourierBtn');
     if (createCourierBtn) createCourierBtn.addEventListener('click', createCourier);
-    // Fetch existing couriers to populate select
+    // Fetch existing couriers to populate list
     fetchCouriers();
 
-    // Wire the courier count +/- widget
-    const plus = document.getElementById('courierPlusBtn');
-    const minus = document.getElementById('courierMinusBtn');
-    const countInput = document.getElementById('courierCountInput');
+    // Wire courier selection buttons
+    const selectAllBtn = document.getElementById('selectAllCouriersBtn');
+    const deselectAllBtn = document.getElementById('deselectAllCouriersBtn');
 
-    // Initialize display from system if available
-    if (countInput) {
-        const init = (typeof system !== 'undefined' && system.nbCouriers) ? system.nbCouriers : 1;
-        setCourierCountDisplay(init);
-        if (typeof system !== 'undefined') system.nbCouriers = init;
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', () => {
+            const checkboxes = document.querySelectorAll('#couriersList input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
+            updateSelectedCouriersCount();
+        });
     }
 
-    if (plus) plus.addEventListener('click', () => changeCourierCount(1));
-    if (minus) minus.addEventListener('click', () => changeCourierCount(-1));
+    if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', () => {
+            const checkboxes = document.querySelectorAll('#couriersList input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateSelectedCouriersCount();
+        });
+    }
 
     // Ajouter le listener pour le bouton de calcul de tournée
     const calculateBtn = document.querySelector('.sidebar .btn.btn-primary');
@@ -1730,22 +1764,42 @@ document.addEventListener('DOMContentLoaded', () => {
             const viewName = btn.dataset.view;
 
             if (viewName === 'history') {
-                // On sauve l’état actuel de la vue Livreur
+                // On sauve l'état actuel de la vue Livreur
                 saveCourierViewState();
 
                 if (sidebarLivreur) sidebarLivreur.style.display = 'none';
                 if (sidebarHistory) sidebarHistory.style.display = 'block';
-                handleLoadHistoryMulti(); // charger la liste dans la sidebar
+
+                // Nettoyer la carte avant d'afficher l'historique
+                if (view.map) {
+                    view.clearMap();
+                }
+
+                // Réinitialiser les détails de tournée
+                resetTimelineToEmpty();
+                updateCourierInfo(null);
+
+                // Charger la liste de l'historique
+                handleLoadHistoryMulti();
             } else if (viewName === 'courier') {
-                // Revenir à la vue Livreur telle qu’elle était
+                // Revenir à la vue Livreur telle qu'elle était
                 if (sidebarLivreur) sidebarLivreur.style.display = 'block';
                 if (sidebarHistory) sidebarHistory.style.display = 'none';
-                restoreCourierViewState();
+
+                // Rafraîchir la liste des coursiers pour s'assurer qu'elle est à jour
+                fetchCouriers().then(() => {
+                    // Restaurer l'état après le chargement des coursiers
+                    restoreCourierViewState();
+                });
             } else {
                 // Autres vues (ex: globale) -> sidebar Livreur
                 if (sidebarLivreur) sidebarLivreur.style.display = 'block';
                 if (sidebarHistory) sidebarHistory.style.display = 'none';
-                restoreCourierViewState();
+
+                // Rafraîchir la liste des coursiers
+                fetchCouriers().then(() => {
+                    restoreCourierViewState();
+                });
             }
         });
     });
