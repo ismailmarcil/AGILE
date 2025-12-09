@@ -263,28 +263,79 @@ class System {
             }
 
             try {
+                // S'assurer que distance et durée sont à jour
+                if (typeof tour.calculateTotalDistance === "function") {
+                    tour.calculateTotalDistance();
+                }
+                if (typeof tour.calculateTotalDuration === "function") {
+                    tour.calculateTotalDuration();
+                }
+
+                const departureTime = tour.departureTime || "8:00";
+                const departureToken = departureTime.replace(":", "h"); // ex : 8:00 -> 8h00
+
+                const courierNameRaw = tour.courier && tour.courier.name
+                    ? String(tour.courier.name).trim()
+                    : "Inconnu";
+
+                const courierToken = courierNameRaw
+                    .replace(/\s+/g, "-")
+                    .replace(/_/g, "-")
+                    .replace(/[^A-Za-z0-9\-]/g, "");
+
+                const totalDuration = typeof tour.totalDuration === "number"
+                    ? Math.round(tour.totalDuration)
+                    : 0;
+                const totalDistance = typeof tour.totalDistance === "number"
+                    ? Math.round(tour.totalDistance)
+                    : 0;
+
+                const currentId = typeof tour.id === "string" ? tour.id : "";
+                const alreadyFormatted = /^[^_]+_[^_]+_[^_]+_[0-9]+_[0-9]+$/.test(currentId);
+
+                let formattedId;
+                if (alreadyFormatted) {
+                    // Si l'id est déjà du type id_heure_livreur_duree_distance, on le garde
+                    formattedId = currentId;
+                } else {
+                    // Première sauvegarde : on construit l'id complet
+                    const rawId = currentId || `tour_${Date.now()}`;
+                    const idToken = rawId
+                        .replace(/\s+/g, "-")
+                        .replace(/_/g, "-")
+                        .replace(/[^A-Za-z0-9\-]/g, "");
+
+                    // Format : id_heureDepart_livreur_totalDuration_totalDistance
+                    formattedId = `${idToken}_${departureToken}_${courierToken}_${totalDuration}_${totalDistance}`;
+                }
+
+                tour.id = formattedId;
+
                 const tourJSON = tour.toJSON ? tour.toJSON() : {
-                    id: tour.id || `tour_${Date.now()}`,
-                    departureTime: tour.departureTime,
+                    id: formattedId,
+                    departureTime: departureTime,
                     courier: tour.courier ? { id: tour.courier.id, name: tour.courier.name } : null,
                     stops: tour.stops || [],
                     legs: tour.legs || [],
-                    totalDistance: tour.totalDistance || 0,
-                    totalDuration: tour.totalDuration || 0
+                    totalDistance: totalDistance,
+                    totalDuration: totalDuration
                 };
 
                 const payload = JSON.stringify(tourJSON);
 
                 fetch('/api/tours/save', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: payload
                 })
                     .then(response => response.json())
                     .then(data => {
-                        resolve({ success: true, message: data.message, tourId: data.tourId });
+                        resolve({
+                            success: true,
+                            message: data.message,
+                            tourId: data.tourId,
+                            filename: data.filename
+                        });
                     })
                     .catch(error => {
                         resolve({ success: false, error: error.message });
