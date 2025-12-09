@@ -208,6 +208,198 @@ async function handleLoadHistory() {
     view.displayHistoryList(result.tours, resultsContainer, errorElement, onSelectTour);
 }
 
+// Nouvelle version: chargement + sélection multiple + affichage simultané
+async function handleLoadHistoryMulti() {
+    const resultsContainer = document.getElementById('historyResults');
+    const errorElement = document.getElementById('historyError');
+    if (!resultsContainer) return;
+
+    resultsContainer.innerHTML = '<p>Chargement de l\'historique...</p>';
+    if (errorElement) errorElement.textContent = '';
+
+    const result = await system.loadSavedToursSummary();
+
+    if (!result.success) {
+        if (errorElement) {
+            errorElement.textContent = result.error || 'Erreur lors du chargement de l\'historique.';
+        } else {
+            alert(result.error || 'Erreur lors du chargement de l\'historique.');
+        }
+        resultsContainer.innerHTML = '';
+        return;
+    }
+
+    const selectedTours = new Map();
+    const palette = ['#e74c3c', '#3498db', '#27ae60', '#f39c12', '#9b59b6', '#16a085'];
+
+    const setStatus = (msg) => { statusEl.textContent = msg || ''; };
+
+    const loadTourFromSummary = async (tourSummary) => {
+        const loadResult = await system.loadTourFromServer(tourSummary.tourId || tourSummary.filename);
+        if (!loadResult.success) {
+            throw new Error(loadResult.error || 'Erreur lors du chargement de la tournée.');
+        }
+        const loaded = loadResult.tour;
+        return Array.isArray(loaded) ? loaded : [loaded];
+    };
+
+    const renderLegend = (tours) => {
+        legendEl.innerHTML = '';
+        tours.forEach((t, idx) => {
+            const color = palette[idx % palette.length];
+            const item = document.createElement('div');
+            item.className = 'history-legend-item';
+            item.innerHTML = `<span class="history-legend-dot" style="background:${color}"></span>${t.courier?.name || t.courier?.id || 'Coursier ?'} (${t.id || 'tour'})`;
+            legendEl.appendChild(item);
+        });
+    };
+
+    const handleShowSelection = async () => {
+        if (selectedTours.size === 0) {
+            alert('Sélectionnez au moins une tournée à afficher.');
+            return;
+        }
+        setStatus('Chargement des tournées sélectionnées...');
+        try {
+            const tours = [];
+            for (const summary of selectedTours.values()) {
+                const arr = await loadTourFromSummary(summary);
+                tours.push(...arr);
+            }
+            if (view.map && typeof view.displayToursMulti === 'function') {
+                view.displayToursMulti(tours);
+                renderLegend(tours);
+            }
+            const first = tours[0];
+            window.currentDisplayedTour = first;
+            if (typeof updateTimelineFromTour === 'function') {
+                updateTimelineFromTour(first, true);
+            }
+            if (typeof updateCourierInfo === 'function') {
+                updateCourierInfo(first);
+            }
+            setStatus(`${tours.length} tournée(s) affichée(s) simultanément.`);
+        } catch (e) {
+            console.error(e);
+            alert(e.message || 'Erreur lors du chargement des tournées sélectionnées.');
+            setStatus('');
+        }
+    };
+
+    const handleShowAll = () => {
+        listContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.checked = true;
+            selectedTours.set(cb.value, cb._summary);
+        });
+        handleShowSelection();
+    };
+
+    const handleClearSelection = () => {
+        listContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        selectedTours.clear();
+        setStatus('Aucune tournée sélectionnée.');
+        legendEl.innerHTML = '';
+    };
+
+    // Build UI
+    resultsContainer.innerHTML = '';
+    const controls = document.createElement('div');
+    controls.className = 'history-controls';
+    controls.innerHTML = `
+        <button type="button" class="btn btn-sm" id="historyShowSelected">Afficher la sélection</button>
+        <button type="button" class="btn btn-sm" id="historyShowAll">Afficher tout</button>
+        <button type="button" class="btn btn-sm" id="historyClear">Vider la sélection</button>
+    `;
+    const statusEl = document.createElement('div');
+    statusEl.className = 'history-status';
+    const legendEl = document.createElement('div');
+    legendEl.className = 'history-legend';
+    const listContainer = document.createElement('div');
+    listContainer.className = 'history-list';
+
+    resultsContainer.appendChild(controls);
+    resultsContainer.appendChild(statusEl);
+    resultsContainer.appendChild(legendEl);
+    resultsContainer.appendChild(listContainer);
+
+    // Populate list with checkboxes + single view button
+    result.tours.forEach((t, idx) => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+
+        const left = document.createElement('div');
+        left.className = 'history-left';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = t.tourId || t.filename || `tour-${idx}`;
+        checkbox._summary = t;
+        checkbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                selectedTours.set(checkbox.value, t);
+            } else {
+                selectedTours.delete(checkbox.value);
+            }
+            setStatus(`${selectedTours.size} tournée(s) sélectionnée(s).`);
+        });
+
+        const info = document.createElement('div');
+        info.className = 'history-info';
+        const title = document.createElement('div');
+        title.className = 'history-title';
+        title.textContent = t.id || t.filename || '';
+        const meta = document.createElement('div');
+        meta.className = 'history-meta';
+        meta.textContent = [
+            t.departureTime || '',
+            t.courier || '',
+            t.totalDistance ? `${(t.totalDistance / 1000).toFixed(1)} km` : ''
+        ].filter(Boolean).join(' • ');
+        info.appendChild(title);
+        info.appendChild(meta);
+
+        left.appendChild(checkbox);
+        left.appendChild(info);
+
+        const actions = document.createElement('div');
+        actions.className = 'history-actions';
+        const viewBtn = document.createElement('button');
+        viewBtn.type = 'button';
+        viewBtn.className = 'btn btn-sm';
+        viewBtn.textContent = 'Afficher';
+        viewBtn.addEventListener('click', async () => {
+            setStatus('Chargement de la tournée...');
+            try {
+                const arr = await loadTourFromSummary(t);
+                const tour = arr[0];
+                window.currentDisplayedTour = tour;
+                if (view.map) view.displayTour(tour);
+                if (typeof updateTimelineFromTour === 'function') {
+                    updateTimelineFromTour(tour, true);
+                }
+                if (typeof updateCourierInfo === 'function') {
+                    updateCourierInfo(tour);
+                }
+                setStatus(`Tournée affichée : ${tour.id || ''}`);
+                legendEl.innerHTML = '';
+            } catch (e) {
+                console.error(e);
+                alert(e.message || 'Erreur lors du chargement de la tournée.');
+                setStatus('');
+            }
+        });
+        actions.appendChild(viewBtn);
+
+        item.appendChild(left);
+        item.appendChild(actions);
+        listContainer.appendChild(item);
+    });
+
+    // Wire controls
+    controls.querySelector('#historyShowSelected').addEventListener('click', handleShowSelection);
+    controls.querySelector('#historyShowAll').addEventListener('click', handleShowAll);
+    controls.querySelector('#historyClear').addEventListener('click', handleClearSelection);
+}
 
 
 // Update timeline UI from tour data
@@ -477,34 +669,216 @@ function updateTimelineFromTour(tour, readOnly = false) {
 }
 
 // Handle demands loading
+let currentEditedDemandId = null; // null => on crée, nombre => on édite
 
 // Récupération des éléments du DOM
-const addDemandModal = document.getElementById("addDemandModal");
+const addDemandSidebar = document.getElementById("addDemandSidebar");
 const addDemandForm = document.getElementById("addDemandForm");
 const addDemandBtn = document.getElementById("addDemandBtn");
 const addDemandCancelBtn = document.getElementById("addDemandCancelBtn");
 const addDemandCloseBtn = document.getElementById("addDemandCloseBtn");
 const clearDemandsBtn = document.getElementById("clearDemandsBtn");
 
-
+// État de sélection des points
+let nodeSelectionState = {
+    mode: null, // 'pickup' ou 'delivery'
+    pickupNode: null,
+    deliveryNode: null,
+    pickupMarker: null,
+    deliveryMarker: null
+};
 
 function openAddDemandModal() {
-    if (!addDemandModal) return;
-    addDemandModal.style.display = "flex";
+    if (!addDemandSidebar) return;
+
+    // Vérifier qu'un plan est chargé
+    if (!system.plan) {
+        alert('⚠️ Veuillez d\'abord charger un plan XML pour pouvoir ajouter des demandes.');
+        return;
+    }
+
+    // Réinitialiser l'état
+    resetNodeSelection();
+    addDemandSidebar.style.display = "flex";
 }
 
 function closeAddDemandModal() {
-    if (!addDemandModal) return;
-    addDemandModal.style.display = "none";
+    if (!addDemandSidebar) return;
+    addDemandSidebar.style.display = "none";
+
+    // Nettoyer les marqueurs de sélection
+    if (nodeSelectionState.pickupMarker) {
+        view.map.removeLayer(nodeSelectionState.pickupMarker);
+    }
+    if (nodeSelectionState.deliveryMarker) {
+        view.map.removeLayer(nodeSelectionState.deliveryMarker);
+    }
+
+    // Réinitialiser le mode de sélection
+    nodeSelectionState.mode = null;
+    view.setNodeSelectionMode(false);
+
     if (addDemandForm) {
         addDemandForm.reset();
+        document.getElementById('pickupAddressDisplay').value = '';
+        document.getElementById('deliveryAddressDisplay').value = '';
+    }
+
+    resetNodeSelection();
+    // On repasse en mode création par défaut
+    currentEditedDemandId = null;
+
+    const title = document.querySelector("#addDemandModal h3");
+    if (title) title.textContent = "Ajouter une demande";
+
+    const submitBtn = addDemandForm?.querySelector("button[type='submit']");
+    if (submitBtn) submitBtn.textContent = "Ajouter";
+}
+
+function resetNodeSelection() {
+    nodeSelectionState = {
+        mode: null,
+        pickupNode: null,
+        deliveryNode: null,
+        pickupMarker: null,
+        deliveryMarker: null
+    };
+
+    // Réinitialiser les champs
+    const pickupInput = document.getElementById('pickupAddressInput');
+    const deliveryInput = document.getElementById('deliveryAddressInput');
+    const pickupDisplay = document.getElementById('pickupAddressDisplay');
+    const deliveryDisplay = document.getElementById('deliveryAddressDisplay');
+
+    if (pickupInput) pickupInput.value = '';
+    if (deliveryInput) deliveryInput.value = '';
+    if (pickupDisplay) pickupDisplay.value = '';
+    if (deliveryDisplay) deliveryDisplay.value = '';
+
+    // Réinitialiser les styles des boutons
+    const selectPickupBtn = document.getElementById('selectPickupBtn');
+    const selectDeliveryBtn = document.getElementById('selectDeliveryBtn');
+
+    if (selectPickupBtn) {
+        selectPickupBtn.style.background = '';
+        selectPickupBtn.innerHTML = '<i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte';
+    }
+    if (selectDeliveryBtn) {
+        selectDeliveryBtn.style.background = '';
+        selectDeliveryBtn.innerHTML = '<i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte';
     }
 }
 
+// Fonction appelée quand un nœud est sélectionné sur la carte
+window.onNodeSelected = function(node) {
+    if (!nodeSelectionState.mode) return;
+
+    if (nodeSelectionState.mode === 'pickup') {
+        nodeSelectionState.pickupNode = node;
+
+        // Mettre à jour les champs
+        document.getElementById('pickupAddressInput').value = node.id;
+        document.getElementById('pickupAddressDisplay').value = `Point ${node.id} (${node.latitude.toFixed(4)}, ${node.longitude.toFixed(4)})`;
+
+        // Mettre à jour le bouton
+        const btn = document.getElementById('selectPickupBtn');
+        btn.style.background = '#4caf50';
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Point sélectionné';
+
+        // Ajouter un marqueur vert sur la carte
+        if (nodeSelectionState.pickupMarker) {
+            view.map.removeLayer(nodeSelectionState.pickupMarker);
+        }
+
+        nodeSelectionState.pickupMarker = L.circleMarker([node.latitude, node.longitude], {
+            radius: 12,
+            fillColor: '#4caf50',
+            color: '#fff',
+            weight: 3,
+            fillOpacity: 0.8
+        }).addTo(view.map);
+
+        nodeSelectionState.pickupMarker.bindPopup(`<b>Point d'enlèvement</b><br>ID: ${node.id}`).openPopup();
+
+    } else if (nodeSelectionState.mode === 'delivery') {
+        nodeSelectionState.deliveryNode = node;
+
+        // Mettre à jour les champs
+        document.getElementById('deliveryAddressInput').value = node.id;
+        document.getElementById('deliveryAddressDisplay').value = `Point ${node.id} (${node.latitude.toFixed(4)}, ${node.longitude.toFixed(4)})`;
+
+        // Mettre à jour le bouton
+        const btn = document.getElementById('selectDeliveryBtn');
+        btn.style.background = '#2196f3';
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Point sélectionné';
+
+        // Ajouter un marqueur bleu sur la carte
+        if (nodeSelectionState.deliveryMarker) {
+            view.map.removeLayer(nodeSelectionState.deliveryMarker);
+        }
+
+        nodeSelectionState.deliveryMarker = L.circleMarker([node.latitude, node.longitude], {
+            radius: 12,
+            fillColor: '#2196f3',
+            color: '#fff',
+            weight: 3,
+            fillOpacity: 0.8
+        }).addTo(view.map);
+
+        nodeSelectionState.deliveryMarker.bindPopup(`<b>Point de livraison</b><br>ID: ${node.id}`).openPopup();
+    }
+
+    // Désactiver le mode de sélection
+    nodeSelectionState.mode = null;
+    view.setNodeSelectionMode(false);
+};
+
 // Ouverture via le bouton +
 if (addDemandBtn) {
-    addDemandBtn.addEventListener("click", openAddDemandModal);
+    addDemandBtn.addEventListener("click", () => {
+        currentEditedDemandId = null; // on est en mode AJOUT
+        // remettre un titre propre
+        const title = document.querySelector("#addDemandModal h3");
+        if (title) title.textContent = "Ajouter une demande";
+        const submitBtn = addDemandForm?.querySelector("button[type='submit']");
+        if (submitBtn) submitBtn.textContent = "Ajouter";
+        openAddDemandModal();
+    });
 }
+
+// Boutons de sélection sur la carte
+document.addEventListener('DOMContentLoaded', () => {
+    const selectPickupBtn = document.getElementById('selectPickupBtn');
+    const selectDeliveryBtn = document.getElementById('selectDeliveryBtn');
+
+    if (selectPickupBtn) {
+        selectPickupBtn.addEventListener('click', () => {
+            nodeSelectionState.mode = 'pickup';
+            view.setNodeSelectionMode(true, 'pickup');
+
+            // Mettre en surbrillance le bouton actif
+            selectPickupBtn.style.background = '#ffa726';
+            selectPickupBtn.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> Cliquez sur la carte...';
+
+            selectDeliveryBtn.style.background = '';
+            selectDeliveryBtn.innerHTML = '<i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte';
+        });
+    }
+
+    if (selectDeliveryBtn) {
+        selectDeliveryBtn.addEventListener('click', () => {
+            nodeSelectionState.mode = 'delivery';
+            view.setNodeSelectionMode(true, 'delivery');
+
+            // Mettre en surbrillance le bouton actif
+            selectDeliveryBtn.style.background = '#ffa726';
+            selectDeliveryBtn.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> Cliquez sur la carte...';
+
+            selectPickupBtn.style.background = '';
+            selectPickupBtn.innerHTML = '<i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte';
+        });
+    }
+});
 
 // Effacer toutes les demandes via le bouton Clear
 if (clearDemandsBtn) {
@@ -532,15 +906,9 @@ if (addDemandCloseBtn) {
     addDemandCloseBtn.addEventListener("click", closeAddDemandModal);
 }
 
-// Fermeture si on clique sur le fond gris
-if (addDemandModal) {
-    addDemandModal.addEventListener("click", (e) => {
-        if (e.target === addDemandModal) {
-            closeAddDemandModal();
-        }
-    });
-}
+// La sidebar ne se ferme que via les boutons Annuler ou X (pas de clic sur overlay)
 
+// Soumission du formulaire
 // Soumission du formulaire
 if (addDemandForm) {
     addDemandForm.addEventListener("submit", (event) => {
@@ -557,39 +925,98 @@ if (addDemandForm) {
         const pickupDuration = Number(pickupDurationInput.value);
         const deliveryDuration = Number(deliveryDurationInput.value);
 
-        if (!pickupAddress || !deliveryAddress || isNaN(pickupDuration) || isNaN(deliveryDuration)) {
-            alert("Merci de remplir tous les champs correctement.");
+        // Validation améliorée avec messages spécifiques
+        if (!pickupAddress) {
+            alert("⚠️ Veuillez sélectionner un point d'enlèvement sur la carte.");
             return;
         }
 
+        if (!deliveryAddress) {
+            alert("⚠️ Veuillez sélectionner un point de livraison sur la carte.");
+            return;
+        }
 
+        if (pickupAddress === deliveryAddress) {
+            alert("⚠️ Le point d'enlèvement et le point de livraison doivent être différents.");
+            return;
+        }
 
-        // Appel de la fonction back déjà existante dans System
-        // addDemand(pickupAddress, deliveryAddress, pickupDuration, deliveryDuration)
-        const result = system.addDemand(
-            pickupAddress,
-            deliveryAddress,
-            pickupDuration,
-            deliveryDuration
-        );
+        if (isNaN(pickupDuration) || pickupDuration < 0) {
+            alert("⚠️ La durée d'enlèvement doit être un nombre positif.");
+            return;
+        }
+
+        if (isNaN(deliveryDuration) || deliveryDuration < 0) {
+            alert("⚠️ La durée de livraison doit être un nombre positif.");
+            return;
+        }
+
+        let result;
+        const isEdit = currentEditedDemandId !== null;
+
+        try {
+            if (!isEdit) {
+                // 🌱 MODE CRÉATION
+                result = system.addDemand(
+                    pickupAddress,
+                    deliveryAddress,
+                    pickupDuration,
+                    deliveryDuration
+                );
+            } else {
+                // ✏️ MODE MODIFICATION
+                result = system.updateDemand(
+                    currentEditedDemandId,
+                    pickupAddress,
+                    deliveryAddress,
+                    pickupDuration,
+                    deliveryDuration
+                );
+            }
+        } catch (err) {
+            console.error(isEdit ? 'updateDemand threw:' : 'addDemand threw:', err);
+            alert('❌ Erreur lors de la ' + (isEdit ? 'modification' : 'création') + ' de la demande: ' + (err && err.message ? err.message : String(err)));
+            return;
+        }
+
+        if (!result) {
+            alert('❌ Erreur inconnue lors de la ' + (isEdit ? 'modification' : 'création') + ' de la demande.');
+            return;
+        }
+
         if (!result.success) {
-            alert(result.error);
+            alert("❌ " + (result.error || 'Erreur inconnue lors de la ' + (isEdit ? 'modification' : 'création') + ' de la demande.'));
             return;
         }
 
         const demand = result.demand;
-        // Assign a default name for manually added demands
-        if (demand) {
-            demand.clientName = `Demande manuelle #${demand.id}`;
+
+        // Nom par défaut pour les demandes manuelles (seulement si pas déjà de clientName)
+        if (demand && !demand.clientName) {
+            if (!isEdit) {
+                demand.clientName = `Demande manuelle #${demand.id}`;
+            } else {
+                demand.clientName = demand.clientName || `Demande #${demand.id}`;
+            }
         }
 
-        // Rafraîchir l'UI avec la nouvelle demande
+        // Message de succès avec les détails
+        console.log(isEdit ? '✏️ Demande modifiée avec succès:' : '✅ Demande ajoutée avec succès:', demand);
+
+        if (!isEdit) {
+            alert(`✅ Demande ajoutée avec succès!\n\nEnlèvement: Point ${pickupAddress}\nLivraison: Point ${deliveryAddress}\nDurées: ${pickupDuration}s / ${deliveryDuration}s`);
+        } else {
+            alert(`✏️ Demande #${demand.id} modifiée avec succès.`);
+        }
+
+        // Rafraîchir l'UI avec la liste à jour
         updateDemandsUI();
 
         // Fermer la modale
         closeAddDemandModal();
     });
 }
+
 
 async function handleLoadDemands() {
     const input = document.getElementById("xmlDeliveriesInput");
@@ -661,9 +1088,25 @@ async function handleLoadDemands() {
 }
 
 // Helper function to format node address for display
-function formatNodeAddress(nodeId) {
+function formatNodeAddress(nodeIdOrObject) {
     if (!system.plan) {
-        return `Node #${nodeId}`;
+        return `Node #${nodeIdOrObject}`;
+    }
+
+    // Si c'est déjà un objet Node avec latitude/longitude
+    if (nodeIdOrObject && typeof nodeIdOrObject === 'object' && nodeIdOrObject.latitude && nodeIdOrObject.longitude) {
+        const lat = nodeIdOrObject.latitude.toFixed(4);
+        const lon = nodeIdOrObject.longitude.toFixed(4);
+        return `(${lat}, ${lon})`;
+    }
+
+    // Sinon, c'est un ID (string ou number)
+    let nodeId = nodeIdOrObject;
+
+    // Si l'ID est une string, extraire uniquement le nombre
+    if (typeof nodeId === 'string') {
+        // Enlever "Node " au début si présent
+        nodeId = nodeId.replace(/^Node\s*/i, '').trim();
     }
 
     const node = system.plan.getNodeById(nodeId);
@@ -691,7 +1134,7 @@ function updateDemandsUI() {
     });
 
     // Update map display if plan is loaded
-    if (system.plan && view.map && system.toursList == []) {
+    if (system.plan && view.map && system.toursList.length === 0) {
         // Redisplay plan (light segments and nodes)
         const planJSON = system.plan.toJSON();
         view.clearMap();
@@ -751,9 +1194,41 @@ function updateDemandsUI() {
 
 // Edit demand function (placeholder)
 function editDemand(demandId) {
-    console.log('Edit demand:', demandId);
-    alert('Fonctionnalité de modification à implémenter');
+    const demande = system.demandsList.find(d => d.id === demandId);
+    if (!demande) {
+        alert(`Demande ${demandId} introuvable.`);
+        return;
+    }
+
+    currentEditedDemandId = demande.id; // on passe en MODE EDITION
+
+    // Récupérer les inputs du formulaire
+    const pickupAddressInput    = document.getElementById("pickupAddressInput");
+    const deliveryAddressInput  = document.getElementById("deliveryAddressInput");
+    const pickupDurationInput   = document.getElementById("pickupDurationInput");
+    const deliveryDurationInput = document.getElementById("deliveryDurationInput");
+
+    if (!pickupAddressInput || !deliveryAddressInput || !pickupDurationInput || !deliveryDurationInput) {
+        alert("Formulaire de demande introuvable.");
+        return;
+    }
+
+    // Pré-remplir les champs avec les valeurs de la demande
+    pickupAddressInput.value    = demande.pickupAddress;
+    deliveryAddressInput.value  = demande.deliveryAddress;
+    pickupDurationInput.value   = demande.pickupDuration;
+    deliveryDurationInput.value = demande.deliveryDuration;
+
+    // (optionnel) changer le titre et le texte du bouton
+    const title = document.querySelector("#addDemandModal h3");
+    if (title) title.textContent = `Modifier la demande #${demande.id}`;
+    const submitBtn = addDemandForm?.querySelector("button[type='submit']");
+    if (submitBtn) submitBtn.textContent = "Enregistrer";
+
+    // Ouvrir la modale
+    openAddDemandModal();
 }
+
 
 // Delete demand function
 function deleteDemand(demandId) {
@@ -939,6 +1414,26 @@ async function handleCalculateTour() {
     // avant de lancer le calcul synchrone qui bloque l'UI
     setTimeout(() => {
         try {
+            // Ensure there's at least one courier in system (some flows add couriers when loading XML)
+            if (!system.listCouriers || system.listCouriers.length === 0) {
+                try {
+                    // Respect system's Courier class signature
+                    const defaultCourier = new Courier(1, 'Default');
+                    system.listCouriers = [defaultCourier];
+                    console.log('Ajout d\'un coursier par défaut pour le calcul:', defaultCourier);
+                } catch (e) {
+                    // Fallback plain object
+                    system.listCouriers = [{ id: 1, name: 'Default' }];
+                    console.warn('Impossible d\'instancier Courier, fallback au plain object', e);
+                }
+            }
+
+            // Vérifier que l'entrepôt est défini (sinon system.calculateTour retournera null)
+            if (!system.plan.warehouse) {
+                alert('⚠️ Aucun entrepôt défini dans le plan. Chargez un fichier de demandes (XML) qui contient la balise <entrepot> ou définissez l\'entrepôt dans le plan.');
+                return;
+            }
+
             // Appeler la fonction de calcul de tournée du système
             const result = system.calculateTour(system.demandsList);
 
@@ -1161,7 +1656,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (sidebarLivreur) sidebarLivreur.style.display = 'none';
                 if (sidebarHistory) sidebarHistory.style.display = 'block';
-                handleLoadHistory(); // charger la liste dans la sidebar
+                handleLoadHistoryMulti(); // charger la liste dans la sidebar
             } else if (viewName === 'courier') {
                 // Revenir à la vue Livreur telle qu’elle était
                 if (sidebarLivreur) sidebarLivreur.style.display = 'block';
@@ -1180,7 +1675,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bouton interne pour recharger l'historique
     const historyBtn = document.getElementById('historyBtn');
     if (historyBtn) {
-        historyBtn.addEventListener('click', handleLoadHistory);
+        historyBtn.addEventListener('click', handleLoadHistoryMulti);
     }
 });
-

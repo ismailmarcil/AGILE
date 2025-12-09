@@ -12,6 +12,11 @@ class View {
         this.selectedMarker = null; // Currently selected marker
         this.selectedStopIndex = null; // Currently selected stop index
 
+        // Node selection mode
+        this.nodeSelectionMode = false;
+        this.nodeSelectionType = null; // 'pickup' or 'delivery'
+        this.selectableNodes = []; // Array of clickable node markers
+
         if (mapElementId) {
             this.initMap();
         }
@@ -56,7 +61,7 @@ class View {
      */
     displayNodes(nodes) {
         nodes.forEach(node => {
-            L.circleMarker([node.latitude, node.longitude], {
+            const marker = L.circleMarker([node.latitude, node.longitude], {
                 radius: 2,
                 fillColor: "#95a5a6",
                 color: "#7f8c8d",
@@ -64,7 +69,108 @@ class View {
                 fillOpacity: 0.3,
                 opacity: 0.4
             }).addTo(this.map);
+
+            // Stocker une référence aux données du nœud
+            marker.nodeData = node;
         });
+    }
+
+    /**
+     * Active/désactive le mode de sélection de nœuds
+     * @param {boolean} active - Activer ou désactiver le mode
+     * @param {string} type - 'pickup' ou 'delivery'
+     */
+    setNodeSelectionMode(active, type = null) {
+        this.nodeSelectionMode = active;
+        this.nodeSelectionType = type;
+
+        if (active) {
+            // Changer le curseur de la carte
+            document.getElementById(this.mapElementId).style.cursor = 'crosshair';
+
+            // Rendre tous les nœuds plus visibles et cliquables
+            this.makeNodesSelectable();
+
+            console.log(`Mode sélection activé: ${type}`);
+        } else {
+            // Restaurer le curseur normal
+            document.getElementById(this.mapElementId).style.cursor = '';
+
+            // Supprimer les marqueurs de sélection
+            this.removeSelectableNodes();
+
+            console.log('Mode sélection désactivé');
+        }
+    }
+
+    /**
+     * Crée des marqueurs cliquables pour tous les nœuds du plan
+     */
+    makeNodesSelectable() {
+        // Supprimer les anciens marqueurs sélectionnables
+        this.removeSelectableNodes();
+
+        if (!this.nodeMap || this.nodeMap.size === 0) {
+            console.warn('Aucun nœud disponible pour la sélection');
+            return;
+        }
+
+        // Créer des marqueurs cliquables pour chaque nœud
+        this.nodeMap.forEach((node, nodeId) => {
+            const color = this.nodeSelectionType === 'pickup' ? '#4caf50' : '#2196f3';
+
+            const marker = L.circleMarker([node.latitude, node.longitude], {
+                radius: 6,
+                fillColor: color,
+                color: '#fff',
+                weight: 2,
+                fillOpacity: 0.7,
+                opacity: 1
+            }).addTo(this.map);
+
+            // Tooltip au survol
+            marker.bindTooltip(`Point ${nodeId}`, {
+                permanent: false,
+                direction: 'top'
+            });
+
+            // Gestion du clic
+            marker.on('click', () => {
+                if (this.nodeSelectionMode && window.onNodeSelected) {
+                    window.onNodeSelected(node);
+                    console.log('Nœud sélectionné:', node.id);
+                }
+            });
+
+            // Effet de survol
+            marker.on('mouseover', function() {
+                this.setStyle({
+                    radius: 8,
+                    fillOpacity: 1
+                });
+            });
+
+            marker.on('mouseout', function() {
+                this.setStyle({
+                    radius: 6,
+                    fillOpacity: 0.7
+                });
+            });
+
+            this.selectableNodes.push(marker);
+        });
+
+        console.log(`${this.selectableNodes.length} nœuds rendus sélectionnables`);
+    }
+
+    /**
+     * Supprime tous les marqueurs de sélection
+     */
+    removeSelectableNodes() {
+        this.selectableNodes.forEach(marker => {
+            this.map.removeLayer(marker);
+        });
+        this.selectableNodes = [];
     }
 
     /**
@@ -576,9 +682,25 @@ class View {
 
             const meta = document.createElement('div');
             meta.className = 'history-meta';
+
             const time = t.departureTime || '';
             const courier = t.courier || '';
-            meta.textContent = [time, courier].filter(Boolean).join(' · ');
+
+            const durationMin = (typeof t.totalDuration === 'number')
+                ? Math.round(t.totalDuration / 60)    // secondes -> minutes
+                : null;
+
+            const distanceKm = (typeof t.totalDistance === 'number')
+                ? (t.totalDistance / 1000).toFixed(2) // mètres -> km
+                : null;
+
+            const metaParts = [];
+            if (time) metaParts.push(time);
+            if (courier) metaParts.push(courier);
+            if (durationMin !== null) metaParts.push(`${durationMin} min`);
+            if (distanceKm !== null) metaParts.push(`${distanceKm} km`);
+
+            meta.textContent = metaParts.join(' · ');
 
             item.appendChild(title);
             item.appendChild(meta);
@@ -796,6 +918,39 @@ class View {
      * Stars (★) = Centroids
      * @param {Array} clusters - Array of clusters {demands: [], centroid: {lat, lon}}
      */
+    displayToursMulti(tours) {
+        if (!tours || tours.length === 0) {
+            console.warn('No tours to display');
+            return;
+        }
+
+        const bounds = [];
+        tours.forEach(t => {
+            (t.legs || []).forEach(l => {
+                (l.pathNode || []).forEach(n => {
+                    if (n && n.latitude !== undefined && n.longitude !== undefined) {
+                        bounds.push([n.latitude, n.longitude]);
+                    }
+                });
+            });
+            (t.stops || []).forEach(s => {
+                if (s && s.node && s.node.latitude !== undefined && s.node.longitude !== undefined) {
+                    bounds.push([s.node.latitude, s.node.longitude]);
+                }
+            });
+        });
+
+        this.displayTours(tours);
+
+        if (bounds.length > 0 && this.map) {
+            try {
+                this.map.fitBounds(bounds, { padding: [50, 50] });
+            } catch (e) {
+                console.warn('Could not fit bounds for multi tours', e);
+            }
+        }
+    }
+
     displayKMeansClustering(clusters) {
         if (!clusters || clusters.length === 0) {
             console.warn('No clusters to display');

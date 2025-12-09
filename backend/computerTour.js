@@ -1,6 +1,3 @@
-const Leg = require('./leg.js');
-const Tour = require('./tours.js');
-
 /**
  * Class responsible for computing optimal delivery tours
  */
@@ -303,4 +300,9 @@ class ComputerTour {
 // Export for Node.js
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ComputerTour;
+}
+
+// Export for Browser
+if (typeof window !== 'undefined') {
+    window.ComputerTour = ComputerTour;
 }

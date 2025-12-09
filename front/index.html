@@ -86,7 +86,7 @@
     <div id="sidebar-history" style="display:none; padding:20px; overflow-y:auto;">
         <h3 style="margin-bottom:10px;">Historique des tournées</h3>
         <button id="historyBtn" class="btn btn-sm btn-primary" style="width:auto; margin-bottom:10px;">
-            Charger l'historique
+            Recharger l'historique
         </button>
         <div id="historyError" style="color:#b00020; margin-bottom:8px;"></div>
         <div id="historyResults"></div>
@@ -119,12 +119,15 @@
             <div class="section-title">
                 <span><i class="fa-solid fa-stopwatch"></i> Détails de la tournée</span>
                 <div style="display: flex; gap: 8px; margin-left: auto; align-items: center;">
+                    <!-- Sélecteur de tournées par coursier (affiché quand plusieurs tournées calculées) -->
+                    <div id="courierSelectContainer" style="display: none;">
+                        <select id="courierTourSelect" style="padding: 6px 12px; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); background: #f8f9fa; cursor: pointer;">
+                            <option value="">Sélectionner une tournée...</option>
+                        </select>
+                    </div>
                     <div id="courierInfo" style="display: none; padding: 4px 12px; background: #f8f9fa; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color);">
                         <i class="fa-solid fa-user"></i> <span id="courierName">-</span>
                     </div>
-                    <button class="btn btn-sm save-btn" onclick="document.getElementById('jsonTourInput').click()" style="background:white; border:1px solid #bdc3c7;">
-                        <i class="fa-solid fa-folder-open" style="margin-right:6px"></i> Restaurer
-                    </button>
                     <button class="btn btn-sm save-btn" id="saveTourBtn" style="background:white; border:1px solid #bdc3c7; display:none;">
                         <i class="fa-solid fa-floppy-disk" style="margin-right:6px"></i> Sauvegarder
                     </button>
@@ -159,43 +162,69 @@
 <!-- Geocoding service -->
 <script src="/front/scripts/geocoding.js"></script>
 
-<!-- Modal ajout de demande -->
-<div id="addDemandModal" class="modal-overlay" style="display:none;">
-    <div class="modal">
-        <div class="modal-header">
-            <h3>Ajouter une demande</h3>
-            <button type="button" id="addDemandCloseBtn" class="btn-icon">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
+<!-- Sidebar ajout de demande -->
+<div id="addDemandSidebar" class="demand-sidebar" style="display:none;">
+    <div class="demand-sidebar-header">
+        <h3>Ajouter une demande</h3>
+        <button type="button" id="addDemandCloseBtn" class="btn-icon">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <form id="addDemandForm" class="demand-sidebar-body">
+        <!-- Instructions -->
+        <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 12px; margin-bottom: 15px; border-radius: 4px;">
+            <p style="margin: 0; font-size: 0.9rem; color: #1976d2;">
+                <i class="fa-solid fa-info-circle"></i> Cliquez sur les boutons ci-dessous puis sélectionnez les points sur la carte
+            </p>
         </div>
 
-        <form id="addDemandForm" class="modal-body">
-            <div class="form-row">
-                <label for="pickupAddressInput">Adresse pickup (id de noeud)</label>
-                <input type="text" id="pickupAddressInput" required placeholder="ex: 25175791">
+        <!-- Point d'enlèvement -->
+        <div class="form-row">
+            <label>Point d'enlèvement (Pickup)</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button type="button" id="selectPickupBtn" class="btn" style="flex: 1;">
+                    <i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte
+                </button>
+                <input type="text" id="pickupAddressDisplay" readonly placeholder="Aucun point sélectionné"
+                       style="flex: 2; background: #f5f5f5; cursor: not-allowed;">
             </div>
+            <input type="hidden" id="pickupAddressInput" required>
+        </div>
 
-            <div class="form-row">
-                <label for="deliveryAddressInput">Adresse delivery (id de noeud)</label>
-                <input type="text" id="deliveryAddressInput" required placeholder="ex: 26086130">
+        <!-- Point de livraison -->
+        <div class="form-row">
+            <label>Point de livraison (Delivery)</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button type="button" id="selectDeliveryBtn" class="btn" style="flex: 1;">
+                    <i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte
+                </button>
+                <input type="text" id="deliveryAddressDisplay" readonly placeholder="Aucun point sélectionné"
+                       style="flex: 2; background: #f5f5f5; cursor: not-allowed;">
             </div>
+            <input type="hidden" id="deliveryAddressInput" required>
+        </div>
 
+        <!-- Durées -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <div class="form-row">
                 <label for="pickupDurationInput">Durée pickup (sec)</label>
-                <input type="number" id="pickupDurationInput" min="0" value="5" required>
+                <input type="number" id="pickupDurationInput" min="0" value="300" required>
             </div>
 
             <div class="form-row">
                 <label for="deliveryDurationInput">Durée delivery (sec)</label>
-                <input type="number" id="deliveryDurationInput" min="0" value="5" required>
+                <input type="number" id="deliveryDurationInput" min="0" value="300" required>
             </div>
+        </div>
 
-            <div class="modal-footer">
-                <button type="button" class="btn" id="addDemandCancelBtn">Annuler</button>
-                <button type="submit" class="btn btn-primary">Ajouter</button>
-            </div>
-        </form>
-    </div>
+        <div class="demand-sidebar-footer">
+            <button type="button" class="btn" id="addDemandCancelBtn">Annuler</button>
+            <button type="submit" class="btn btn-primary" id="addDemandSubmitBtn">
+                <i class="fa-solid fa-plus"></i> Ajouter
+            </button>
+        </div>
+    </form>
 </div>
 
 <!-- Main application script -->
