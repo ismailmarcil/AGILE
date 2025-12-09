@@ -392,7 +392,7 @@ class View {
             }
 
             const node = tourPoint.node;
-            const isWarehouse = tourPoint.type === 'ENTREPOT';
+            const isWarehouse = tourPoint.type === 'WAREHOUSE';
             const isPickup = tourPoint.type === 'PICKUP';
             const isDelivery = tourPoint.type === 'DELIVERY';
 
@@ -844,7 +844,7 @@ class View {
             }
 
             const node = tourPoint.node;
-            const isWarehouse = tourPoint.type === 'ENTREPOT';
+            const isWarehouse = tourPoint.type === 'WAREHOUSE';
             const isPickup = tourPoint.type === 'PICKUP';
             const isDelivery = tourPoint.type === 'DELIVERY';
 

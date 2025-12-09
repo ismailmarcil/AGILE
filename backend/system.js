@@ -739,7 +739,7 @@ class System {
         let travelTime = this.calculateTravelTime(distance);
         let leg = new Leg(this.plan.warehouse, path[path.length - 1], path, segments, distance, travelTime);
         tour.addLeg(leg);
-        tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", demands[0]));
+        tour.addStop(new TourPoint(this.plan.warehouse, 0, "WAREHOUSE", demands[0]));
 
         for (let i = 0; i < demands.length - 1; ++i) {
             let demand = demands[i];
@@ -770,7 +770,7 @@ class System {
         let returnTravelTime = this.calculateTravelTime(returnDistance);
         let returnLeg = new Leg(returnPath[0], this.plan.warehouse, returnPath, returnSegments, returnDistance, returnTravelTime);
         tour.addLeg(returnLeg);
-        tour.addStop(new TourPoint(this.plan.warehouse, 0, "ENTREPOT", null));
+        tour.addStop(new TourPoint(this.plan.warehouse, 0, "WAREHOUSE", null));
 
         // Calculate total distance and duration
         tour.calculateTotalDistance();

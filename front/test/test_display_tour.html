@@ -92,12 +92,12 @@
             const tour = new Tour(null, "08:00", courier);
 
             // Create stops
-            const warehouse = new TourPoint(node1, 0, TypePoint.ENTREPOT, null);
+            const warehouse = new TourPoint(node1, 0, TypePoint.WAREHOUSE, null);
             const pickup1 = new TourPoint(node2, 300, TypePoint.PICKUP, demand1);
             const delivery1 = new TourPoint(node3, 240, TypePoint.DELIVERY, demand1);
             const pickup2 = new TourPoint(node4, 180, TypePoint.PICKUP, demand2);
             const delivery2 = new TourPoint(node5, 300, TypePoint.DELIVERY, demand2);
-            const warehouseReturn = new TourPoint(node1, 0, TypePoint.ENTREPOT, null);
+            const warehouseReturn = new TourPoint(node1, 0, TypePoint.WAREHOUSE, null);
 
             tour.addStop(warehouse);
             tour.addStop(pickup1);

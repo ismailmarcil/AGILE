@@ -15,8 +15,8 @@ describe('Tour order change - isMoveValid and movePoint', () => {
         const tour = new Tour(null, '08:00', courier);
 
         const node = new Node('N', 45.75, 4.85, []);
-        const start = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
-        const end = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
+        const start = new TourPoint(node, 0, TypePoint.WAREHOUSE, null);
+        const end = new TourPoint(node, 0, TypePoint.WAREHOUSE, null);
 
         tour.stops = [start, end];
 
@@ -30,8 +30,8 @@ describe('Tour order change - isMoveValid and movePoint', () => {
         const tour = new Tour(null, '08:00', courier);
 
         const node = new Node('N', 45.75, 4.85, []);
-        const start = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
-        const end = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
+        const start = new TourPoint(node, 0, TypePoint.WAREHOUSE, null);
+        const end = new TourPoint(node, 0, TypePoint.WAREHOUSE, null);
 
         tour.stops = [start, end];
 
@@ -45,9 +45,9 @@ describe('Tour order change - isMoveValid and movePoint', () => {
         const tour = new Tour(null, '08:00', courier);
 
         const node = new Node('N', 45.75, 4.85, []);
-        const start = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
+        const start = new TourPoint(node, 0, TypePoint.WAREHOUSE, null);
         const p = new TourPoint(node, 60, TypePoint.PICKUP, null);
-        const end = new TourPoint(node, 0, TypePoint.ENTREPOT, null);
+        const end = new TourPoint(node, 0, TypePoint.WAREHOUSE, null);
 
         tour.stops = [start, p, end];
 
@@ -63,10 +63,10 @@ describe('Tour order change - isMoveValid and movePoint', () => {
         const nodeA = new Node('A', 45.75, 4.85, []);
         const nodeB = new Node('B', 45.76, 4.86, []);
 
-        const start = new TourPoint(nodeA, 0, TypePoint.ENTREPOT, null);
+        const start = new TourPoint(nodeA, 0, TypePoint.WAREHOUSE, null);
         const p = new TourPoint(nodeA, 60, TypePoint.PICKUP, null);
         const d = new TourPoint(nodeB, 120, TypePoint.DELIVERY, null);
-        const end = new TourPoint(nodeB, 0, TypePoint.ENTREPOT, null);
+        const end = new TourPoint(nodeB, 0, TypePoint.WAREHOUSE, null);
 
         // link the pair
         p.relatedTourPoint = d;
@@ -91,10 +91,10 @@ describe('Tour order change - isMoveValid and movePoint', () => {
         const nodeA = new Node('A', 45.75, 4.85, []);
         const nodeB = new Node('B', 45.76, 4.86, []);
 
-        const start = new TourPoint(nodeA, 0, TypePoint.ENTREPOT, null);
+        const start = new TourPoint(nodeA, 0, TypePoint.WAREHOUSE, null);
         const p = new TourPoint(nodeA, 60, TypePoint.PICKUP, null);
         const d = new TourPoint(nodeB, 120, TypePoint.DELIVERY, null);
-        const end = new TourPoint(nodeB, 0, TypePoint.ENTREPOT, null);
+        const end = new TourPoint(nodeB, 0, TypePoint.WAREHOUSE, null);
 
         // link the pair
         p.relatedTourPoint = d;
@@ -116,12 +116,12 @@ describe('Tour order change - isMoveValid and movePoint', () => {
         const n2 = new Node('2', 45.76, 4.86, []);
         const n3 = new Node('3', 45.77, 4.87, []);
 
-        const start = new TourPoint(n1, 0, TypePoint.ENTREPOT, null);
+        const start = new TourPoint(n1, 0, TypePoint.WAREHOUSE, null);
         const p1 = new TourPoint(n2, 60, TypePoint.PICKUP, null);
         const d1 = new TourPoint(n3, 120, TypePoint.DELIVERY, null);
         const p2 = new TourPoint(n3, 30, TypePoint.PICKUP, null);
         const d2 = new TourPoint(n2, 30, TypePoint.DELIVERY, null);
-        const end = new TourPoint(n1, 0, TypePoint.ENTREPOT, null);
+        const end = new TourPoint(n1, 0, TypePoint.WAREHOUSE, null);
 
         // link pairs
         p1.relatedTourPoint = d1; d1.relatedTourPoint = p1;

@@ -43,7 +43,7 @@ describe('System.calculateTour() Tests', () => {
         assert.isTrue(tour !== null, "Tour should be created");
         assert.isTrue(tour.legs.length > 0, "Tour should have legs");
         assert.isTrue(tour.stops.length > 0, "Tour should have stops");
-        assert.strictEqual(tour.stops[0].type, "ENTREPOT", "First stop should be warehouse");
+        assert.strictEqual(tour.stops[0].type, "WAREHOUSE", "First stop should be warehouse");
         // Last stop is NOT warehouse in current buggy implementation for single demand
     });
 
@@ -97,7 +97,7 @@ describe('System.calculateTour() Tests', () => {
         // Count stop types
         const pickupStops = tour.stops.filter(s => s.type === "PICKUP");
         const deliveryStops = tour.stops.filter(s => s.type === "DELIVERY");
-        const warehouseStops = tour.stops.filter(s => s.type === "ENTREPOT");
+        const warehouseStops = tour.stops.filter(s => s.type === "WAREHOUSE");
 
         assert.strictEqual(pickupStops.length, 1, "Should have 1 pickup stop (only first demand processed)");
         assert.strictEqual(deliveryStops.length, 1, "Should have 1 delivery stop (only first demand processed)");
@@ -413,7 +413,7 @@ describe('System.calculateTour() Tests', () => {
         // Count actual stops
         const pickupStops = tour.stops.filter(s => s.type === "PICKUP");
         const deliveryStops = tour.stops.filter(s => s.type === "DELIVERY");
-        const warehouseStops = tour.stops.filter(s => s.type === "ENTREPOT");
+        const warehouseStops = tour.stops.filter(s => s.type === "WAREHOUSE");
 
         // With current implementation bug, last demand won't get stops
         assert.isTrue(pickupStops.length >= 3, "Should have at least 3 pickup stops");

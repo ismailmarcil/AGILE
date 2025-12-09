@@ -498,7 +498,7 @@ function updateTimelineFromTour(tour, readOnly = false) {
         const iconDiv = document.createElement('div');
         iconDiv.className = 'step-icon';
 
-        if (stop.type === 'ENTREPOT') {
+        if (stop.type === 'WAREHOUSE') {
             iconDiv.style.background = 'var(--secondary-color)';
             iconDiv.style.color = 'white';
             iconDiv.innerHTML = '<i class="fa-solid fa-warehouse"></i>';
@@ -516,7 +516,7 @@ function updateTimelineFromTour(tour, readOnly = false) {
         stepDiv.appendChild(iconDiv);
 
         // Add left/right controls for non-depot stops (only if not read-only)
-        if (!readOnly && stop.type !== 'ENTREPOT') {
+        if (!readOnly && stop.type !== 'WAREHOUSE') {
             const controls = document.createElement('div');
             controls.className = 'step-controls';
 
@@ -586,7 +586,7 @@ function updateTimelineFromTour(tour, readOnly = false) {
         // Add description
         const descDiv = document.createElement('div');
         descDiv.className = 'step-desc';
-        if (stop.type === 'ENTREPOT') {
+        if (stop.type === 'WAREHOUSE') {
             descDiv.textContent = index === 0 ? 'Départ' : 'Arrivée';
         } else {
             // Afficher "Chargement..." pendant la récupération de l'adresse
@@ -698,7 +698,19 @@ function openAddDemandModal() {
     }
 
     // Réinitialiser l'état
-    resetNodeSelection();
+    if (currentEditedDemandId === null) {
+        resetNodeSelection();
+
+        if (addDemandForm) {
+            addDemandForm.reset();
+        }
+
+        const pickupDisplay   = document.getElementById('pickupAddressDisplay');
+        const deliveryDisplay = document.getElementById('deliveryAddressDisplay');
+
+        if (pickupDisplay)   pickupDisplay.value   = '';
+        if (deliveryDisplay) deliveryDisplay.value = '';
+    }
     addDemandSidebar.style.display = "flex";
 }
 
@@ -1001,7 +1013,7 @@ if (addDemandForm) {
         }
 
         // Message de succès avec les détails
-        console.log(isEdit ? '✏️ Demande modifiée avec succès:' : '✅ Demande ajoutée avec succès:', demand);
+        console.log(isEdit ? 'Demande modifiée avec succès:' : 'Demande ajoutée avec succès:', demand);
 
         if (!isEdit) {
             alert(`✅ Demande ajoutée avec succès!\n\nEnlèvement: Point ${pickupAddress}\nLivraison: Point ${deliveryAddress}\nDurées: ${pickupDuration}s / ${deliveryDuration}s`);
@@ -1200,34 +1212,107 @@ function editDemand(demandId) {
         return;
     }
 
-    currentEditedDemandId = demande.id; // on passe en MODE EDITION
+    // On passe en mode EDITION
+    currentEditedDemandId = demande.id;
 
-    // Récupérer les inputs du formulaire
+    // Ouvrir la sidebar sans reset (grâce à la modif d'openAddDemandModal)
+    openAddDemandModal();
+
+    // Récupérer les éléments du formulaire
     const pickupAddressInput    = document.getElementById("pickupAddressInput");
     const deliveryAddressInput  = document.getElementById("deliveryAddressInput");
+    const pickupAddressDisplay  = document.getElementById("pickupAddressDisplay");
+    const deliveryAddressDisplay= document.getElementById("deliveryAddressDisplay");
     const pickupDurationInput   = document.getElementById("pickupDurationInput");
     const deliveryDurationInput = document.getElementById("deliveryDurationInput");
 
-    if (!pickupAddressInput || !deliveryAddressInput || !pickupDurationInput || !deliveryDurationInput) {
+    if (!pickupAddressInput || !deliveryAddressInput ||
+        !pickupDurationInput || !deliveryDurationInput) {
         alert("Formulaire de demande introuvable.");
         return;
     }
 
-    // Pré-remplir les champs avec les valeurs de la demande
-    pickupAddressInput.value    = demande.pickupAddress;
-    deliveryAddressInput.value  = demande.deliveryAddress;
+    // --- 1) Durées (ça fonctionnait déjà chez toi) ---
     pickupDurationInput.value   = demande.pickupDuration;
     deliveryDurationInput.value = demande.deliveryDuration;
 
-    // (optionnel) changer le titre et le texte du bouton
-    const title = document.querySelector("#addDemandModal h3");
-    if (title) title.textContent = `Modifier la demande #${demande.id}`;
-    const submitBtn = addDemandForm?.querySelector("button[type='submit']");
-    if (submitBtn) submitBtn.textContent = "Enregistrer";
+    // --- 2) Récupérer les IDs de noeud ---
+    const pickupId   = demande.pickupAddress?.id   ?? demande.pickupAddress;
+    const deliveryId = demande.deliveryAddress?.id ?? demande.deliveryAddress;
 
-    // Ouvrir la modale
-    openAddDemandModal();
+    // --- 3) Récupérer les noeuds dans le plan (pour afficher les coords jolies) ---
+    let pickupNode = null;
+    let deliveryNode = null;
+    if (system.plan && typeof system.plan.getNodeById === "function") {
+        if (pickupId)   pickupNode   = system.plan.getNodeById(pickupId);
+        if (deliveryId) deliveryNode = system.plan.getNodeById(deliveryId);
+    }
+
+    // --- 4) Remplir les champs cachés ---
+    if (pickupId)   pickupAddressInput.value   = pickupId;
+    if (deliveryId) deliveryAddressInput.value = deliveryId;
+
+    // --- 5) Remplir les champs affichés (à droite des boutons) ---
+    if (pickupAddressDisplay) {
+        if (pickupNode) {
+            pickupAddressDisplay.value =
+                `Point ${pickupId} (${pickupNode.latitude.toFixed(4)}, ${pickupNode.longitude.toFixed(4)})`;
+        } else if (pickupId) {
+            pickupAddressDisplay.value = `Point ${pickupId}`;
+        } else {
+            pickupAddressDisplay.value = "Aucun point sélectionné";
+        }
+    }
+
+    if (deliveryAddressDisplay) {
+        if (deliveryNode) {
+            deliveryAddressDisplay.value =
+                `Point ${deliveryId} (${deliveryNode.latitude.toFixed(4)}, ${deliveryNode.longitude.toFixed(4)})`;
+        } else if (deliveryId) {
+            deliveryAddressDisplay.value = `Point ${deliveryId}`;
+        } else {
+            deliveryAddressDisplay.value = "Aucun point sélectionné";
+        }
+    }
+
+    // --- 6) Mettre à jour le style des boutons comme si la carte avait été cliquée ---
+    const selectPickupBtn   = document.getElementById('selectPickupBtn');
+    const selectDeliveryBtn = document.getElementById('selectDeliveryBtn');
+
+    if (selectPickupBtn) {
+        if (pickupId) {
+            selectPickupBtn.style.background = '#4caf50';
+            selectPickupBtn.innerHTML = '<i class="fa-solid fa-check"></i> Point sélectionné';
+        } else {
+            selectPickupBtn.style.background = '';
+            selectPickupBtn.innerHTML = '<i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte';
+        }
+    }
+
+    if (selectDeliveryBtn) {
+        if (deliveryId) {
+            selectDeliveryBtn.style.background = '#2196f3';
+            selectDeliveryBtn.innerHTML = '<i class="fa-solid fa-check"></i> Point sélectionné';
+        } else {
+            selectDeliveryBtn.style.background = '';
+            selectDeliveryBtn.innerHTML = '<i class="fa-solid fa-map-marker-alt"></i> Sélectionner sur la carte';
+        }
+    }
+
+    // --- 7) Mettre à jour le titre + bouton de la sidebar ---
+    const title = document.querySelector("#addDemandSidebar h3");
+    if (title) title.textContent = `Modifier la demande #${demande.id}`;
+
+    const submitBtn = document.getElementById("addDemandSubmitBtn");
+    if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Enregistrer';
+    }
+
+    // (optionnel) mettre à jour l'état interne de sélection si tu veux des marqueurs sur la carte
+    nodeSelectionState.pickupNode   = pickupNode || null;
+    nodeSelectionState.deliveryNode = deliveryNode || null;
 }
+
 
 
 // Delete demand function
@@ -1387,7 +1472,7 @@ function changeCourierCount(delta) {
 }
 
 // Handle tour calculation
-async function handleCalculateTour() {
+async function handleComputeTour() {
     // Vérifier que le plan est chargé
     if (!system.plan) {
         alert('⚠️ Veuillez d\'abord charger un plan XML.');
@@ -1414,36 +1499,61 @@ async function handleCalculateTour() {
     // avant de lancer le calcul synchrone qui bloque l'UI
     setTimeout(() => {
         try {
-            // Ensure there's at least one courier in system (some flows add couriers when loading XML)
-            if (!system.listCouriers || system.listCouriers.length === 0) {
+            // Récupérer le nombre de coursiers demandé
+            const courierCountInput = document.getElementById('courierCountInput');
+            const requestedCourierCount = courierCountInput ? parseInt(courierCountInput.value) || 1 : 1;
+
+            console.log(`Calcul de tournées pour ${requestedCourierCount} coursier(s)`);
+
+            // S'assurer qu'on a suffisamment de coursiers dans la liste
+            if (!system.listCouriers) {
+                system.listCouriers = [];
+            }
+
+            // Créer ou compléter la liste de coursiers jusqu'au nombre demandé
+            while (system.listCouriers.length < requestedCourierCount) {
+                const courierIndex = system.listCouriers.length + 1;
                 try {
-                    // Respect system's Courier class signature
-                    const defaultCourier = new Courier(1, 'Default');
-                    system.listCouriers = [defaultCourier];
-                    console.log('Ajout d\'un coursier par défaut pour le calcul:', defaultCourier);
+                    const courier = new Courier(courierIndex, `Coursier ${courierIndex}`);
+                    system.listCouriers.push(courier);
+                    console.log(`Ajout du coursier ${courierIndex} pour le calcul`);
                 } catch (e) {
                     // Fallback plain object
-                    system.listCouriers = [{ id: 1, name: 'Default' }];
-                    console.warn('Impossible d\'instancier Courier, fallback au plain object', e);
+                    system.listCouriers.push({ id: courierIndex, name: `Coursier ${courierIndex}` });
+                    console.warn(`Impossible d\'instancier Courier ${courierIndex}, fallback au plain object`, e);
                 }
             }
 
-            // Vérifier que l'entrepôt est défini (sinon system.calculateTour retournera null)
+            // Limiter la liste au nombre demandé
+            const couriersToUse = system.listCouriers.slice(0, requestedCourierCount);
+
+            // Vérifier que l'entrepôt est défini
             if (!system.plan.warehouse) {
                 alert('⚠️ Aucun entrepôt défini dans le plan. Chargez un fichier de demandes (XML) qui contient la balise <entrepot> ou définissez l\'entrepôt dans le plan.');
                 return;
             }
 
-            // Appeler la fonction de calcul de tournée du système
-            const result = system.calculateTour(system.demandsList);
+            // Appeler computeTours avec la liste de coursiers
+            const result = system.computeTours(couriersToUse);
 
             if (!result) {
-                alert('❌ Erreur lors du calcul de la tournée. Vérifiez que toutes les demandes sont valides.');
+                alert('❌ Erreur lors du calcul des tournées. Vérifiez que toutes les demandes sont valides.');
                 return;
             }
 
-            // Gérer le cas où calculateTour retourne une liste de tournées
-            const tours = Array.isArray(result) ? result : [result];
+            // Gérer le code de retour
+            if (result.code === 2) {
+                alert('⚠️ Nombre de coursiers insuffisant pour traiter toutes les demandes.');
+                return;
+            }
+
+            if (result.code === 1) {
+                alert('❌ Erreur lors du calcul des tournées.');
+                return;
+            }
+
+            // Succès (code === 0)
+            const tours = result.tours || [];
 
             if (tours.length === 0) {
                 alert('❌ Aucune tournée n\'a pu être calculée.');
@@ -1569,13 +1679,8 @@ function populateCourierTourSelector(tours) {
     };
 }
 
-// Helper function to get the number of couriers
-// TODO: Cette fonction sera utilisée lors du calcul des tournées multiples
-// Exemple: const tours = system.calculateTours(system.demandsList, getCouriersCount());
-function getCouriersCount() {
-    const couriersCountInput = document.getElementById('couriersCount');
-    return parseInt(couriersCountInput?.value) || 1;
-}
+// Note: Le nombre de coursiers est maintenant géré directement dans handleComputeTour()
+// qui appelle system.computeTours(couriers) avec la liste de coursiers appropriée
 
 // Setup event listeners when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
@@ -1608,35 +1713,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ajouter le listener pour le bouton de calcul de tournée
     const calculateBtn = document.querySelector('.sidebar .btn.btn-primary');
     if (calculateBtn) {
-        calculateBtn.addEventListener('click', handleCalculateTour);
+        calculateBtn.addEventListener('click', handleComputeTour);
     }
 
-    // Gestion du nombre de coursiers
-    const couriersCountInput = document.getElementById('couriersCount');
-    const decreaseCouriersBtn = document.getElementById('decreaseCouriersBtn');
-    const increaseCouriersBtn = document.getElementById('increaseCouriersBtn');
-
-    if (decreaseCouriersBtn && couriersCountInput) {
-        decreaseCouriersBtn.addEventListener('click', () => {
-            let count = parseInt(couriersCountInput.value) || 1;
-            if (count > 1) {
-                count--;
-                couriersCountInput.value = count;
-                console.log('Nombre de coursiers:', count);
-            }
-        });
-    }
-
-    if (increaseCouriersBtn && couriersCountInput) {
-        increaseCouriersBtn.addEventListener('click', () => {
-            let count = parseInt(couriersCountInput.value) || 1;
-            if (count < 10) { // Limite maximale de 10 coursiers
-                count++;
-                couriersCountInput.value = count;
-                console.log('Nombre de coursiers:', count);
-            }
-        });
-    }
 
     // Switch entre Vue Livreur / Vue Historique dans la sidebar
     const toggleButtons = document.querySelectorAll('.view-toggles .toggle-btn');

@@ -4,7 +4,7 @@
 const TypePoint = {
     PICKUP: "PICKUP",
     DELIVERY: "DELIVERY",
-    ENTREPOT: "ENTREPOT"
+    WAREHOUSE: "WAREHOUSE"
 };
 
 /**
@@ -17,8 +17,8 @@ class TourPoint {
      * Constructor for the TourPoint class
      * @param {Node} node - Reference to the node
      * @param {number} serviceDuration - Duration of the service in seconds
-     * @param {("PICKUP"|"DELIVERY"|"ENTREPOT")} type - The type of point
-     * @param {Demand|null} demand - Related demand (null for ENTREPOT)
+     * @param {("PICKUP"|"DELIVERY"|"WAREHOUSE")} type - The type of point
+     * @param {Demand|null} demand - Related demand (null for WAREHOUSE)
      */
     constructor(node, serviceDuration, type, demand = null) {
         this.node = node;
