@@ -1,6 +1,10 @@
 /**
  * Class responsible for computing optimal delivery tours
  */
+
+// Import dependencies for Node.js
+const Leg = (typeof require !== 'undefined') ? require('./leg') : null;
+
 class ComputerTour {
     /**
      * Constructor for the ComputerTour class
@@ -206,7 +210,7 @@ class ComputerTour {
         }
 
         const TourClass = (typeof Tour !== 'undefined') ? Tour : require('./tours');
-        const LegClass = (typeof Leg !== 'undefined') ? Leg : require('./leg');
+        const LegClass = Leg || require('./leg');
 
         const DEFAULT_DEPARTURE = "08:00";
         const tour = new TourClass(null, DEFAULT_DEPARTURE, courier || null);
