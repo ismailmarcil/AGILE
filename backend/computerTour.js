@@ -1,8 +1,47 @@
 /**
  * Class responsible for computing optimal delivery tours
  */
-const Leg = (typeof require !== 'undefined') ? require('./leg') : null;
-const Tour = (typeof require !== 'undefined') ? require('./tours') : null;
+const isNodeEnv = typeof module !== 'undefined' && module.exports;
+
+let LegDependency = null;
+if (isNodeEnv) {
+    LegDependency = require('./leg');
+} else if (typeof window !== 'undefined' && window.Leg) {
+    LegDependency = window.Leg;
+} else if (typeof Leg !== 'undefined') {
+    LegDependency = Leg;
+}
+
+let TourDependency = null;
+if (isNodeEnv) {
+    TourDependency = require('./tours');
+} else if (typeof window !== 'undefined' && window.Tour) {
+    TourDependency = window.Tour;
+} else if (typeof Tour !== 'undefined') {
+    TourDependency = Tour;
+}
+
+function getLegClass() {
+    if (LegDependency) {
+        return LegDependency;
+    }
+    if (typeof globalThis !== 'undefined' && globalThis.Leg) {
+        LegDependency = globalThis.Leg;
+        return LegDependency;
+    }
+    throw new Error('Leg class is not available for ComputerTour');
+}
+
+function getTourClass() {
+    if (TourDependency) {
+        return TourDependency;
+    }
+    if (typeof globalThis !== 'undefined' && globalThis.Tour) {
+        TourDependency = globalThis.Tour;
+        return TourDependency;
+    }
+    throw new Error('Tour class is not available for ComputerTour');
+}
 
 class ComputerTour {
     /**
@@ -104,6 +143,7 @@ class ComputerTour {
         // 2. tourPointGraphTimes & tourPointGraphLegs
         const allTourPoints = Array.from(this.tourPoints);
         allTourPoints.push(this.start); // Include the warehouse start point
+        const LegClass = getLegClass();
         // Get all pairs of tour points (including the warehouse)
         for (let i = 0; i < allTourPoints.length; i++) {
             for (let j = 0; j < allTourPoints.length; j++) {
@@ -117,7 +157,7 @@ class ComputerTour {
                         return false; // No path exists between these points
                     }
                     const travelTime = Math.ceil(pathResult.distance / (15000 / 3600)); // 15 km/h = 15000m/3600s
-                    const leg = new Leg(fromPoint, toPoint, pathResult.path, pathResult.segments, pathResult.distance, travelTime);
+                    const leg = new LegClass(fromPoint, toPoint, pathResult.path, pathResult.segments, pathResult.distance, travelTime);
                     // Store in the maps with string key
                     const key = this.getKey(fromPoint, toPoint);
                     this.tourPointGraphTimes.set(key, travelTime);
@@ -711,8 +751,8 @@ class ComputerTour {
             return null;
         }
 
-        const TourClass = (typeof Tour !== 'undefined') ? Tour : require('./tours');
-        const LegClass = Leg || require('./leg');
+        const TourClass = getTourClass();
+        const LegClass = getLegClass();
 
         const DEFAULT_DEPARTURE = "08:00";
         const tour = new TourClass(null, DEFAULT_DEPARTURE, courier || null);
