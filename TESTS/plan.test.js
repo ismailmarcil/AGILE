@@ -330,6 +330,60 @@ describe('Plan Class - Edge Cases', () => {
     });
 });
 
+describe('Plan Class - Neighbors and Shortest Path', () => {
+
+    function buildSamplePlan() {
+        const nodeA = new Node('A', 45.75, 4.85, []);
+        const nodeB = new Node('B', 45.76, 4.86, []);
+        const nodeC = new Node('C', 45.77, 4.87, []);
+        const nodeD = new Node('D', 45.78, 4.88, []);
+
+        const segAB = new Segment(nodeA, nodeB, 'AB', 100);
+        const segBC = new Segment(nodeB, nodeC, 'BC', 200);
+        const segAC = new Segment(nodeA, nodeC, 'AC', 400);
+
+        const nodes = new Map([
+            ['A', nodeA],
+            ['B', nodeB],
+            ['C', nodeC],
+            ['D', nodeD]
+        ]);
+
+        const plan = new Plan(nodes, [segAB, segBC, segAC], nodeA);
+        return { plan, nodeA, nodeB, nodeC, nodeD };
+    }
+
+    it('should list neighbors for a node with multiple links', () => {
+        const { plan } = buildSamplePlan();
+        const neighbors = plan.getNeighbors('A');
+        neighbors.sort();
+        assert.deepStrictEqual(neighbors, ['B', 'C']);
+    });
+
+    it('should return shortest path between connected nodes', () => {
+        const { plan } = buildSamplePlan();
+        const result = plan.findShortestPath('A', 'C');
+        assert.isTrue(result !== null, 'Path should exist');
+        const pathIds = result.path.map(node => node.id);
+        assert.deepStrictEqual(pathIds, ['A', 'B', 'C']); // A->B->C is cheaper than direct AC
+        assert.strictEqual(result.distance, 300);
+        assert.strictEqual(result.segments.length, 2);
+    });
+
+    it('should return null when nodes are missing', () => {
+        const { plan } = buildSamplePlan();
+        const missingStart = plan.findShortestPath('X', 'A');
+        const missingEnd = plan.findShortestPath('A', 'Z');
+        assert.strictEqual(missingStart, null);
+        assert.strictEqual(missingEnd, null);
+    });
+
+    it('should return null when no path exists between nodes', () => {
+        const { plan } = buildSamplePlan();
+        const result = plan.findShortestPath('A', 'D'); // D is isolated
+        assert.strictEqual(result, null);
+    });
+});
+
 // Export results
 module.exports = getResults();
-
