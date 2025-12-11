@@ -1,7 +1,47 @@
 /**
  * Class responsible for computing optimal delivery tours
  */
+const isNodeEnv = typeof module !== 'undefined' && module.exports;
 
+let LegDependency = null;
+if (isNodeEnv) {
+    LegDependency = require('./leg');
+} else if (typeof window !== 'undefined' && window.Leg) {
+    LegDependency = window.Leg;
+} else if (typeof Leg !== 'undefined') {
+    LegDependency = Leg;
+}
+
+let TourDependency = null;
+if (isNodeEnv) {
+    TourDependency = require('./tours');
+} else if (typeof window !== 'undefined' && window.Tour) {
+    TourDependency = window.Tour;
+} else if (typeof Tour !== 'undefined') {
+    TourDependency = Tour;
+}
+
+function getLegClass() {
+    if (LegDependency) {
+        return LegDependency;
+    }
+    if (typeof globalThis !== 'undefined' && globalThis.Leg) {
+        LegDependency = globalThis.Leg;
+        return LegDependency;
+    }
+    throw new Error('Leg class is not available for ComputerTour');
+}
+
+function getTourClass() {
+    if (TourDependency) {
+        return TourDependency;
+    }
+    if (typeof globalThis !== 'undefined' && globalThis.Tour) {
+        TourDependency = globalThis.Tour;
+        return TourDependency;
+    }
+    throw new Error('Tour class is not available for ComputerTour');
+}
 
 class ComputerTour {
     /**
@@ -54,18 +94,29 @@ class ComputerTour {
      */
     computeTour(pickupDeliveryPairs, courier) {
         // 1. Fill internal data structures
+        let fillStartTime = Date.now();
         const success = this.fillTourPointStructures(pickupDeliveryPairs);
         if (!success) {
             return null;
         }
+        let fillTime = (Date.now() - fillStartTime) / 1000;
+        console.log(`Tour point structures filled in ${fillTime.toFixed(2)} seconds`);
+
         // 2. Compute the TSP tour
+        let TSPStartTime = Date.now();
         const tspTour = this.computeTSPTour();
         if (!tspTour) {
             return null;
         }
+        let tspTime = (Date.now() - TSPStartTime) / 1000;
+        console.log(`TSP tour computed in ${tspTime.toFixed(2)} seconds`);
 
         // 3. Compute the complete tour with all details
-        return this.computeCompleteTour(tspTour, courier);
+        let CompleteStartTime = Date.now();
+        const completeTour = this.computeCompleteTour(tspTour, courier);
+        let completeTime = (Date.now() - CompleteStartTime) / 1000;
+        console.log(`Complete tour computed in ${completeTime.toFixed(2)} seconds`);
+        return completeTour;
     }
 
     /**
@@ -92,6 +143,7 @@ class ComputerTour {
         // 2. tourPointGraphTimes & tourPointGraphLegs
         const allTourPoints = Array.from(this.tourPoints);
         allTourPoints.push(this.start); // Include the warehouse start point
+        const LegClass = getLegClass();
         // Get all pairs of tour points (including the warehouse)
         for (let i = 0; i < allTourPoints.length; i++) {
             for (let j = 0; j < allTourPoints.length; j++) {
@@ -105,7 +157,7 @@ class ComputerTour {
                         return false; // No path exists between these points
                     }
                     const travelTime = Math.ceil(pathResult.distance / (15000 / 3600)); // 15 km/h = 15000m/3600s
-                    const leg = new Leg(fromPoint, toPoint, pathResult.path, pathResult.segments, pathResult.distance, travelTime);
+                    const leg = new LegClass(fromPoint, toPoint, pathResult.path, pathResult.segments, pathResult.distance, travelTime);
                     // Store in the maps with string key
                     const key = this.getKey(fromPoint, toPoint);
                     this.tourPointGraphTimes.set(key, travelTime);
@@ -372,7 +424,7 @@ class ComputerTour {
      */
     findShortestPath(startId, endId, algorithm = 'astar') {
         let algorithmResult;
-        
+
         if (algorithm === 'astar') {
             algorithmResult = this.aStarShortestPath(startId, endId);
         } else if (algorithm === 'dijkstra') {
@@ -381,7 +433,7 @@ class ComputerTour {
             console.warn(`Unknown algorithm: ${algorithm}, falling back to A*`);
             algorithmResult = this.aStarShortestPath(startId, endId);
         }
-        
+
         if (!algorithmResult) {
             return null;
         }
@@ -503,12 +555,12 @@ class ComputerTour {
      * @returns {Array<TourPoint>|null}
      * @private
      */
-    computeTSPTourV2_Jade(){
+    computeTSPTourV2_Jade() {
         const allPoints = Array.from(this.tourPoints);
-        
+
         let bestTour = null;
         let bestCost = Infinity;
-        
+
         /**
          * Recursive function to generate permutations with early pruning
          * @param {Array<TourPoint>} currentPath - Current path being built (starts with warehouse)
@@ -521,17 +573,17 @@ class ComputerTour {
             if (currentCost >= bestCost) {
                 return;
             }
-            
+
             // Base case: all points visited, return to warehouse
             if (remaining.size === 0) {
                 const lastPoint = currentPath[currentPath.length - 1];
                 const returnKey = this.getKey(lastPoint, this.start);
                 const returnTime = this.tourPointGraphTimes.get(returnKey);
-                
+
                 if (returnTime === undefined) {
                     return; // No path back to warehouse
                 }
-                
+
                 const totalCost = currentCost + returnTime;
                 if (totalCost < bestCost) {
                     bestCost = totalCost;
@@ -539,7 +591,7 @@ class ComputerTour {
                 }
                 return;
             }
-            
+
             // Try each remaining point
             for (const nextPoint of remaining) {
                 // Check precedence constraint: if it's a delivery, its pickup must be done
@@ -549,100 +601,39 @@ class ComputerTour {
                         continue; // Skip this delivery, pickup not done yet
                     }
                 }
-                
+
                 // Get travel time from current position to next point
                 const currentPoint = currentPath[currentPath.length - 1];
                 const edgeKey = this.getKey(currentPoint, nextPoint);
                 const travelTime = this.tourPointGraphTimes.get(edgeKey);
-                
+
                 if (travelTime === undefined) {
                     continue; // No path to this point
                 }
-                
+
                 // Calculate new cost (travel time only)
                 const newCost = currentCost + travelTime;
-                
+
                 // Prepare next state
                 const newPath = [...currentPath, nextPoint];
                 const newRemaining = new Set(remaining);
                 newRemaining.delete(nextPoint);
                 const newPickedUp = new Set(pickedUp);
-                
+
                 // If this is a pickup (using type property), mark it as picked up
                 if (nextPoint.type === "PICKUP") {
                     newPickedUp.add(nextPoint);
                 }
-                
+
                 // Recurse
                 buildTour(newPath, newRemaining, newPickedUp, newCost);
             }
         };
-        
+
         // Start the search from the warehouse
         buildTour([this.start], new Set(allPoints), new Set(), 0);
-        
+
         return bestTour;
-    }
-
-    /**
-     * Version 1 : Flexible order with precedence validation
-     * Allows visiting all pickups first, then deliveries (respecting precedences)
-     * @returns {Array<TourPoint>|null}
-     * @private
-     */
-    computeTSPTourV1() {
-        const finalPath = [];
-        finalPath.push(this.start);
-
-        // Get all pickups and deliveries
-        const allPickups = [];
-        const allDeliveries = [];
-        
-        for (const [delivery, pickup] of this.precedence.entries()) {
-            allPickups.push(pickup);
-            allDeliveries.push(delivery);
-        }
-
-        // Strategy: Visit all pickups first, then deliveries in valid order
-        const visited = new Set();
-        const visitedPickups = new Set();
-
-        // Phase 1: Visit all pickups
-        for (const pickup of allPickups) {
-            finalPath.push(pickup);
-            visited.add(pickup);
-            visitedPickups.add(pickup);
-        }
-
-        // Phase 2: Visit deliveries, ensuring their pickup was already visited
-        const remainingDeliveries = [...allDeliveries];
-        
-        while (remainingDeliveries.length > 0) {
-            let foundValid = false;
-            
-            for (let i = 0; i < remainingDeliveries.length; i++) {
-                const delivery = remainingDeliveries[i];
-                const requiredPickup = this.precedence.get(delivery);
-                
-                // Can visit this delivery if its pickup was already visited
-                if (visitedPickups.has(requiredPickup)) {
-                    finalPath.push(delivery);
-                    visited.add(delivery);
-                    remainingDeliveries.splice(i, 1);
-                    foundValid = true;
-                    break;
-                }
-            }
-            
-            // If no valid delivery found, there's a precedence issue
-            if (!foundValid) {
-                console.error("ComputerTour.computeTSPTourV1: Precedence constraint violation");
-                return null;
-            }
-        }
-
-        finalPath.push(this.start);
-        return finalPath;
     }
 
     /**
@@ -718,7 +709,7 @@ class ComputerTour {
      */
     validatePrecedenceConstraints(tour) {
         const visitOrder = new Map();
-        
+
         // Record visit order
         for (let i = 0; i < tour.length; i++) {
             visitOrder.set(tour[i], i);
@@ -760,8 +751,8 @@ class ComputerTour {
             return null;
         }
 
-        const TourClass = (typeof Tour !== 'undefined') ? Tour : require('./tours');
-        const LegClass = Leg || require('./leg');
+        const TourClass = getTourClass();
+        const LegClass = getLegClass();
 
         const DEFAULT_DEPARTURE = "08:00";
         const tour = new TourClass(null, DEFAULT_DEPARTURE, courier || null);

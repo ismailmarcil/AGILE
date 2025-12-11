@@ -347,13 +347,13 @@ class System {
         });
     }
 
-     /**
-     * Charge la liste des tournées sauvegardées depuis le serveur
-     * et retourne un tableau d'objets avec les infos importantes.
-     * Format attendu du nom de fichier :
-     *   id_departureTime_courier_totalDuration_totalDistance.json
-     * ex : T1_08h00_Pierre_5280_5200.json
-     */
+    /**
+    * Charge la liste des tournées sauvegardées depuis le serveur
+    * et retourne un tableau d'objets avec les infos importantes.
+    * Format attendu du nom de fichier :
+    *   id_departureTime_courier_totalDuration_totalDistance.json
+    * ex : T1_08h00_Pierre_5280_5200.json
+    */
     async loadSavedToursSummary() {
         try {
             const res = await fetch('/api/tours/list', { cache: 'no-store' });
@@ -667,7 +667,7 @@ class System {
         return { success: true, demand: demande };
     }
 
-    updateDemand(idDemand,pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
+    updateDemand(idDemand, pickupAddress, deliveryAddress, pickupDuration, deliveryDuration) {
         //Vérifie si un plan est chargé
         if (!this.plan) {
             return { success: false, error: "Aucun plan chargé. Impossible d'ajouter une demande." };
@@ -839,14 +839,16 @@ class System {
      *   - tours: Array of computed tours (empty on error/time limit exceeded)
      */
     computeTours(couriers) {
+        const startTime = Date.now();
+
         if (!this.plan || !this.plan.nodes || this.demandsList.length === 0) {
             console.error("Cannot compute tours: plan or demands are missing");
-            return {code: 1, tours: []};
+            return { code: 1, tours: [] };
         }
 
         if (!couriers || couriers.length === 0) {
             console.error("Cannot compute tours: no couriers available");
-            return {code: 1, tours: []};
+            return { code: 1, tours: [] };
         }
 
         const nomCouriers = couriers.length;
@@ -854,17 +856,21 @@ class System {
         // Step 1: Distribute demands among couriers using K-means
         const demandGroups = this.distributeDemands(nomCouriers);
 
+        const distributionTime = (Date.now() - startTime) / 1000;
+        console.log(`\nDemand distribution completed in ${distributionTime.toFixed(2)} seconds`);
+
         // Step 2: Create warehouse TourPoint for ComputerTour
         const warehouse = this.plan.warehouse;
         if (!warehouse) {
             console.error("Cannot compute tours: no warehouse defined");
-            return {code: 1, tours: []};
+            return { code: 1, tours: [] };
         }
         const warehouseTourPoint = new TourPoint(warehouse, 0, TypePoint.WAREHOUSE, null);
 
         // Step 3: Build optimal tour for each courier's demand group using ComputerTour
         const tours = [];
         for (let i = 0; i < Math.min(demandGroups.length, nomCouriers); i++) {
+            let computeStartTime = Date.now();
             const courier = couriers[i];
             const courierDemands = demandGroups[i];
 
@@ -874,40 +880,44 @@ class System {
             }
 
             console.log(`\nComputing tour for ${courier.name} (${courierDemands.length} demands) using ComputerTour...`);
-            
+
             // Convert demands to pickup/delivery TourPoint pairs
             const pickupDeliveryPairs = this.createTourPointPairs(courierDemands);
-            
+
             if (pickupDeliveryPairs.length === 0) {
                 console.warn(`⚠️  No valid pickup/delivery pairs for courier ${courier.name}`);
-                return {code: 1, tours: []};
+                return { code: 1, tours: [] };
             }
 
             // Create ComputerTour instance
             const computerTour = new ComputerTour(this.plan, warehouseTourPoint);
-            
+
             // Compute the optimal tour
             const tour = computerTour.computeTour(pickupDeliveryPairs, courier);
 
+            let computeEndTime = Date.now();
+            let computeDuration = (computeEndTime - computeStartTime) / 1000;
+            console.log(`Tour computed in ${computeDuration.toFixed(2)} seconds`);
+
             if (tour) {
-                
+
                 tour.calculateTotalDuration();
-                const maxDurationSeconds = 8 * 60 * 60; 
+                const maxDurationSeconds = 8 * 60 * 60;
                 const tourDurationSeconds = tour.totalDuration || 0;
 
                 if (tourDurationSeconds > maxDurationSeconds) {
                     tours.push(tour);
-                        this.toursList.push(tour);
-                    return {code: 2, tours: tours};
+                    this.toursList.push(tour);
+                    return { code: 2, tours: tours };
                 }
-                
+
                 tours.push(tour);
                 this.toursList.push(tour);
-                console.log(`✅ Tour completed: ${tour.stops?.length || 0} stops, ${(tour.totalDistance/1000).toFixed(2)} km, ${(tourDurationSeconds/3600).toFixed(1)}h`);
-                
+                console.log(`✅ Tour completed: ${tour.stops?.length || 0} stops, ${(tour.totalDistance / 1000).toFixed(2)} km, ${(tourDurationSeconds / 3600).toFixed(1)}h`);
+
             } else {
                 console.error(`❌ Failed to compute tour for courier ${courier.name}`);
-                return {code: 1, tours: []};
+                return { code: 1, tours: [] };
             }
         }
         // Nombre de couriers insuffisant (code = 2) :
@@ -917,7 +927,7 @@ class System {
         //  return {code: 1, tours: ?};
 
         // Succés (code = 0) :
-        return {code: 0, tours: tours};
+        return { code: 0, tours: tours };
     }
 
     /**
@@ -927,49 +937,49 @@ class System {
      */
     createTourPointPairs(demands) {
         const pairs = [];
-        
+
         for (const demand of demands) {
             try {
                 // Get pickup and delivery nodes
                 const pickupNodeId = demand.pickupAddress?.id || demand.pickupAddress;
                 const deliveryNodeId = demand.deliveryAddress?.id || demand.deliveryAddress;
-                
+
                 const pickupNode = this.plan.nodes.get(pickupNodeId);
                 const deliveryNode = this.plan.nodes.get(deliveryNodeId);
-                
+
                 if (!pickupNode) {
                     console.error(`Pickup node not found: ${pickupNodeId} for demand ${demand.id}`);
                     continue;
                 }
-                
+
                 if (!deliveryNode) {
                     console.error(`Delivery node not found: ${deliveryNodeId} for demand ${demand.id}`);
                     continue;
                 }
-                
+
                 // Create TourPoint objects
                 const pickupTourPoint = new TourPoint(
-                    pickupNode, 
+                    pickupNode,
                     demand.pickupDuration || 300, // 5 minutes default
-                    TypePoint.PICKUP, 
+                    TypePoint.PICKUP,
                     demand
                 );
-                
+
                 const deliveryTourPoint = new TourPoint(
-                    deliveryNode, 
+                    deliveryNode,
                     demand.deliveryDuration || 300, // 5 minutes default
-                    TypePoint.DELIVERY, 
+                    TypePoint.DELIVERY,
                     demand
                 );
-                
+
                 pairs.push([pickupTourPoint, deliveryTourPoint]);
                 console.log(`  ✓ Created TourPoint pair for demand ${demand.id}: ${pickupNodeId} → ${deliveryNodeId}`);
-                
+
             } catch (error) {
                 console.error(`Error creating TourPoint pair for demand ${demand.id}:`, error);
             }
         }
-        
+
         console.log(`Created ${pairs.length} pickup/delivery pairs from ${demands.length} demands`);
         return pairs;
     }
@@ -1045,6 +1055,92 @@ class System {
             path: path,
             distance: distances.get(endId)
         };
+    }
+
+    /**
+     * Recalculate legs of an existing tour after manual reordering of stops.
+     * Uses Dijkstra on the current plan to rebuild each leg so the polyline
+     * follows the real graph instead of straight lines.
+     * @param {Tour} tour
+     */
+    recalculateTourLegs(tour) {
+        if (!tour || !Array.isArray(tour.stops) || tour.stops.length < 2) {
+            console.warn("System.recalculateTourLegs: invalid tour or not enough stops");
+            return;
+        }
+        if (!this.plan || !this.plan.nodes || !(this.plan.nodes instanceof Map)) {
+            console.warn("System.recalculateTourLegs: plan or nodes map not initialized");
+            return;
+        }
+        if (!this.distanceMatrix) {
+            console.warn("System.recalculateTourLegs: distanceMatrix not initialized");
+            return;
+        }
+
+        const newLegs = [];
+        let hadError = false;
+
+        for (let i = 0; i < tour.stops.length - 1; i++) {
+            const fromStop = tour.stops[i];
+            const toStop = tour.stops[i + 1];
+
+            const fromNode = fromStop && fromStop.node;
+            const toNode = toStop && toStop.node;
+
+            if (!fromNode || !toNode || !fromNode.id || !toNode.id) {
+                console.warn("System.recalculateTourLegs: missing node for stops", i, i + 1);
+                hadError = true;
+                break;
+            }
+
+            const result = this.dijkstra(fromNode.id, toNode.id);
+            if (!result || !Array.isArray(result.path) || result.path.length < 2 || result.distance === Infinity) {
+                console.warn(`System.recalculateTourLegs: no path found between ${fromNode.id} and ${toNode.id}`);
+                hadError = true;
+                break;
+            }
+
+            const pathNodes = result.path
+                .map(id => this.plan.nodes.get(id))
+                .filter(n => n);
+
+            if (pathNodes.length < 2) {
+                console.warn("System.recalculateTourLegs: insufficient path nodes between stops", i, i + 1);
+                hadError = true;
+                break;
+            }
+
+            // Compute distance in meters by summing segment lengths along the path
+            let distance = 0;
+            for (let j = 0; j < pathNodes.length - 1; j++) {
+                const origin = pathNodes[j];
+                const dest = pathNodes[j + 1];
+                if (!origin || !origin.segments) continue;
+                const seg = origin.segments.find(s => s.destination && s.destination.id === dest.id);
+                if (seg && typeof seg.length === "number") {
+                    distance += seg.length;
+                }
+            }
+
+            const travelTime = this.calculateTravelTime(distance);
+            const leg = new Leg(pathNodes[0], pathNodes[pathNodes.length - 1], pathNodes, [], distance, travelTime);
+            newLegs.push(leg);
+        }
+
+        // If any leg failed to be rebuilt, keep existing legs to avoid corrupting the tour
+        if (hadError || newLegs.length !== tour.stops.length - 1) {
+            console.warn("System.recalculateTourLegs: keeping existing legs due to errors");
+            return;
+        }
+
+        tour.legs = newLegs;
+
+        if (typeof tour.calculateTotalDistance === "function") {
+            tour.calculateTotalDistance();
+        }
+        if (typeof tour.calculateTotalDuration === "function") {
+            tour.calculateTotalDuration();
+        }
     }
 
     /**
@@ -1433,7 +1529,7 @@ class System {
         console.log(`\n📊 Computing K-means clusters for ${this.demandsList.length} demands with ${k} couriers`);
         const clusters = this.kmeansClustering(this.demandsList, k);
         console.log(`✅ K-means clustering complete: ${clusters.length} clusters\n`);
-        
+
         return clusters;
     }
 
