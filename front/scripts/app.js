@@ -270,6 +270,11 @@ async function handleLoadHistoryMulti() {
                 view.displayToursMulti(tours);
                 renderLegend(tours);
             }
+            
+            // Stocker les tournées pour navigation multi-détail
+            window.currentMultiTours = tours;
+            window.currentMultiTourIndex = 0;
+            
             const first = tours[0];
             window.currentDisplayedTour = first;
             if (typeof updateTimelineFromTour === 'function') {
@@ -278,6 +283,10 @@ async function handleLoadHistoryMulti() {
             if (typeof updateCourierInfo === 'function') {
                 updateCourierInfo(first);
             }
+            
+            // Ajouter le dropdown de navigation multi-tournées
+            addMultiTourNavigationDropdown(tours);
+            
             setStatus(`${tours.length} tournée(s) affichée(s) simultanément.`);
         } catch (e) {
             console.error(e);
@@ -408,6 +417,52 @@ async function handleLoadHistoryMulti() {
     controls.querySelector('#historyShowSelected').addEventListener('click', handleShowSelection);
     controls.querySelector('#historyShowAll').addEventListener('click', handleShowAll);
     controls.querySelector('#historyClear').addEventListener('click', handleClearSelection);
+}
+
+// Fonction pour ajouter un dropdown de navigation entre les tournées en mode multi-affichage
+function addMultiTourNavigationDropdown(tours) {
+    if (!tours || tours.length <= 1) return;
+    
+    // Récupérer ou créer le container du dropdown
+    let multiTourNavContainer = document.getElementById('multiTourNavContainer');
+    if (!multiTourNavContainer) {
+        const courierSelectContainer = document.getElementById('courierSelectContainer');
+        if (!courierSelectContainer) return;
+        
+        multiTourNavContainer = document.createElement('div');
+        multiTourNavContainer.id = 'multiTourNavContainer';
+        multiTourNavContainer.style.display = 'flex';
+        multiTourNavContainer.style.alignItems = 'center';
+        multiTourNavContainer.style.gap = '8px';
+        courierSelectContainer.parentNode.insertBefore(multiTourNavContainer, courierSelectContainer.nextSibling);
+    }
+    
+    multiTourNavContainer.innerHTML = '';
+    
+    const select = document.createElement('select');
+    select.id = 'multiTourDetailSelect';
+    select.style.cssText = 'padding: 6px 12px; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); background: #f8f9fa; cursor: pointer;';
+    
+    tours.forEach((tour, idx) => {
+        const option = document.createElement('option');
+        option.value = idx;
+        const courierName = tour.courier ? tour.courier.name : `Coursier ${idx + 1}`;
+        const distanceKm = (tour.totalDistance / 1000).toFixed(2);
+        const durationMin = Math.round(tour.totalDuration / 60);
+        option.textContent = `${courierName} - ${tour.stops.length} arrêts (${distanceKm} km, ${durationMin} min)`;
+        select.appendChild(option);
+    });
+    
+    select.value = '0';
+    select.onchange = function() {
+        const idx = parseInt(this.value);
+        window.currentMultiTourIndex = idx;
+        window.currentDisplayedTour = tours[idx];
+        updateTimelineFromTour(tours[idx], true);
+        updateCourierInfo(tours[idx]);
+    };
+    
+    multiTourNavContainer.appendChild(select);
 }
 
 
@@ -1822,6 +1877,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const courierSelectContainer = document.getElementById('courierSelectContainer');
                 if (courierSelectContainer) courierSelectContainer.style.display = 'none';
 
+                // Si le dropdown multi-tours existe (créé par l'historique multi), l'afficher
+                const multiTourNavContainer = document.getElementById('multiTourNavContainer');
+                if (multiTourNavContainer) multiTourNavContainer.style.display = 'flex';
+
                 // Nettoyer la carte avant d'afficher l'historique
                 if (view.map) {
                     view.clearMap();
@@ -1843,6 +1902,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (courierSelectContainer && window.allCalculatedTours && window.allCalculatedTours.length > 0) {
                     courierSelectContainer.style.display = 'flex';
                 }
+
+                // Masquer le dropdown multi-tours
+                const multiTourNav = document.getElementById('multiTourNavContainer');
+                if (multiTourNav) multiTourNav.style.display = 'none';
 
                 // Rafraîchir la liste des coursiers pour s'assurer qu'elle est à jour
                 fetchCouriers().then(() => {
