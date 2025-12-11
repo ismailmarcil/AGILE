@@ -1547,6 +1547,8 @@ async function createCourier() {
                     checkbox.checked = true;
                 }
             }
+            clearInsufficientCouriersBanner();
+            try { closeInsufficientCouriersModal(); } catch (e) {}
             alert('Coursier créé: ' + data.courier.name);
         } else {
             alert('Erreur: ' + (data.error || ''));
@@ -1599,6 +1601,95 @@ function getSelectedCouriers() {
     });
 
     return selected;
+}
+
+// Show a banner in the courier sidebar asking the user to add couriers
+function showInsufficientCouriersBanner(message) {
+    const list = document.getElementById('couriersList');
+    if (!list) return;
+
+    clearInsufficientCouriersBanner();
+
+    const banner = document.createElement('div');
+    banner.id = 'courier-insufficient-banner';
+    banner.style.cssText = 'background:#fff3cd;border:1px solid #ffeeba;padding:10px;border-radius:6px;margin-bottom:8px;display:flex;align-items:center;gap:10px;';
+    const text = document.createElement('div');
+    text.style.flex = '1';
+    text.style.color = '#856404';
+    text.style.fontWeight = '600';
+    text.textContent = message || 'Le nombre de coursiers est insuffisant pour traiter toutes les demandes.';
+
+    banner.appendChild(text);
+    
+
+    // Insert banner at top of couriers list container
+    list.insertBefore(banner, list.firstChild);
+}
+
+function clearInsufficientCouriersBanner() {
+    const existing = document.getElementById('courier-insufficient-banner');
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+}
+
+// Classic modal popup to invite user to add a courier
+function showInsufficientCouriersModal(message) {
+    // If already displayed, do nothing
+    if (document.getElementById('insufficient-couriers-modal')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'insufficient-couriers-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:2000;';
+
+    const modal = document.createElement('div');
+    modal.id = 'insufficient-couriers-modal';
+    modal.style.cssText = 'width:420px;background:#fff;border-radius:8px;padding:18px;box-shadow:0 12px 30px rgba(0,0,0,0.25);font-family:inherit;color:#222;';
+
+    const title = document.createElement('h3');
+    title.style.margin = '0 0 8px 0';
+    title.textContent = 'Nombre de coursiers insuffisant';
+
+    const body = document.createElement('div');
+    body.style.marginBottom = '14px';
+    body.style.color = '#333';
+    body.style.fontSize = '0.95rem';
+    body.textContent = message || 'Le nombre de coursiers sélectionné est insuffisant pour traiter toutes les demandes. Ajoutez un coursier puis relancez le calcul.';
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn btn-sm';
+    closeBtn.textContent = 'Fermer';
+    closeBtn.onclick = () => closeInsufficientCouriersModal();
+
+    actions.appendChild(closeBtn);
+
+    modal.appendChild(title);
+    modal.appendChild(body);
+    modal.appendChild(actions);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Allow ESC to close
+    function escHandler(e) {
+        if (e.key === 'Escape') closeInsufficientCouriersModal();
+    }
+    overlay._escHandler = escHandler;
+    document.addEventListener('keydown', escHandler);
+
+    // Close when clicking outside modal
+    overlay.addEventListener('click', (ev) => {
+        if (ev.target === overlay) closeInsufficientCouriersModal();
+    });
+}
+
+function closeInsufficientCouriersModal() {
+    const overlay = document.getElementById('insufficient-couriers-modal-overlay');
+    if (!overlay) return;
+    if (overlay._escHandler) document.removeEventListener('keydown', overlay._escHandler);
+    overlay.parentNode.removeChild(overlay);
 }
 
 // Handle tour calculation
@@ -1656,7 +1747,8 @@ async function handleComputeTour() {
 
             // Gérer le code de retour
             if (result.code === 2) {
-                alert('⚠️ Nombre de coursiers insuffisant pour traiter toutes les demandes.');
+                // Inform the user via modal and invite to add a courier
+                showInsufficientCouriersModal('⚠️ Le nombre de coursiers sélectionné est insuffisant pour traiter toutes les demandes. Ajoutez un coursier et relancez le calcul.');
                 return;
             }
 
@@ -1674,6 +1766,10 @@ async function handleComputeTour() {
             }
 
             console.log('Tournées calculées:', tours);
+
+            // Clear any previous insufficient-couriers banner or modal
+            clearInsufficientCouriersBanner();
+            try { closeInsufficientCouriersModal(); } catch (e) {}
 
             // Store all tours globally
             window.allCalculatedTours = tours;
