@@ -329,6 +329,7 @@ async function handleLoadHistoryMulti() {
 
         const left = document.createElement('div');
         left.className = 'history-left';
+        left.style.cursor = 'pointer';
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -393,6 +394,14 @@ async function handleLoadHistoryMulti() {
         item.appendChild(left);
         item.appendChild(actions);
         listContainer.appendChild(item);
+
+        // Toggle selection when clicking the row (outside the action button)
+        item.addEventListener('click', (e) => {
+            if (e.target === checkbox) return;
+            if (e.target.closest('.history-actions')) return;
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change'));
+        });
     });
 
     // Wire controls
