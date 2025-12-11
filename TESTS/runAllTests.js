@@ -43,9 +43,12 @@ runTestSuite('./demand.test.js', 'Demand Class Tests');
 runTestSuite('./tourpoint.test.js', 'TourPoint Class Tests');
 runTestSuite('./courier.test.js', 'Courier Class Tests');
 runTestSuite('./plan.test.js', 'Plan Class Tests');
+runTestSuite('./leg.test.js', 'Leg Class Tests');
 runTestSuite('./tour.test.js', 'Tour Class Tests');
 runTestSuite('./tours_move.test.js', 'Tour Move Tests');
 runTestSuite('./computerTour.test.js', 'ComputerTour computeCompleteTour Tests');
+runTestSuite('./computerTour_algorithms.test.js', 'ComputerTour Algorithms Tests');
+runTestSuite('./system_core.test.js', 'System Core Tests');
 
 // Print overall summary
 console.log('\n\n╔═══════════════════════════════════════════════════════════╗');
@@ -84,4 +87,3 @@ if (overallResults.totalFailed === 0) {
     console.log(`\n⚠️  WARNING! ${overallResults.totalFailed} test(s) failed. Please review the errors above.`);
     process.exit(1);
 }
-

@@ -20,6 +20,11 @@ function saveCourierViewState() {
 }
 
 function resetTimelineToEmpty() {
+    const timelineContainer = document.getElementById('timeline');
+    if (timelineContainer) {
+        timelineContainer.style.display = 'block';
+    }
+
     const timelineScroll = document.querySelector('.timeline-scroll');
     if (!timelineScroll) return;
 
@@ -30,8 +35,13 @@ function resetTimelineToEmpty() {
 }
 
 function restoreCourierViewState() {
+    const timelineContainer = document.getElementById('timeline');
+    if (timelineContainer) {
+        timelineContainer.style.display = 'block';
+    }
+
     if (!courierViewState) {
-        // Pas d’état sauvegardé : on remet juste la timeline basique
+        // Pas d'état sauvegardé : on remet juste la timeline basique
         resetTimelineToEmpty();
         updateCourierInfo(null);
         return;
@@ -1979,7 +1989,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveCourierViewState();
 
                 if (sidebarLivreur) sidebarLivreur.style.display = 'none';
-                if (sidebarHistory) sidebarHistory.style.display = 'block';
+                if (sidebarHistory) sidebarHistory.style.display = 'flex';
 
                 // Masquer le dropdown de sélection des tournées (vue historique uniquement)
                 const courierSelectContainer = document.getElementById('courierSelectContainer');
@@ -2002,7 +2012,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 handleLoadHistoryMulti();
             } else if (viewName === 'courier') {
                 // Revenir à la vue Livreur telle qu'elle était
-                if (sidebarLivreur) sidebarLivreur.style.display = 'block';
+                if (sidebarLivreur) sidebarLivreur.style.display = 'flex';
                 if (sidebarHistory) sidebarHistory.style.display = 'none';
 
                 // Réafficher le dropdown si une tournée est calculée
@@ -2022,7 +2032,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } else {
                 // Autres vues (ex: globale) -> sidebar Livreur
-                if (sidebarLivreur) sidebarLivreur.style.display = 'block';
+                if (sidebarLivreur) sidebarLivreur.style.display = 'flex';
                 if (sidebarHistory) sidebarHistory.style.display = 'none';
 
                 // Réafficher le dropdown si une tournée est calculée
