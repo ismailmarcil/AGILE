@@ -1217,6 +1217,18 @@ function updateDemandsUI() {
         }
     });
 
+    // Update demands count badge
+    const demandsCountBadge = document.getElementById('demandsCount');
+    if (demandsCountBadge) {
+        demandsCountBadge.textContent = system.demandsList.length;
+        // Change color based on count
+        if (system.demandsList.length === 0) {
+            demandsCountBadge.style.background = '#95a5a6';
+        } else {
+            demandsCountBadge.style.background = '#27ae60';
+        }
+    }
+
     // Update map display if plan is loaded
     if (system.plan && view.map && system.toursList.length === 0) {
         // Redisplay plan (light segments and nodes)
