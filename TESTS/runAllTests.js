@@ -49,6 +49,7 @@ runTestSuite('./tours_move.test.js', 'Tour Move Tests');
 runTestSuite('./computerTour.test.js', 'ComputerTour computeCompleteTour Tests');
 runTestSuite('./computerTour_algorithms.test.js', 'ComputerTour Algorithms Tests');
 runTestSuite('./system_core.test.js', 'System Core Tests');
+runTestSuite('./testSystem.js', 'System Extended Tests');
 
 // Print overall summary
 console.log('\n\n╔═══════════════════════════════════════════════════════════╗');
