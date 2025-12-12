@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 
-const PORT = 8080;
+let PORT = 8080;
 
 // Types MIME pour les différentes extensions de fichiers
 const mimeTypes = {
@@ -285,14 +285,49 @@ function handleCreateCourier(req, res) {
     });
 }
 
-server.listen(PORT, () => {
-    console.log(`\n========================================`);
-    console.log(`🚀 Serveur DelivHub démarré !`);
-    console.log(`========================================`);
-    console.log(`📍 URL: http://localhost:${PORT}/`);
-    console.log(`📂 Dossier: ${__dirname}`);
-    console.log(`💾 Tournées: ${SAVED_TOURS_DIR}`);
-    console.log(`\n👉 Ouvrez http://localhost:${PORT}/ dans votre navigateur`);
-    console.log(`\nAppuyez sur Ctrl+C pour arrêter le serveur\n`);
-});
+function startServer(port) {
+    server.listen(port, () => {
+        console.log(`\n========================================`);
+        console.log(`🚀 Serveur DelivHub démarré !`);
+        console.log(`========================================`);
+        console.log(`📍 URL: http://localhost:${port}/`);
+        console.log(`📂 Dossier: ${__dirname}`);
+        console.log(`💾 Tournées: ${SAVED_TOURS_DIR}`);
+        console.log(`\n👉 Ouvrez http://localhost:${port}/ dans votre navigateur`);
+        console.log(`\nAppuyez sur Ctrl+C pour arrêter le serveur\n`);
+    });
+
+    server.on('error', (err) => {
+        if (err && err.code === 'EADDRINUSE') {
+            const next = port + 1;
+            console.warn(`Port ${port} occupé. Tentative sur ${next}...`);
+            // Remove previous 'error' listener to avoid duplicate logs
+            server.removeAllListeners('error');
+            // Retry listen on next port by creating a new server instance sharing handlers
+            PORT = next;
+            // Create a new server bound to same request handler
+            const http2 = require('http');
+            const newServer = http2.createServer(server.listeners('request')[0]);
+            // Replace reference
+            server.close(() => {
+                // Start the new server
+                newServer.listen(next, () => {
+                    console.log(`\n========================================`);
+                    console.log(`🚀 Serveur DelivHub démarré !`);
+                    console.log(`========================================`);
+                    console.log(`📍 URL: http://localhost:${next}/`);
+                    console.log(`📂 Dossier: ${__dirname}`);
+                    console.log(`💾 Tournées: ${SAVED_TOURS_DIR}`);
+                    console.log(`\n👉 Ouvrez http://localhost:${next}/ dans votre navigateur`);
+                    console.log(`\nAppuyez sur Ctrl+C pour arrêter le serveur\n`);
+                });
+                // Rebind global server reference to allow future logs or controls (optional)
+            });
+        } else {
+            console.error('Erreur serveur:', err);
+        }
+    });
+}
+
+startServer(PORT);
 

@@ -591,63 +591,135 @@ class ComputerTour {
      * @private
      */
     computeTSPTourV2() {
-        const finalPath = [];
-        finalPath.push(this.start);
+        // Step 1: Build an initial tour via nearest neighbor respecting precedence
+        const path = [];
+        path.push(this.start);
 
         const visited = new Set();
         const visitedPickups = new Set();
         let currentPoint = this.start;
-
-        // Get all points that need to be visited
         const allPoints = Array.from(this.tourPoints);
 
         while (visited.size < allPoints.length) {
-            let nearestPoint = null;
-            let nearestDistance = Infinity;
+            let best = null;
+            let bestCost = Infinity;
 
-            // Find the nearest valid point (respecting precedences)
             for (const point of allPoints) {
                 if (visited.has(point)) continue;
 
-                // Check precedence constraint
+                // Delivery precedence: its pickup must be already visited
                 if (this.precedence.has(point)) {
-                    // This is a delivery point, check if pickup was visited
                     const requiredPickup = this.precedence.get(point);
-                    if (!visitedPickups.has(requiredPickup)) {
-                        continue; // Cannot visit delivery before its pickup
-                    }
+                    if (!visitedPickups.has(requiredPickup)) continue;
                 }
 
-                // Calculate distance to this point
                 const key = this.getKey(currentPoint, point);
-                const distance = this.tourPointGraphTimes.get(key) || Infinity;
-
-                if (distance < nearestDistance) {
-                    nearestDistance = distance;
-                    nearestPoint = point;
-                }
+                const cost = this.tourPointGraphTimes.get(key) ?? Infinity;
+                if (cost < bestCost) { bestCost = cost; best = point; }
             }
 
-            if (!nearestPoint) {
-                console.error("ComputerTour.computeTSPTourV2: No valid next point found");
+            if (!best) {
+                console.error('ComputerTour.computeTSPTourV2: No valid next point found');
                 return null;
             }
 
-            // Visit the nearest valid point
-            finalPath.push(nearestPoint);
-            visited.add(nearestPoint);
+            path.push(best);
+            visited.add(best);
+            if (!this.precedence.has(best)) {
+                visitedPickups.add(best);
+            }
+            currentPoint = best;
+        }
+        path.push(this.start);
 
-            // If this is a pickup, mark it as visited
-            if (!this.precedence.has(nearestPoint)) {
-                // This is likely a pickup (not in precedence as key)
-                visitedPickups.add(nearestPoint);
+        // Helper: get symmetric arc cost between two points
+        const arcCost = (a, b) => {
+            if (!a || !b) return Infinity;
+            const key = this.getKey(a, b);
+            const t = this.tourPointGraphTimes.get(key);
+            return typeof t === 'number' ? t : Infinity;
+        };
+
+        // Helper: check precedence validity of a full path
+        const respectsPrecedence = (tourArr) => {
+            const indexMap = new Map();
+            for (let i = 0; i < tourArr.length; i++) {
+                indexMap.set(tourArr[i], i);
+            }
+            for (const [delivery, pickup] of this.precedence.entries()) {
+                const iPick = indexMap.get(pickup);
+                const iDel = indexMap.get(delivery);
+                if (iPick === undefined || iDel === undefined) return false;
+                if (iPick >= iDel) return false;
+            }
+            return true;
+        };
+
+        // Helper: compute full path cost (start..start)
+        const pathCost = (tourArr) => {
+            let sum = 0;
+            for (let i = 0; i < tourArr.length - 1; i++) {
+                const c = arcCost(tourArr[i], tourArr[i + 1]);
+                if (!Number.isFinite(c)) return Infinity;
+                sum += c;
+            }
+            return sum;
+        };
+
+        // Step 2: Greedy local search (2-opt) to improve path cost
+        // We keep endpoints `start` fixed: indices 0 and path.length-1
+        let improved = true;
+        while (improved) {
+            improved = false;
+            let bestDelta = 0;
+            let bestI = -1;
+            let bestJ = -1;
+
+            // Try all pairs of edges (i,i+1) and (j,j+1) with 1 <= i < j-1 <= n-2
+            for (let i = 1; i < path.length - 2; i++) {
+                for (let j = i + 1; j < path.length - 1; j++) {
+                    // Skip adjacent edges; 2-opt requires non-overlapping edges
+                    if (j === i + 1) continue;
+
+                    const a = path[i - 1];
+                    const b = path[i];
+                    const c = path[j];
+                    const d = path[j + 1];
+
+                    const currentCost = arcCost(a, b) + arcCost(c, d);
+                    const swappedCost = arcCost(a, c) + arcCost(b, d);
+                    const delta = swappedCost - currentCost;
+                    if (delta >= -1e-9) continue; // not improving
+
+                    // Build candidate path by reversing segment [i..j]
+                    const candidate = path.slice(0, i)
+                        .concat(path.slice(i, j + 1).reverse())
+                        .concat(path.slice(j + 1));
+
+                    // Check precedence validity
+                    if (!respectsPrecedence(candidate)) continue;
+
+                    // Greedy: pick the most improving pair in this iteration
+                    if (delta < bestDelta) {
+                        bestDelta = delta;
+                        bestI = i;
+                        bestJ = j;
+                        improved = true;
+                    }
+                }
             }
 
-            currentPoint = nearestPoint;
+            // Apply the best found swap of this iteration
+            if (improved && bestI >= 0) {
+                const newPath = path.slice(0, bestI)
+                    .concat(path.slice(bestI, bestJ + 1).reverse())
+                    .concat(path.slice(bestJ + 1));
+                path.length = 0;
+                Array.prototype.push.apply(path, newPath);
+            }
         }
 
-        finalPath.push(this.start);
-        return finalPath;
+        return path;
     }
 
     /**
