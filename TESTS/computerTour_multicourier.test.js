@@ -369,7 +369,7 @@ describe('ComputerTour Multi-Courier Performance Analysis', () => {
             console.log(`\n--- Testing TSP Strategy ${strategy} ---`);
             
             // Create ComputerTour instance to set strategy
-            const warehouseTourPoint = new TourPoint(plan.warehouse, 0, TypePoint.ENTREPOT, null, null);
+            const warehouseTourPoint = new TourPoint(plan.warehouse, 0, TypePoint.WAREHOUSE, null, null);
             const computer = new ComputerTour(plan, warehouseTourPoint);
             computer.setTSPStrategy(strategy);
             
