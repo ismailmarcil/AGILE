@@ -1,215 +1,179 @@
-# Documentation Technique (Sprint 1)
+# 🚴‍♂️ DelivHub – Optimisation de tournées Pickup & Delivery
 
-## 1. Introduction
-
-Ce projet constitue la base du système de gestion de livraisons développé dans le cadre du projet AGILE.
-L’objectif actuel est de :
-
-* Charger un plan de ville au format XML.
-* Visualiser ce plan dans le frontend via Leaflet.
-* Afficher également une tournée d’exemple.
-* Mettre en place un backend avec les classes métier.
-* Fournir un environnement de tests automatisés.
-
-Le système est séparé en deux parties :
-
-1. Une partie "backend" contenant les classes métier.
-2. Une partie "frontend" avec des pages de test et l’affichage Leaflet.
+Projet réalisé dans le cadre du **Projet Longue Durée (PLD Agile)** à l’**INSA Lyon**.  
+L’objectif est de concevoir une application permettant d’optimiser des tournées de livraison **Pickup & Delivery à vélo** en milieu urbain, à partir de plans et de demandes décrits en XML.
 
 ---
 
-## 2. Architecture du projet
+## 📌 Contexte du projet
 
-Arborescence simplifiée :
 
+L’application permet de :
+- Charger un **plan de ville** (intersections + tronçons)
+- Charger ou créer des **demandes de livraison**
+- Répartir les demandes entre plusieurs **coursiers**
+- Calculer des **tournées optimisées** respectant les contraintes Pickup → Delivery
+- Visualiser les tournées sur une **carte interactive**
+- Sauvegarder et restaurer les tournées
+
+---
+
+## 🧠 Fonctionnalités principales
+
+### 📂 Chargement des données
+- Chargement d’un **plan XML** (nœuds, segments, entrepôt)
+- Chargement de **demandes XML** (pickup, delivery, durées)
+- Validation automatique des fichiers (structure et cohérence)
+
+### 🚚 Gestion des coursiers
+- Création dynamique de coursiers
+- Sélection multiple de coursiers
+- Distribution automatique des demandes entre coursiers
+
+### 🧮 Calcul des tournées
+- Respect strict des contraintes de précédence (**Pickup avant Delivery**)
+- Minimisation du temps total de tournée
+- Vitesse constante : **15 km/h**
+- Départ et retour à l’entrepôt à **08:00**
+- Limite maximale d’une tournée : **8 heures**
+
+### 🗺️ Visualisation
+- Carte interactive via **Leaflet**
+- Affichage des itinéraires réels (Dijkstra / A*)
+- Timeline détaillée :
+  - Étapes
+  - Heures d’arrivée et de départ
+  - Type d’étape (Warehouse, Pickup, Delivery)
+
+### 💾 Sauvegarde & historique
+- Sauvegarde des tournées en **JSON**
+- Rechargement depuis le serveur
+- Historique des tournées calculées
+
+---
+
+## 🏗️ Architecture du projet
+
+Le projet suit une **architecture MVC** claire et modulaire.
+
+### 🔹 Modèle (Backend logique – JavaScript)
+Dossier `/backend/` :
+
+- `Plan`, `Node`, `Segment` : représentation du graphe de la ville
+- `Demand` : demande Pickup & Delivery
+- `Courier` : coursier
+- `Tour`, `TourPoint`, `Leg` : structure d’une tournée
+- `ComputerTour` :
+  - Calcul des plus courts chemins (Dijkstra / A*)
+  - Résolution du TSP avec contraintes de précédence
+- `System` :
+  - Chargement des données
+  - Distribution des demandes (K-means)
+  - Calcul des tournées
+  - Sauvegarde / restauration
+
+### 🔹 Vue (Frontend)
+Dossier `/front/` :
+
+- Interface HTML / CSS
+- Carte interactive Leaflet
+- Timeline des tournées
+- Sidebar de gestion (coursiers, demandes)
+
+### 🔹 Contrôleur
+- `app.js` : gestion des interactions utilisateur
+- Coordination entre la vue et la logique métier
+
+---
+
+## 🧩 Algorithmes utilisés
+
+### 🔸 Plus courts chemins
+- **Dijkstra**
+- **A*** (heuristique euclidienne)
+
+### 🔸 Optimisation de tournée (TSP)
+- Branch & Bound (petits ensembles)
+- Heuristique Nearest Neighbor
+- Amélioration locale (2-opt)
+- Respect strict des contraintes Pickup → Delivery
+
+### 🔸 Répartition multi-coursiers
+- **K-means clustering**
+- Chaque demande est atomique (pickup + delivery toujours ensemble)
+
+---
+
+## 🛠️ Technologies utilisées
+
+- **JavaScript (ES6)**
+- **HTML / CSS**
+- **Leaflet**
+- **Node.js**
+- **XML / JSON**
+- **Git**
+
+---
+
+## 🚀 Lancer le projet en local
+
+### 1️⃣ Prérequis
+- Node.js installé
+- Navigateur moderne (Chrome, Firefox)
+
+### 2️⃣ Lancer le serveur
+```bash
+node server.js
 ```
-project-root/
-│
+### 3️⃣ Ouvrir l’application
+
+👉 http://localhost:8080
+
+---
+## 📁 Structure du projet
+
+```bash
+.
 ├── backend/
-│   ├── Node.js
-│   ├── Segment.js
-│   ├── Demand.js
-│   ├── Courier.js
-│   ├── TourPoint.js
-│   ├── Tour.js
-│   └── Plan.js
+│   ├── demand.js
+│   ├── node.js
+│   ├── segment.js
+│   ├── plan.js
+│   ├── courier.js
+│   ├── tourpoint.js
+│   ├── leg.js
+│   ├── tours.js
+│   ├── computerTour.js
+│   └── system.js
 │
 ├── front/
 │   ├── scripts/
-│   │     ├── displayTour.js
-│   │     └── displayPlan.js
-│   │
-│   ├── styles/
-│   │     └── styles.css
-│   │
-│   ├── tests/
-│   │     ├── server.js
-│   │     ├── test_display_tour.html
-│   │     └── test_display_plan.html
-│   │
-│   └── index.html
+│   │   ├── app.js
+│   │   ├── view.js
+│   │   └── geocoding.js
+│   └── styles/
+│       └── styles.css
 │
-└── fichiersXMLPickupDelivery/
-      └── petitPlan.xml
+├── index.html
+├── server.js
+└── README.md
 ```
-
-Points importants :
-
-* Le backend n’est pas un serveur HTTP, il sert uniquement à charger et manipuler les données (Plan, Node, Segment, Tour, etc.).
-* Le frontend de test utilise un petit serveur HTTP (server.js) pour servir les pages et les fichiers XML.
-* Le dossier `fichiersXMLPickupDelivery` doit obligatoirement être à la racine du projet.
+---
+## 🧪 Tests & robustesse
+- Vérification systématique des fichiers XML
+- Gestion des cas limites :
+  - demandes invalides
+  - nœuds hors plan
+  - tournées impossibles
+- Logs détaillés pour l’analyse des 
 
 ---
+## 📈 Perspectives d’amélioration
 
-## 3. Backend (Node.js)
-
-Le backend contient l’ensemble des classes métier nécessaires au fonctionnement du système :
-
-* `Node` : représente un nœud du plan (intersection).
-* `Segment` : représente un tronçon entre deux nœuds.
-* `Plan` : charge un fichier XML et construit le graphe interne (Map de nœuds, liste de segments).
-* `Demand`, `Courier`, `Tour`, `TourPoint` : seront utilisés pour la gestion des pickup/delivery.
-
-### Chargement d’un plan XML
-
-La méthode suivante dans `Plan.js` permet de charger un fichier XML :
-
-```js
-Plan.loadFromXML(filepath)
-```
-
-Elle retourne une instance de `Plan` contenant :
-
-* `nodes` : Map<id, Node>
-* `segments` : liste des tronçons
-* `warehouse` : entrepôt (optionnel pour l’instant)
-
-`toJSON()` permet de convertir un Plan en structure exploitable par le frontend.
-
----
-
-## 4. Frontend (Leaflet)
-
-Le frontend de test permet d’afficher :
-
-* une tournée d’exemple (`test_display_tour.html`) ;
-* un plan complet chargé depuis un fichier XML (`test_display_plan.html`).
-
-Le mini serveur HTTP `server.js` :
-
-* sert les fichiers HTML du dossier `front/tests` ;
-* sert les scripts frontend ;
-* sert les scripts backend utilisés dans le frontend ;
-* sert le fichier XML depuis `fichiersXMLPickupDelivery`.
-
----
-
-## 5. Affichage du plan (DisplayPlan)
-
-Le fichier :
-
-```
-front/scripts/displayPlan.js
-```
-
-contient une classe Leaflet capable d’afficher :
-
-* tous les nœuds du plan en tant que points ;
-* tous les segments en tant que lignes ;
-* un centrage automatique de la carte sur les données.
-
-Le test correspondant :
-
-```
-front/tests/test_display_plan.html
-```
-
-Charge le fichier XML, le parse côté navigateur, reconstruit les objets Node et Segment, puis appelle :
-
-```js
-displayPlan.displayPlan(planJSON);
-```
-
----
-
-## 6. Affichage d’une tournée (DisplayTour)
-
-Le fichier :
-
-```
-front/scripts/displayTour.js
-```
-
-permet d'afficher une tournée exemple avec :
-
-* les nœuds du parcours ;
-* les segments du trajet ;
-* les points pickup/delivery.
-
-La page de test :
-
-```
-front/tests/test_display_tour.html
-```
-
-sert à valider cet affichage de manière isolée.
-
----
-
-## 7. Lancement du serveur de test
-
-Pour lancer l’environnement de test Leaflet :
-
-```
-cd front/tests
-node server.js
-```
-
-Ensuite ouvrir dans un navigateur :
-
-* Test du plan :
-  `http://localhost:8080/test_display_plan.html`
-
-* Test d’une tournée :
-  `http://localhost:8080/test_display_tour.html`
-
-* Interface principale (non encore fonctionnelle) :
-  `http://localhost:8080/index.html`
-
----
-
-## 8. Tests unitaires
-
-Un ensemble de tests unitaires existe pour chaque classe du backend :
-
-```
-TESTS/
-   node.test.js
-   segment.test.js
-   plan.test.js
-   demand.test.js
-   tour.test.js
-   ...
-```
-
-Chaque test exporte un objet `{ total, passed, failed }`.
-
-Le script global :
-
-```
-runAllTests.js
-```
-
-exécute toutes les suites et génère un rapport complet. Exemple d’appel :
-
-```
-node runAllTests.js
-```
-
-Ce runner affiche :
-
-* le nombre total de tests ;
-* le nombre de succès / erreurs ;
-* un récapitulatif par module.
+- Contraintes horaires de livraison
+- Capacité des coursiers
+- Recalcul dynamique des tournées
+- Algorithmes d’optimisation avancés
+- Backend persistant (API REST)
 
 ---
