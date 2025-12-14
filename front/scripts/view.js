@@ -206,7 +206,8 @@ class View {
     }
 
     /**
-     * Clear all drawn layers except tile layer
+     * Clears all drawn layers from the map except the base tile layer
+     * Resets markers and selection state
      */
     clearMap() {
         this.map.eachLayer(layer => {

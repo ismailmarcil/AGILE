@@ -198,6 +198,12 @@ function handleListTours(req, res) {
 }
 
 // Gestionnaire de chargement d'une tournée
+/**
+ * Handles GET requests to load a specific tour file by ID
+ * Reads the tour JSON file and returns its contents
+ * @param {string} tourId - Tour identifier (filename without .json extension)
+ * @param {http.ServerResponse} res - HTTP response object
+ */
 function handleLoadTourFile(tourId, res) {
     try {
         const filename = `${tourId}.json`;

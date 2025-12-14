@@ -477,6 +477,13 @@ function addMultiTourNavigationDropdown(tours) {
 
 
 // Update timeline UI from tour data
+/**
+ * Updates the timeline UI from tour data
+ * Displays all stops with times, addresses (via geocoding), and service durations
+ * Supports drag-and-drop reordering if readOnly is false
+ * @param {Tour} tour - The tour to display
+ * @param {boolean} readOnly - Whether the timeline should be read-only (no drag-drop)
+ */
 function updateTimelineFromTour(tour, readOnly = false) {
     const timelineScroll = document.querySelector('.timeline-scroll');
     if (!timelineScroll) return;

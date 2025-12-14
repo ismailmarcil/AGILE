@@ -1534,10 +1534,11 @@ class System {
     }
 
     /**
-     * Get distance from distanceMatrix, returns Infinity if no connection
-     * @param {Map} distanceMatrix - Pre-computed distance matrix
-     * @param {string} fromId - Origin node ID
-     * @param {string} toId - Destination node ID
+     * Gets distance from pre-computed distance matrix
+     * Returns Infinity if no direct connection exists
+     * @param {Map<string, Map<string, number>>} distanceMatrix - Pre-computed distance matrix
+     * @param {string|number} fromId - Origin node ID
+     * @param {string|number} toId - Destination node ID
      * @returns {number} Distance/time or Infinity if not connected
      */
     getDistance(distanceMatrix, fromId, toId) {

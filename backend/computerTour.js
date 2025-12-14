@@ -32,6 +32,12 @@ function getLegClass() {
     throw new Error('Leg class is not available for ComputerTour');
 }
 
+/**
+ * Gets the Tour class from dependencies (handles Node.js and Browser environments)
+ * Provides cross-environment compatibility for the Tour constructor
+ * @returns {Function} The Tour constructor class
+ * @throws {Error} If Tour class is not available in any environment
+ */
 function getTourClass() {
     if (TourDependency) {
         return TourDependency;

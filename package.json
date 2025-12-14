@@ -1,4 +1,8 @@
 {
+  "name": "delivhub-agile",
+  "version": "1.0.0",
+  "description": "Système d'optimisation de tournées Pickup & Delivery à vélo - Projet PLD Agile INSA Lyon",
+  "main": "front/server.js",
   "scripts": {
     "test": "node TESTS/runAllTests.js",
     "test:coverage": "nyc node TESTS/runAllTests.js",
@@ -27,7 +31,7 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
+    "jsdom": "^27.3.0",
     "nyc": "^17.1.0"
   }
 }
-

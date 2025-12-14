@@ -118,14 +118,20 @@ Dossier `/front/` :
 ## 🚀 Lancer le projet en local
 
 ### 1️⃣ Prérequis
-- Node.js installé
+- Node.js (v18+) installé
 - Navigateur moderne (Chrome, Firefox)
 
-### 2️⃣ Lancer le serveur
+### 2️⃣ Installation des dépendances
 ```bash
-node server.js
+npm install
 ```
-### 3️⃣ Ouvrir l’application
+
+### 3️⃣ Lancer le serveur
+```bash
+node front/server.js
+```
+
+### 4️⃣ Ouvrir l'application
 
 👉 http://localhost:8080
 
@@ -154,26 +160,51 @@ node server.js
 │   └── styles/
 │       └── styles.css
 │
-├── index.html
-├── server.js
+├── fichiersXMLPickupDelivery/   # Fichiers XML d'exemple (plans, demandes)
+├── TESTS/                       # Tests unitaires
+├── saved_tours/                 # Tournées sauvegardées
 └── README.md
 ```
 ---
 ## 🧪 Tests & robustesse
+
+### Lancer les tests
+```bash
+npm test
+```
+
+### Lancer les tests avec couverture de code
+```bash
+npm run test:coverage
+```
+
+### Points testés
 - Vérification systématique des fichiers XML
 - Gestion des cas limites :
   - demandes invalides
   - nœuds hors plan
   - tournées impossibles
-- Logs détaillés pour l’analyse des 
+- Logs détaillés pour l'analyse des performances et du débogage
 
 ---
-## 📈 Perspectives d’amélioration
+## 📈 Perspectives d'amélioration
 
 - Contraintes horaires de livraison
 - Capacité des coursiers
 - Recalcul dynamique des tournées
-- Algorithmes d’optimisation avancés
+- Algorithmes d'optimisation avancés
 - Backend persistant (API REST)
+
+---
+
+## 👥 Auteurs
+
+Projet réalisé par l'héxanôme **H4403** – INSA Lyon, 2025-2026
+
+---
+
+## 📄 Licence
+
+Ce projet est réalisé dans un cadre académique (INSA Lyon – PLD Agile).
 
 ---
